@@ -296,3 +296,7 @@ exports.resetPassword = async (data) => {
     message: "Password reset successfully."
   };
 };
+
+exports.logout = async () => {
+  return true;
+};
