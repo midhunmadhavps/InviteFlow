@@ -106,7 +106,6 @@ Request
 ```json
 {
     "firstName": "John",
-    "middleName": "",
     "lastName": "Doe",
     "phone": "9876543210",
     "email": "john@example.com"
@@ -158,7 +157,8 @@ Request
 
 ```json
 {
-    "phone": "9876543210",
+    "userId": "68952fxxxxxxxxxxxx",
+    "username": "midhun",
     "password": "Welcome@123",
     "confirmPassword": "Welcome@123"
 }
@@ -176,7 +176,7 @@ Request
 
 ```json
 {
-    "phone": "9876543210",
+    "username": "midhun",
     "password": "Welcome@123"
 }
 ```
@@ -201,22 +201,27 @@ Authorization: Bearer <JWT_TOKEN>
 
 ```
 Register
-     │
-     ▼
+      │
+      ▼
 Generate OTP
-     │
-     ▼
+      │
+      ▼
 Verify OTP
-     │
-     ▼
-Set Password
-     │
-     ▼
+      │
+      ▼
+Create Username & Password
+      │
+      ▼
 Account Activated
-     │
-     ▼
+      │
+      ▼
 Login
+      │
+      ▼
+JWT Token
 ```
+
+---
 
 ---
 

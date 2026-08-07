@@ -8,7 +8,6 @@ exports.register = async (data) => {
 
   const {
     firstName,
-    middleName,
     lastName,
     phone,
     email,
@@ -22,7 +21,6 @@ exports.register = async (data) => {
 
   const user = await User.create({
     firstName,
-    middleName,
     lastName,
     phone,
     email,
@@ -130,15 +128,16 @@ exports.resendOtp = async (data) => {
 exports.setpassword = async (data) => {
 
   const {
-    phone,
+    userId,
+    username,
     password,
     confirmPassword,
   } = data;
 
-  const existingUser = await User.findOne({ phone });
+  const existingUser = await User.findOne({ username });
 
-  if (!existingUser) {
-    throw new Error("Phone number not registered.");
+  if (existingUser) {
+    throw new Error("Existing user name.");
   }
 
   if (password !== confirmPassword) {
@@ -146,9 +145,10 @@ exports.setpassword = async (data) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await User.updateOne(
-    { phone },
+  const updatedUser  = await User.findByIdAndUpdate(
+    {  _id: userId  },
     {
+      username: username,
       password: hashedPassword,
       status: "Active"
     }
@@ -156,17 +156,17 @@ exports.setpassword = async (data) => {
 
   return {
     userId: user._id,
-    phone: user.phone
+    username: user.username,
   };
 };
 
 exports.login = async (data) => {
-  const { phone, password } = data;
+  const { username, password } = data;
 
-  const user = await User.findOne({ phone });
+  const user = await User.findOne({ username });
 
   if (!user) {
-    throw new Error("Phone number not registered.");
+    throw new Error("user not registered.");
   }
 
   if (!user.isPhoneVerified) {
@@ -192,7 +192,7 @@ exports.login = async (data) => {
   const token = jwt.sign(
     {
       userId: user._id,
-      phone: user.phone,
+      username: user.username,
     },
     process.env.JWT_SECRET,
     {
@@ -204,6 +204,7 @@ exports.login = async (data) => {
     token,
     user: {
       id: user._id,
+      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
