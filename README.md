@@ -183,6 +183,68 @@ Request
 
 ---
 
+## Forgot Password
+
+Allows a registered user to request an OTP to reset their password.
+
+**POST**
+
+```
+/api/auth/forgot-password
+```
+
+### Request
+
+```json
+{
+    "username": "midhun"
+}
+```
+
+### Response
+
+```json
+{
+    "success": true,
+    "message": "OTP sent successfully.",
+    "data": {
+        "phone": "9876543210"
+    }
+}
+```
+## Reset Password
+
+Allows the user to create a new password after successful OTP verification.
+
+**POST**
+
+```
+/api/auth/reset-password
+```
+
+### Request
+
+```json
+{
+    "userId": "6895xxxxxxxxxxxx",
+    "password": "NewPassword@123",
+    "confirmPassword": "NewPassword@123"
+}
+```
+
+### Response
+
+```json
+{
+    "success": true,
+    "message": "Password reset successfully.",
+    "data": {
+        "userId": "6895xxxxxxxxxxxx"
+    }
+}
+```
+
+
 ### Profile
 
 ```
@@ -222,8 +284,49 @@ JWT Token
 ```
 
 ---
+# Forgot Password Flow
 
----
+```
+Forgot Password
+        │
+        ▼
+Enter Username
+        │
+        ▼
+Validate User
+        │
+        ▼
+Generate OTP
+        │
+        ▼
+Store OTP (Purpose: FORGOT_PASSWORD)
+        │
+        ▼
+Send OTP
+        │
+        ▼
+Verify OTP
+        │
+        ▼
+Mark OTP as Verified
+        │
+        ▼
+Reset Password
+        │
+        ▼
+Delete OTP
+        │
+        ▼
+Login with New Password
+```
+
+### Notes
+
+- OTP expires after **15 minutes**.
+- Only one active OTP is allowed per phone number and purpose.
+- Passwords are securely hashed using **bcryptjs** before being stored.
+- After a successful password reset, the corresponding OTP record is deleted.
+- A user must verify the OTP before resetting the password.
 
 ## Future Modules
 

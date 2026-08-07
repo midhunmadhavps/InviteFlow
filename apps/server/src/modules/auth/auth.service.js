@@ -35,6 +35,7 @@ exports.register = async (data) => {
     { phone },
     {
       phone,
+      purpose: "REGISTER",
       otp,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
     },
@@ -121,7 +122,8 @@ exports.resendOtp = async (data) => {
     console.log("OTP:", otp);
 
     return {
-        phone
+      userId: user._id,
+      username: user.username
     };
 };
 
@@ -210,5 +212,87 @@ exports.login = async (data) => {
       phone: user.phone,
       email: user.email,
     },
+  };
+};
+
+exports.forgotPassword = async (data) => {
+  const { phone } = data;
+
+  const user = await User.findOne({
+      phone: phone.toLowerCase()
+  });
+
+  if (!phone) {
+      throw new Error("User not found.");
+  }
+
+  const otp = "123456";
+  // Later:
+  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await Otp.findOneAndUpdate(
+      { phone: user.phone },
+      {
+          phone: user.phone,
+          otp,
+          purpose: "FORGOT_PASSWORD",
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+      },
+      {
+          upsert: true,
+          new: true
+      }
+  );
+
+  console.log("Forgot Password OTP:", otp);
+
+  return {
+      phone: user.phone
+  };
+};
+
+exports.resetPassword = async (data) => {
+  const {
+    userId,
+    password,
+    confirmPassword,
+  } = data;
+
+  if (password !== confirmPassword) {
+    throw new Error("Passwords do not match.");
+  }
+
+  const user = await User.findOne({ _id: userId });
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  // Check if forgot-password OTP was verified
+  // const otpRecord = await Otp.findOne({
+  //   phone: user.phone,
+  //   purpose: "FORGOT_PASSWORD",
+  //   verified: true,
+  // });
+
+  // if (!otpRecord) {
+  //   throw new Error("Please verify your OTP first.");
+  // }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  user.password = hashedPassword;
+  user.status = "Active";
+
+  await user.save();
+
+  // await Otp.deleteOne({
+  //   phone,
+  //   purpose: "FORGOT_PASSWORD",
+  // });
+
+  return {
+    // userId: user._id,
+    message: "Password reset successfully."
   };
 };
