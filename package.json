@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "InviteFlow Backend API",
   "private": true,
-  "main": "src/server.js",
+  "main": "apps/server/src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "dev": "nodemon apps/server/src/server.js",
+    "start": "node apps/server/src/server.js",
+    "seed": "node seed/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
