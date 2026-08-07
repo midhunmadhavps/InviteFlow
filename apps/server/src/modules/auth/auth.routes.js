@@ -4,10 +4,9 @@ const router = express.Router();
 const authController = require("./auth.controller");
 
 router.post("/register", authController.register);
-router.post("/login", authController.login);
 router.post("/verify-otp", authController.verifyOtp);
 router.post("/resend-otp", authController.resendOtp);
-
-router.get("/profile", authController.profile);
+router.post("/set-password", authController.setpassword);
+router.post("/login", authController.login);
 
 module.exports = router;
