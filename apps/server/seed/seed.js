@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-const EventType = require("../apps/server/src/models/eventType.model");
+const EventType = require("../src/models/eventType.model");
 
 const eventTypes = [
   {
