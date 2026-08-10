@@ -72,4 +72,6 @@ mobile/src
     npm install @react-navigation/native @react-navigation/native-stack
     npx expo install react-native-screens react-native-safe-area-context
     npx expo install expo-secure-store
-    npm start
+    npx expo install react-dom react-native-web (for load react load on laptop)
+    npm start 
+    npx expo start
