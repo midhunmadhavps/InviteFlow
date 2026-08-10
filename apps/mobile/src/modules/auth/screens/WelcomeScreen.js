@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
-export default function WelcomeScreen() {
+export default function WelcomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -32,7 +32,10 @@ export default function WelcomeScreen() {
             </Text>
         </View>
 
-        <TouchableOpacity style={styles.continueButton}>
+        <TouchableOpacity 
+            style={styles.continueButton}
+            onPress={() => navigation.navigate("Login")}
+        >
           <Text style={styles.continueText}>Continue</Text>
 
           <View style={styles.arrowCircle}>

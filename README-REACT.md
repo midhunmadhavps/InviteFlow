@@ -66,7 +66,6 @@ mobile/src
     └── package.json
 
     npx create-expo-app mobile (unwanted files) or npx create-expo-app mobile --template blank
-    
     npm install axios
     npm install @react-navigation/native
     npm install @react-navigation/native @react-navigation/native-stack

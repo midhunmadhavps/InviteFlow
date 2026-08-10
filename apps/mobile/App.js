@@ -1,6 +1,5 @@
-import React from "react";
-import WelcomeScreen from "./src/modules/auth/screens/WelcomeScreen";
+import AppNavigator from "./src/navigation/AppNavigator";
 
 export default function App() {
-  return <WelcomeScreen />;
+  return <AppNavigator />;
 }
