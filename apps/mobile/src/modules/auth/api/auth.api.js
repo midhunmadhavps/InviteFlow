@@ -27,7 +27,7 @@ export const resendOtp = async (data) => {
   return response.data;
 };
 
-export const setPassword = async (data) => {
+export const setPasswordUser = async (data) => {
   const response = await api.post("/auth/set-password", data);
 
   return response.data;

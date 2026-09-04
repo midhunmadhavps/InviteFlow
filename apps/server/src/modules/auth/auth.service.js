@@ -161,17 +161,9 @@ exports.setpassword = async (data) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const updatedUser  = await User.findByIdAndUpdate(
-    {  _id: userId  },
-    {
-      password: hashedPassword,
-      status: "Active"
-    }
-  );
+  const updatedUser = await User.findByIdAndUpdate( userId, { password: hashedPassword, status: "Active", }, { new: true } ); 
+  return { userId: updatedUser._id, };
 
-  return {
-    userId: existingUser._id
-  };
 };
 
 exports.login = async (data) => {

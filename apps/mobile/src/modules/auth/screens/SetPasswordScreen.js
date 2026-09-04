@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { setPassword } from "../api/auth.api";
+import { setPasswordUser } from "../api/auth.api";
 
 export default function SetPasswordScreen({ navigation, route }) {
   const { userId } = route.params;
@@ -45,23 +45,29 @@ export default function SetPasswordScreen({ navigation, route }) {
         confirmPassword,
       });
 
-      const response = await setPassword({
+      const payload = {
         userId,
         password,
         confirmPassword,
-      });
+      };
 
-      console.log("set password response:", response);
+      const response = await setPasswordUser(payload);
 
-      if(response.success){
+      if (response?.success) {
         navigation.navigate("Login");
       }
 
     } catch (error) {
-      console.log(
-        "Set Password error:",
-        error.response?.data?.message || error.message
-      );
+      console.log("FULL ERROR:", error);
+      console.log("ERROR DATA:", error.response?.data);
+
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Something went wrong.";
+
+      console.log("ERROR MESSAGE:", message);
     }
   };
   
