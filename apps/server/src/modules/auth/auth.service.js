@@ -13,10 +13,21 @@ exports.register = async (data) => {
     email,
   } = data;
 
-  const existingUser = await User.findOne({ phone });
+  const existingUser = await User.findOne({
+    $or: [
+      { phone },
+      { email }
+    ]
+  });
 
   if (existingUser) {
-    throw new Error("Phone number already registered.");
+    if (existingUser.phone === phone) {
+      throw new Error("Phone number already registered.");
+    }
+
+    if (existingUser.email === email) {
+      throw new Error("Email already registered.");
+    }
   }
 
   const user = await User.create({
@@ -135,10 +146,14 @@ exports.setpassword = async (data) => {
     confirmPassword,
   } = data;
 
-  const existingUser = await User.findOne({ userId });
+  const existingUser = await User.findOne({ _id: userId });
 
-  if (existingUser) {
-    throw new Error("Existing user.");
+  if (!existingUser) {
+    throw new Error("There is no user Exist.");
+  }
+
+  if (existingUser.status === "Pending") {
+    throw new Error("User is not verified.");
   }
 
   if (password !== confirmPassword) {
@@ -155,7 +170,7 @@ exports.setpassword = async (data) => {
   );
 
   return {
-    userId: user._id
+    userId: existingUser._id
   };
 };
 
