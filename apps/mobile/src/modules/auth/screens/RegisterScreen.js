@@ -44,7 +44,7 @@ export default function RegisterScreen({ navigation }) {
 
       // Registration successful
       navigation.navigate("VerifyOtp", {
-        userId: response.data.userId,
+        phone: response.data.phone,
       });
 
     } catch (error) {

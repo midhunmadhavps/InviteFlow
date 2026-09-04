@@ -131,15 +131,14 @@ exports.setpassword = async (data) => {
 
   const {
     userId,
-    username,
     password,
     confirmPassword,
   } = data;
 
-  const existingUser = await User.findOne({ username });
+  const existingUser = await User.findOne({ userId });
 
   if (existingUser) {
-    throw new Error("Existing user name.");
+    throw new Error("Existing user.");
   }
 
   if (password !== confirmPassword) {
@@ -150,15 +149,13 @@ exports.setpassword = async (data) => {
   const updatedUser  = await User.findByIdAndUpdate(
     {  _id: userId  },
     {
-      username: username,
       password: hashedPassword,
       status: "Active"
     }
   );
 
   return {
-    userId: user._id,
-    username: user.username,
+    userId: user._id
   };
 };
 

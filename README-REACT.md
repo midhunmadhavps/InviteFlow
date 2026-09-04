@@ -74,3 +74,9 @@ mobile/src
     npx expo install react-dom react-native-web (for load react load on laptop)
     npm start 
     npx expo start
+
+## Start Development Server
+
+```bash
+npm run mobile
+```

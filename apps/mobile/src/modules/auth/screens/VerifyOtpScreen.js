@@ -11,9 +11,11 @@ import {
   ScrollView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { registerUser } from "../api/auth.api";
+import { verifyOtp, resendOtp } from "../api/auth.api";
 
 export default function OtpScreen({ navigation, route }) {
+  const { phone } = route.params;
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
   const inputRefs = useRef([]);
@@ -65,37 +67,54 @@ export default function OtpScreen({ navigation, route }) {
     }
   };
 
-  const handleSubmit = () => {
-    const enteredOtp = otp.join("");
+  const handleSubmit = async () => {
+    try {
+      const enteredOtp = otp.join("");
 
-    if (enteredOtp.length !== 6) {
-      console.log("Please enter the 6 digit OTP");
-      return;
+      if (enteredOtp.length !== 6) {
+        console.log("Please enter the 6 digit OTP");
+        return;
+      }
+
+      console.log("OTP:", enteredOtp);
+      console.log("Phone:", phone);
+
+      const response = await verifyOtp({
+        phone: phone,
+        otp: enteredOtp,
+      });
+
+      console.log("verifyOtp response:", response);
+
+      navigation.navigate("SetPassword", {
+        userId: response.data.userId,
+      });
+
+      console.log("navigated to setpassword screen");
+
+    } catch (error) {
+      console.log(
+        "Verify OTP error:",
+        error.response?.data?.message || error.message
+      );
     }
-
-    console.log("OTP:", enteredOtp);
-
-    const response = await verifyOtp({
-      phone: phone,
-      otp: enteredOtp
-    });
-    
-    console.log("verifyOtp response:", response);
-
-    navigation.navigate("SetPassword", {
-      userId: response.data.userId,
-    });
-
   };
 
-  const handleResendOtp = () => {
-    console.log("Resend OTP");
+  const handleResendOtp = async () => {
+    try {
+      console.log("Resend OTP");
 
-    const response = await resendOtp({
-      phone: phone
-    });
-    
-    console.log("resendOtp response:", response);
+      const response = await resendOtp({
+        phone: phone,
+      });
+
+      console.log("resendOtp response:", response);
+    } catch (error) {
+      console.log(
+        "Resend OTP error:",
+        error.response?.data?.message || error.message
+      );
+    }
   };
 
   return (

@@ -11,20 +11,26 @@ import {
   ScrollView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { setPassword } from "../api/auth.api";
 
-export default function RegisterScreen({ navigation }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  // const [password, setPassword] = useState("");
-  // const [confirmPassword, setConfirmPassword] = useState("");
+export default function SetPasswordScreen({ navigation, route }) {
+  const { userId } = route.params;
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRegister = async () => {
+  const handleSetPassword = async () => {
     try {
-      if (!name || !email || !phone || !password || !confirmPassword) {
+
+      if (!userId) {
+        console.log("ERROR: userId is missing");
+        return;
+      }
+
+      if (!password || !confirmPassword) {
         console.log("Please fill all fields");
         return;
       }
@@ -35,16 +41,25 @@ export default function RegisterScreen({ navigation }) {
       }
 
       console.log({
-        name,
-        email,
-        phone,
         password,
         confirmPassword,
       });
 
+      const response = await setPassword({
+        userId,
+        password,
+        confirmPassword,
+      });
+
+      console.log("set password response:", response);
+
+      if(response.success){
+        navigation.navigate("Login");
+      }
+
     } catch (error) {
       console.log(
-        "Registration error:",
+        "Set Password error:",
         error.response?.data?.message || error.message
       );
     }
@@ -76,63 +91,6 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.title}>Sign up</Text>
 
             <View style={styles.titleUnderline} />
-          </View>
-
-          {/* Name */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name</Text>
-
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>◯</Text>
-
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your name"
-                placeholderTextColor="#bdbdbd"
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/* Email */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>✉</Text>
-
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="demo@email.com"
-                placeholderTextColor="#bdbdbd"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/* Phone */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone no</Text>
-
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>▯</Text>
-
-              <TextInput
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+00 000-0000-000"
-                placeholderTextColor="#bdbdbd"
-                keyboardType="phone-pad"
-              />
-            </View>
           </View>
 
           {/* Password */}
@@ -198,7 +156,7 @@ export default function RegisterScreen({ navigation }) {
           {/* Create Account */}
           <TouchableOpacity
             style={styles.createButton}
-            onPress={handleRegister}
+             onPress={handleSetPassword}
           >
             <Text style={styles.createButtonText}>
               Create Account
