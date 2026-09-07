@@ -40,9 +40,10 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      const data = await loginUser(email, password);
+      const data = await loginUser(email.trim(), password);
       console.log("Login successful:", data);
       showSuccess("Login successful!");
+      navigation.replace("Main");
       
     } catch (error) {
       const message =

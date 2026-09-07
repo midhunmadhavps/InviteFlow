@@ -13,7 +13,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { setPasswordUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
-import { validateName, validatePassword } from "../../../utils/validation";
+import { validateNameOnly, validatePassword } from "../../../utils/validation";
 
 
 export default function SetPasswordScreen({ navigation, route }) {
@@ -38,13 +38,13 @@ export default function SetPasswordScreen({ navigation, route }) {
       }
 
       let errorMessage;
-      errorMessage = validateName(password, "password");
+      errorMessage = validateNameOnly(password, "password");
       if (errorMessage) {
         showError(errorMessage);
         return;
       }
 
-      errorMessage = validateName(confirmPassword, "confirmPassword");
+      errorMessage = validateNameOnly(confirmPassword, "confirmPassword");
       if (errorMessage) {
         showError(errorMessage);
         return;
@@ -70,7 +70,7 @@ export default function SetPasswordScreen({ navigation, route }) {
       const response = await setPasswordUser(payload);
 
       if (response?.success) { 
-        if(response.purpose == "FORGOT_PASSWORD"){
+        if(purpose == "FORGOT_PASSWORD"){
           showSuccess("Successfully Password updated");
         }else{
           showSuccess("Successfully Password created");
@@ -234,9 +234,9 @@ const styles = StyleSheet.create({
   // Registration form
   registerContainer: {
     flex: 1,
-    marginTop: "47%",
+    marginTop: "70%",
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
 
   // Title

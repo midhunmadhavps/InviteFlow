@@ -72,6 +72,8 @@ mobile/src
     npx expo install react-native-screens react-native-safe-area-context
     npx expo install expo-secure-store
     npx expo install react-dom react-native-web (for load react load on laptop)
+    
+    npx expo install expo-image-picker expo-document-picker
     npm start 
     npx expo start
 

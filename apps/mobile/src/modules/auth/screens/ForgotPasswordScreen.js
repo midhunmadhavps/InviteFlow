@@ -13,7 +13,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { forgotPasswordUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
-import { validateName } from "../../../utils/validation";
+import { validatePhone } from "../../../utils/validation";
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [phone, setPhone] = useState("");
@@ -22,7 +22,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   const handleForgotPassword = async () => {
     try {
-      
+
       let errorMessage;
       errorMessage = validatePhone(phone);
       if (errorMessage) {

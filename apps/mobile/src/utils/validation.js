@@ -34,6 +34,14 @@ export const validatePhone = (phone) => {
   return null;
 };
 
+export const validateNameOnly = (name, fieldName) => {
+  if (!name || !name.trim()) {
+    return `Please enter your ${fieldName}.`;
+  }
+
+  return null;
+};
+
 export const validateName = (name, fieldName) => {
   if (!name || !name.trim()) {
     return `Please enter your ${fieldName}.`;
