@@ -12,26 +12,22 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { registerUser } from "../api/auth.api";
+import { useToast } from "../../../context/ToastContext";
 
 export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  
+  const { showSuccess, showError } = useToast();
 
   const handleRegister = async () => {
     try {
       if (!firstName || !lastName || !email || !phone) {
-        console.log("Please fill all fields");
+        showError("Please fill all mandatory fields.");
         return;
       }
-
-      console.log({
-        firstName,
-        lastName,
-        email,
-        phone
-      });
 
       const response = await registerUser({
         firstName,
@@ -40,7 +36,7 @@ export default function RegisterScreen({ navigation }) {
         phone
       });
 
-      console.log("Register response:", response);
+      // console.log("Register response:", response);
 
       // Registration successful
       navigation.navigate("VerifyOtp", {
@@ -52,6 +48,7 @@ export default function RegisterScreen({ navigation }) {
         "Registration error:",
         error.response?.data?.message || error.message
       );
+      showError(error.response?.data?.message+" Something went wrong. Please try again.");
     }
   };
 

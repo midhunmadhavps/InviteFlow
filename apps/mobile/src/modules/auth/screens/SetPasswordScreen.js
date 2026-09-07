@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { setPasswordUser } from "../api/auth.api";
+import { useToast } from "../../../context/ToastContext";
 
 export default function SetPasswordScreen({ navigation, route }) {
   const { userId } = route.params;
+  const { purpose } = route.params;
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,28 +24,26 @@ export default function SetPasswordScreen({ navigation, route }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { showSuccess, showError } = useToast();
+
   const handleSetPassword = async () => {
     try {
 
       if (!userId) {
         console.log("ERROR: userId is missing");
+        showError("Something went wrong please try again later.");
         return;
       }
 
       if (!password || !confirmPassword) {
-        console.log("Please fill all fields");
+        showError("Please fill all mandatory fields");
         return;
       }
 
       if (password !== confirmPassword) {
-        console.log("Passwords do not match");
+        showError("Passwords do not match");
         return;
       }
-
-      console.log({
-        password,
-        confirmPassword,
-      });
 
       const payload = {
         userId,
@@ -53,7 +53,12 @@ export default function SetPasswordScreen({ navigation, route }) {
 
       const response = await setPasswordUser(payload);
 
-      if (response?.success) {
+      if (response?.success) { 
+        if(response.purpose == "FORGOT_PASSWORD"){
+          showSuccess("Successfully Password updated");
+        }else{
+          showSuccess("Successfully Password created");
+        }
         navigation.navigate("Login");
       }
 
@@ -68,6 +73,7 @@ export default function SetPasswordScreen({ navigation, route }) {
         "Something went wrong.";
 
       console.log("ERROR MESSAGE:", message);
+      showError(error.response?.data?.message+" Something went wrong. Please try again.");
     }
   };
   

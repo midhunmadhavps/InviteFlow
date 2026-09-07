@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { loginUser } from "../api/auth.api";
+import { useToast } from "../../../context/ToastContext";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -19,19 +20,26 @@ export default function LoginScreen({ navigation }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const { showSuccess, showError } = useToast();
+
   const handleLogin = async () => {
     try {
       if (!email || !password) {
-        console.log("Please enter username and password");
+        showError("Please enter email and password.");
         return;
       }
+
       const data = await loginUser(email, password);
       console.log("Login successful:", data);
+      showSuccess("Login successful!");
+      
     } catch (error) {
       console.log(
         "Login error:",
         error.response?.data?.message || error.message
       );
+      showError(error.response?.data?.message+" Something went wrong. Please try again.");
+
     }
   };
 

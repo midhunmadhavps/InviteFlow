@@ -77,9 +77,9 @@ exports.verifyOtp = async (data) => {
         throw new Error("OTP not found.");
     }
 
-    // if (otpRecord.expiresAt < new Date()) {
-    //     throw new Error("OTP has expired.");
-    // }
+    if (otpRecord.expiresAt < new Date()) {
+        throw new Error("OTP has expired.");
+    }
 
     if (otpRecord.otp !== otp) {
         throw new Error("Invalid OTP.");
@@ -99,7 +99,8 @@ exports.verifyOtp = async (data) => {
     return {
         userId: user._id,
         phone: user.phone,
-        status: user.status
+        status: user.status,
+        purpose: user.purpose,
     };
 };
 
@@ -222,12 +223,16 @@ exports.login = async (data) => {
 exports.forgotPassword = async (data) => {
   const { phone } = data;
 
+  if (!phone) {
+    throw new Error("Phone number is required.");
+  }
+
   const user = await User.findOne({
-      phone: phone.toLowerCase()
+    phone: phone.trim()
   });
 
-  if (!phone) {
-      throw new Error("User not found.");
+  if (!user) {
+    throw new Error("Phone number is not registered.");
   }
 
   const otp = "123456";

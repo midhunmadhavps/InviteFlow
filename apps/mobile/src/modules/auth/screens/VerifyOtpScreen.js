@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { verifyOtp, resendOtp } from "../api/auth.api";
+import { useToast } from "../../../context/ToastContext";
 
 export default function OtpScreen({ navigation, route }) {
   const { phone } = route.params;
@@ -19,6 +20,8 @@ export default function OtpScreen({ navigation, route }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
   const inputRefs = useRef([]);
+
+  const { showSuccess, showError } = useToast();
 
   const handleOtpChange = (value, index) => {
     // Only allow numbers
@@ -72,31 +75,33 @@ export default function OtpScreen({ navigation, route }) {
       const enteredOtp = otp.join("");
 
       if (enteredOtp.length !== 6) {
-        console.log("Please enter the 6 digit OTP");
+        showError("Please enter the 6 digit OTP");
         return;
       }
 
-      console.log("OTP:", enteredOtp);
-      console.log("Phone:", phone);
+      // console.log("OTP:", enteredOtp);
+      // console.log("Phone:", phone);
 
       const response = await verifyOtp({
         phone: phone,
         otp: enteredOtp,
       });
 
-      console.log("verifyOtp response:", response);
+      // console.log("verifyOtp response:", response);
 
       navigation.navigate("SetPassword", {
         userId: response.data.userId,
+        purpose: response.data.purpose,
       });
 
-      console.log("navigated to setpassword screen");
+      // console.log("navigated to setpassword screen");
 
     } catch (error) {
       console.log(
         "Verify OTP error:",
         error.response?.data?.message || error.message
       );
+      showError(error.response?.data?.message+" Something went wrong. Please try again.");
     }
   };
 
