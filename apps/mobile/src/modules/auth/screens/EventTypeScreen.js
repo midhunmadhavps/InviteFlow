@@ -58,11 +58,27 @@ const eventTypes = [
 
 const EventTypeScreen = ({ navigation }) => {
   const handleSelectEvent = (event) => {
-    navigation.navigate('EventDetails', {
-      eventType: event.id,
-      eventName: event.title,
-    });
-  };
+    switch (event.id) {
+      case 'wedding':
+        navigation.navigate('WeddingDetails');
+        break;
+
+      case 'anniversary':
+        navigation.navigate('AnniversaryDetails');
+        break;
+
+      case 'engagement':
+        navigation.navigate('EngagementDetails');
+        break;
+
+      case 'birthday':
+        navigation.navigate('BirthdayDetails');
+        break;
+
+      default:
+        console.log('Unknown event type:', event.id);
+    }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -186,17 +202,22 @@ const styles = StyleSheet.create({
   },
 
   eventContainer: {
-    width: (width - 64) / 2,
-    alignItems: 'center',
-    marginBottom: 30,
-  },
+  width: '33.333%',
+  alignItems: 'center',
+  marginBottom: 25,
+},
 
   iconCard: {
-    width: (width - 64) / 2,
-    height: (width - 64) / 2,
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
+  width: (width - 56) / 3,
+  height: (width - 56) / 3,
+  borderRadius: 18,
+  overflow: 'hidden',
+},
+
+  grid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+},
 
   icon: {
     width: '100%',
