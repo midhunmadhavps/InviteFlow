@@ -13,6 +13,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { registerUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
+import { validateName, validateEmail, validatePhone, } from "../../../utils/validation";
+import { RequiredLabel, Label } from "../../../components/RequiredLabel";
 
 export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState("");
@@ -24,16 +26,37 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     try {
-      if (!firstName || !lastName || !email || !phone) {
-        showError("Please fill all mandatory fields.");
+      
+      let errorMessage;
+      errorMessage = validateName(firstName, "first name");
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validateName(lastName, "last name");
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validateEmail(email);
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validatePhone(phone);
+      if (errorMessage) {
+        showError(errorMessage);
         return;
       }
 
       const response = await registerUser({
-        firstName,
-        lastName,
-        email,
-        phone
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
       });
 
       // console.log("Register response:", response);
@@ -82,7 +105,7 @@ export default function RegisterScreen({ navigation }) {
 
           {/* First Name */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>First Name</Text>
+            <RequiredLabel>First Name</RequiredLabel>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>◯</Text>
@@ -101,7 +124,7 @@ export default function RegisterScreen({ navigation }) {
 
           {/* Last Name */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Last Name</Text>
+            <Label>Last Name</Label>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>◯</Text>
@@ -120,7 +143,7 @@ export default function RegisterScreen({ navigation }) {
 
           {/* Email */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <RequiredLabel>Email</RequiredLabel>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>✉</Text>
@@ -140,7 +163,7 @@ export default function RegisterScreen({ navigation }) {
 
           {/* Phone */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone no</Text>
+            <RequiredLabel>Phone number</RequiredLabel>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>▯</Text>
@@ -235,13 +258,6 @@ const styles = StyleSheet.create({
   // Inputs
   inputContainer: {
     marginBottom: 13,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#555555",
-    marginBottom: 6,
   },
 
   inputWrapper: {

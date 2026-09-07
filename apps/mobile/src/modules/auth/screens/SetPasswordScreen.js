@@ -13,6 +13,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { setPasswordUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
+import { validateName, validatePassword } from "../../../utils/validation";
+
 
 export default function SetPasswordScreen({ navigation, route }) {
   const { userId } = route.params;
@@ -35,8 +37,22 @@ export default function SetPasswordScreen({ navigation, route }) {
         return;
       }
 
-      if (!password || !confirmPassword) {
-        showError("Please fill all mandatory fields");
+      let errorMessage;
+      errorMessage = validateName(password, "password");
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validateName(confirmPassword, "confirmPassword");
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validatePassword(password);
+      if (errorMessage) {
+        showError(errorMessage);
         return;
       }
 

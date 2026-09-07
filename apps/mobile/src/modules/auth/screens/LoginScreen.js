@@ -13,6 +13,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { loginUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
+import { validateEmail, validateRequired } from "../../../utils/validation";
+import { RequiredLabel } from "../../../components/RequiredLabel";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -24,8 +26,17 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     try {
-      if (!email || !password) {
-        showError("Please enter email and password.");
+      
+      let errorMessage;
+      errorMessage = validateEmail(email);
+      if (errorMessage) {
+        showError(errorMessage);
+        return;
+      }
+
+      errorMessage = validateRequired(password, "Password");
+      if (errorMessage) {
+        showError(errorMessage);
         return;
       }
 
@@ -34,12 +45,13 @@ export default function LoginScreen({ navigation }) {
       showSuccess("Login successful!");
       
     } catch (error) {
-      console.log(
-        "Login error:",
-        error.response?.data?.message || error.message
-      );
-      showError(error.response?.data?.message+" Something went wrong. Please try again.");
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Something went wrong. Please try again.";
 
+      console.log("Login error:", message);
+      showError(message);
     }
   };
 
@@ -74,7 +86,7 @@ export default function LoginScreen({ navigation }) {
 
           {/* Email */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <RequiredLabel>Email</RequiredLabel>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>✉</Text>
@@ -94,7 +106,7 @@ export default function LoginScreen({ navigation }) {
 
           {/* Password */}
           <View style={styles.passwordContainer}>
-            <Text style={styles.label}>Password</Text>
+            <RequiredLabel>Password</RequiredLabel>
 
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>◉</Text>
@@ -245,13 +257,6 @@ const styles = StyleSheet.create({
 
   passwordContainer: {
     marginBottom: 10,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#555555",
-    marginBottom: 6,
   },
 
   inputWrapper: {
