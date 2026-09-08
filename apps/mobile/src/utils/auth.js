@@ -1,8 +1,32 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TOKEN_KEY = "authToken";
+
+export const saveUser = async (user) => {
+  try {
+    await AsyncStorage.setItem("user", JSON.stringify(user));
+  } catch (error) {
+    console.log("Error saving user:", error);
+  }
+};
+
+export const getUser = async () => {
+  try {
+    const user = await AsyncStorage.getItem("user");
+
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.log("Error getting user:", error);
+    return null;
+  }
+};
+
+export const removeUser = async () => {
+  await AsyncStorage.removeItem("user");
+};
 
 export const saveToken = async (token) => {
   if (Platform.OS === "web") {

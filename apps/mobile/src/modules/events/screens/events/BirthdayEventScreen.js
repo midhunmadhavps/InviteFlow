@@ -19,7 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import api from "../../../../api/client";
 
-export default function BirthdayEventScreen({ navigation }) {
+export default function BirthdayEventScreen({ navigation,route }) {
+  const { eventTypeId } = route.params || {};
+  
   const [name, setName] = useState("");
   const [functionDate, setFunctionDate] = useState("");
   const [functionTime, setFunctionTime] = useState("");

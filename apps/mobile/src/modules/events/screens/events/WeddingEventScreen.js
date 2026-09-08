@@ -17,9 +17,12 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import api from "../../../../api/client";
+import { createEvent } from "../../api/event.api";
+import { getUser } from "../../../../utils/auth";
 
-export default function WeddingEventScreen({ navigation }) {
+export default function WeddingEventScreen({ navigation, route }) {
+  const { eventTypeId } = route.params || {};
+
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
 
@@ -29,7 +32,12 @@ export default function WeddingEventScreen({ navigation }) {
   const [description, setDescription] = useState("");
 
   const [weddingAddress, setWeddingAddress] = useState("");
-  const [weddingLocation, setWeddingLocation] = useState("");
+  const [weddingLocation, setWeddingLocation] = useState({
+    address: "",
+    latitude: null,
+    longitude: null,
+    googleMapsUrl: "",
+  });
 
   const [groomImage, setGroomImage] = useState(null);
   const [brideImage, setBrideImage] = useState(null);
@@ -184,11 +192,8 @@ export default function WeddingEventScreen({ navigation }) {
       return false;
     }
 
-    if (!weddingLocation.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter wedding location."
-      );
+    if (!weddingLocation.address.trim()) {
+      Alert.alert("Required", "Please enter engagement location.");
       return false;
     }
 
@@ -227,109 +232,71 @@ export default function WeddingEventScreen({ navigation }) {
       return;
     }
 
+    if (!eventTypeId) {
+      Alert.alert("Error", "Event type ID is missing.");
+      return;
+    }
+
     try {
       setSaving(true);
 
       const formData = new FormData();
 
+      formData.append("eventTypeId", String(eventTypeId));
       formData.append(
-        "eventType",
-        "Wedding"
+        "title",
+        `${groomName.trim()} & ${brideName.trim()} Engagement`
+      );
+      formData.append("hostOne", groomName.trim());
+      formData.append("hostTwo", brideName.trim());
+      formData.append("eventDate", weddingDate);
+      formData.append("eventTime", weddingTime);
+      formData.append("message", description.trim());
+      formData.append("address", weddingAddress.trim());
+      formData.append(
+        "location",
+        JSON.stringify({
+          address: weddingLocation.address.trim(),
+          latitude: weddingLocation.latitude,
+          longitude: weddingLocation.longitude,
+          googleMapsUrl: weddingLocation.googleMapsUrl,
+        })
       );
 
-      formData.append(
-        "groomName",
-        groomName.trim()
-      );
-
-      formData.append(
-        "brideName",
-        brideName.trim()
-      );
-
-      formData.append(
-        "weddingDate",
-        weddingDate
-      );
-
-      formData.append(
-        "weddingTime",
-        weddingTime
-      );
-
-      formData.append(
-        "description",
-        description.trim()
-      );
-
-      formData.append(
-        "weddingAddress",
-        weddingAddress.trim()
-      );
-
-      formData.append(
-        "weddingLocation",
-        weddingLocation.trim()
-      );
-
-      // Groom image
       if (groomImage) {
-        formData.append("groomImage", {
+        formData.append("hostOneImage", {
           uri: groomImage.uri,
-          name:
-            groomImage.fileName ||
-            "groom-image.jpg",
-          type:
-            groomImage.mimeType ||
-            "image/jpeg",
+          name: groomImage.fileName || "host-one.jpg",
+          type: groomImage.mimeType || "image/jpeg",
         });
       }
 
-      // Bride image
       if (brideImage) {
-        formData.append("brideImage", {
+        formData.append("hostTwoImage", {
           uri: brideImage.uri,
-          name:
-            brideImage.fileName ||
-            "bride-image.jpg",
-          type:
-            brideImage.mimeType ||
-            "image/jpeg",
+          name: brideImage.fileName || "host-two.jpg",
+          type: brideImage.mimeType || "image/jpeg",
         });
       }
 
-      // Invitation PDF
       if (invitation) {
         formData.append("invitation", {
           uri: invitation.uri,
-          name:
-            invitation.name ||
-            "invitation.pdf",
-          type:
-            invitation.mimeType ||
-            "application/pdf",
+          name: invitation.name || "engagement-invitation.pdf",
+          type: invitation.mimeType || "application/pdf",
         });
       }
 
       const response = await api.post(
         "/event/create",
-        formData,
-        {
-          headers: {
-            "Content-Type":
-              "multipart/form-data",
-          },
-        }
+        formData
       );
 
-      console.log(
-        "Wedding created:",
-        response.data
-      );
+      console.log("Engagement created:", response.data);
 
       Alert.alert(
         "Success",
-        "Wedding event created successfully.",
+        "Engagement event created successfully.",
         [
           {
             text: "Continue",
@@ -343,14 +310,14 @@ export default function WeddingEventScreen({ navigation }) {
       );
     } catch (error) {
       console.log(
-        "Create wedding error:",
+        "Create engagement error:",
         error.response?.data || error
       );
 
       Alert.alert(
         "Error",
         error.response?.data?.message ||
-          "Failed to create wedding event."
+          "Failed to create Engagement event."
       );
     } finally {
       setSaving(false);
@@ -565,10 +532,15 @@ export default function WeddingEventScreen({ navigation }) {
 
             <TextInput
               style={styles.locationTextInput}
-              placeholder="Enter wedding location"
+              placeholder="Enter engagement location"
               placeholderTextColor="#999"
-              value={weddingLocation}
-              onChangeText={setWeddingLocation}
+              value={weddingLocation.address}
+              onChangeText={(text) =>
+                setWeddingLocation((prev) => ({
+                  ...prev,
+                  address: text,
+                }))
+              }
             />
 
           </View>

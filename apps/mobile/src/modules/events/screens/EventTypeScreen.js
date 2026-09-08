@@ -95,19 +95,27 @@ const EventTypeScreen = ({ navigation }) => {
   const handleSelectEvent = (event) => {
     switch (event.name) {
       case 'Wedding':
-        navigation.navigate('WeddingEvent');
+        navigation.navigate('WeddingEvent', {
+          eventTypeId: event._id,
+        });
         break;
 
       case 'Anniversary':
-        navigation.navigate('AnniversaryEvent');
+        navigation.navigate('AnniversaryEvent', {
+          eventTypeId: event._id,
+        });
         break;
 
       case 'Engagement':
-        navigation.navigate('EngagementEvent');
+        navigation.navigate('EngagementEvent', {
+          eventTypeId: event._id,
+        });
         break;
 
       case 'Birthday':
-        navigation.navigate('BirthdayEvent');
+        navigation.navigate('BirthdayEvent', {
+          eventTypeId: event._id,
+        });
         break;
 
       default:

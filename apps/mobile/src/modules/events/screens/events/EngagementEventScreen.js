@@ -19,7 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import api from "../../../../api/client";
 
-export default function EngagementEventScreen({ navigation }) {
+export default function EngagementEventScreen({ navigation,route }) {
+  const { eventTypeId } = route.params || {};
+
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
 
@@ -28,7 +30,12 @@ export default function EngagementEventScreen({ navigation }) {
   const [weddingTime, setWeddingTime] = useState("");
 
   const [weddingAddress, setWeddingAddress] = useState("");
-  const [weddingLocation, setWeddingLocation] = useState("");
+  const [weddingLocation, setWeddingLocation] = useState({
+    address: "",
+    latitude: null,
+    longitude: null,
+    googleMapsUrl: "",
+  });
 
   const [groomImage, setGroomImage] = useState(null);
   const [brideImage, setBrideImage] = useState(null);
@@ -161,7 +168,7 @@ export default function EngagementEventScreen({ navigation }) {
       return false;
     }
 
-    if (!weddingLocation.trim()) {
+    if (!weddingLocation.address.trim()) {
       Alert.alert("Required", "Please enter engagement location.");
       return false;
     }
@@ -195,96 +202,68 @@ export default function EngagementEventScreen({ navigation }) {
       return;
     }
 
+    if (!eventTypeId) {
+      Alert.alert("Error", "Event type ID is missing.");
+      return;
+    }
+
     try {
       setSaving(true);
 
       const formData = new FormData();
 
-      formData.append("eventType", "Engagement");
-
+      formData.append("eventTypeId", String(eventTypeId));
       formData.append(
-        "groomName",
-        groomName.trim()
+        "title",
+        `${groomName.trim()} & ${brideName.trim()} Engagement`
+      );
+      formData.append("hostOne", groomName.trim());
+      formData.append("hostTwo", brideName.trim());
+      formData.append("eventDate", weddingDate);
+      formData.append("eventTime", weddingTime);
+      formData.append("message", description.trim());
+      formData.append("address", weddingAddress.trim());
+      formData.append(
+        "location",
+        JSON.stringify({
+          address: weddingLocation.address.trim(),
+          latitude: weddingLocation.latitude,
+          longitude: weddingLocation.longitude,
+          googleMapsUrl: weddingLocation.googleMapsUrl,
+        })
       );
 
-      formData.append(
-        "brideName",
-        brideName.trim()
-      );
-
-      formData.append(
-        "weddingDate",
-        weddingDate
-      );
-
-      formData.append(
-        "description",
-        description.trim()
-      );
-
-      formData.append(
-        "weddingTime",
-        weddingTime
-      );
-
-      formData.append(
-        "weddingAddress",
-        weddingAddress.trim()
-      );
-
-      formData.append(
-        "weddingLocation",
-        weddingLocation.trim()
-      );
-
-      // Groom image
       if (groomImage) {
-        formData.append("groomImage", {
+        formData.append("hostOneImage", {
           uri: groomImage.uri,
-          name:
-            groomImage.fileName ||
-            "groom-image.jpg",
-          type:
-            groomImage.mimeType ||
-            "image/jpeg",
+          name: groomImage.fileName || "host-one.jpg",
+          type: groomImage.mimeType || "image/jpeg",
         });
       }
 
-      // Bride image
       if (brideImage) {
-        formData.append("brideImage", {
+        formData.append("hostTwoImage", {
           uri: brideImage.uri,
-          name:
-            brideImage.fileName ||
-            "bride-image.jpg",
-          type:
-            brideImage.mimeType ||
-            "image/jpeg",
+          name: brideImage.fileName || "host-two.jpg",
+          type: brideImage.mimeType || "image/jpeg",
         });
       }
 
-      // Invitation PDF
       if (invitation) {
         formData.append("invitation", {
           uri: invitation.uri,
-          name:
-            invitation.name ||
-            "engagement-invitation.pdf",
-          type:
-            invitation.mimeType ||
-            "application/pdf",
+          name: invitation.name || "engagement-invitation.pdf",
+          type: invitation.mimeType || "application/pdf",
         });
       }
 
-      const response = await api.post(
-        "/event/create",
-        formData
-      );
+      // const response = await api.post(
+      //   "/event/create",
+      //   formData
+      // );
+      const response = await createEvent({formData});
 
-      console.log(
-        "Engagement created:",
-        response.data
-      );
+      console.log("Engagement created:", response.data);
 
       Alert.alert(
         "Success",
@@ -509,8 +488,13 @@ export default function EngagementEventScreen({ navigation }) {
               style={styles.locationTextInput}
               placeholder="Enter engagement location"
               placeholderTextColor="#999"
-              value={weddingLocation}
-              onChangeText={setWeddingLocation}
+              value={weddingLocation.address}
+              onChangeText={(text) =>
+                setWeddingLocation((prev) => ({
+                  ...prev,
+                  address: text,
+                }))
+              }
             />
           </View>
 

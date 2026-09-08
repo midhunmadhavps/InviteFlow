@@ -19,7 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import api from "../../../../api/client";
 
-export default function AnniversaryEventScreen({ navigation }) {
+export default function AnniversaryEventScreen({ navigation,route }) {
+  const { eventTypeId } = route.params || {};
+
   const [partnerOneName, setPartnerOneName] = useState("");
   const [partnerTwoName, setPartnerTwoName] = useState("");
 
