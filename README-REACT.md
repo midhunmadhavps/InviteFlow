@@ -74,6 +74,8 @@ mobile/src
     npx expo install react-dom react-native-web (for load react load on laptop)
     
     npx expo install expo-image-picker expo-document-picker
+    npx expo install expo-secure-store
+    npm install jwt-decode
     npm start 
     npx expo start
 

@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { saveToken } from "../../../utils/auth";
 import { StatusBar } from "expo-status-bar";
 import { loginUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
@@ -40,10 +41,17 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      const data = await loginUser(email.trim(), password);
-      console.log("Login successful:", data);
-      showSuccess("Login successful!");
-      navigation.replace("Main");
+      const response = await loginUser(email.trim(), password);
+
+      if (response.success) {
+        const token = response.data.token;
+        await saveToken(token);
+
+        console.log("Login successful:", response);
+        showSuccess("Login successful!");
+
+        navigation.replace("Main");
+      }
       
     } catch (error) {
       const message =

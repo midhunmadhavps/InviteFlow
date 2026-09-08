@@ -1,9 +1,10 @@
 import api from "../../../api/client";
 
-export const loginUser = async (email, password) => {
-  const response = await api.post("/auth/login", {
-    email,
-    password,
+export const eventTypes = async (token) => {
+  const response = await api.get("/event/event-types", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   return response.data;

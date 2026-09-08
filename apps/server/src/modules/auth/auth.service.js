@@ -168,9 +168,9 @@ exports.setpassword = async (data) => {
 };
 
 exports.login = async (data) => {
-  const { username, password } = data;
+  const { email, password } = data;
 
-  const user = await User.findOne({ username });
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new Error("user not registered.");
