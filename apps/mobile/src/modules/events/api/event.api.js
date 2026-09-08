@@ -1,11 +1,7 @@
 import api from "../../../api/client";
 
-export const eventTypes = async (token) => {
-  const response = await api.get("/event/event-types", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export const getEventTypes  = async () => {
+  const response = await api.get("/event/event-types");
 
   return response.data;
 };

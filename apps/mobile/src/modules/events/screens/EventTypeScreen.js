@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,83 +9,117 @@ import {
   SafeAreaView,
   Dimensions,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+
+import { getEventTypes } from '../api/event.api';
 
 const { width } = Dimensions.get('window');
 
-const eventType = [
-  {
-    id: 'wedding',
-    title: 'Wedding',
-    image: require('../../../../assets/images/wedding.png'),
-  },
-  {
-    id: 'anniversary',
-    title: 'Anniversary',
-    image: require('../../../../assets/images/anniversary.png'),
-  },
-  {
-    id: 'engagement',
-    title: 'Engagement',
-    image: require('../../../../assets/images/engagement.png'),
-  },
-  {
-    id: 'birthday',
-    title: 'Birthday',
-    image: require('../../../../assets/images/birthday.png'),
-  },
-  {
-    id: 'aaaa',
-    title: 'aaaa',
-    image: require('../../../../assets/images/birthday.png'),
-  },
-  {
-    id: 'bbbb',
-    title: 'bbbb',
-    image: require('../../../../assets/images/birthday.png'),
-  },
-  {
-    id: 'cccc',
-    title: 'cccc',
-    image: require('../../../../assets/images/birthday.png'),
-  },
-  {
-    id: 'dddd',
-    title: 'dddd',
-    image: require('../../../../assets/images/birthday.png'),
-  },
-];
-
 const EventTypeScreen = ({ navigation }) => {
+  const [eventTypes, setEventTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchEventTypes();
+  }, []);
+
+  const fetchEventTypes = async () => {
+    try {
+      setLoading(true);
+
+      const response = await getEventTypes();
+
+      console.log('Event Types Response:', response);
+
+      if(response.success) {
+
+        const allowedEvents = [
+          {
+            name: 'Wedding',
+            image: require('../../../../assets/images/wedding.png'),
+          },
+          {
+            name: 'Anniversary',
+            image: require('../../../../assets/images/anniversary.png'),
+          },
+          {
+            name: 'Engagement',
+            image: require('../../../../assets/images/engagement.png'),
+          },
+          {
+            name: 'Birthday',
+            image: require('../../../../assets/images/birthday.png'),
+          },
+        ]
+
+        const filteredEvents = response.data
+          .filter((event) =>
+            allowedEvents.some((allowed) => allowed.name === event.name)
+          )
+          .map((event) => {
+            const allowed = allowedEvents.find(
+              (item) => item.name === event.name
+            );
+
+            return {
+              ...event,
+              image: allowed.image,
+            };
+          });
+
+        setEventTypes(filteredEvents);
+
+      } else {
+        Alert.alert(
+          'Error',
+          response.message || 'Failed to load event types'
+        );
+      }
+    } catch (error) {
+      console.log(
+        'Event types error:',
+        error.response?.data || error.message
+      );
+
+      Alert.alert(
+        'Error',
+        'Unable to load event types'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelectEvent = (event) => {
-    switch (event.id) {
-      case 'wedding':
+    switch (event.name) {
+      case 'Wedding':
         navigation.navigate('WeddingEvent');
         break;
 
-      case 'anniversary':
+      case 'Anniversary':
         navigation.navigate('AnniversaryEvent');
         break;
 
-      case 'engagement':
+      case 'Engagement':
         navigation.navigate('EngagementEvent');
         break;
 
-      case 'birthday':
+      case 'Birthday':
         navigation.navigate('BirthdayEvent');
         break;
 
       default:
-        console.log('Unknown event type:', event.id);
+        console.log('No screen configured for:', event.name);
     }
-};
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
         source={require('../../../../assets/Vector1.png')}
         style={styles.background}
-        // resizeMode="cover"
         resizeMode="stretch"
       >
         <ScrollView
@@ -101,39 +135,64 @@ const EventTypeScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <Text style={styles.backArrow}>‹</Text>
-              <Text style={styles.backText}>Back</Text>
+
+              <Text style={styles.backText}>
+                Back
+              </Text>
             </TouchableOpacity>
 
             {/* Header */}
-            <Text style={styles.title}>Select Event Type</Text>
+            <Text style={styles.title}>
+              Select Event Type
+            </Text>
 
             <Text style={styles.subtitle}>
               Choose an event to get started
             </Text>
 
-            {/* Event Grid */}
-            <View style={styles.grid}>
-              {eventType.map((event) => (
-                <TouchableOpacity
-                  key={event.id}
-                  activeOpacity={0.8}
-                  style={styles.eventContainer}
-                  onPress={() => handleSelectEvent(event)}
-                >
-                  <View style={styles.iconCard}>
-                    <Image
-                      source={event.image}
-                      style={styles.icon}
-                      resizeMode="contain"
-                    />
-                  </View>
+            {/* Loading */}
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator
+                  size="large"
+                  color="#ff7f86"
+                />
 
-                  <Text style={styles.eventTitle}>
-                    {event.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                <Text style={styles.loadingText}>
+                  Loading event types...
+                </Text>
+              </View>
+            ) : eventTypes.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No event types available
+                </Text>
+              </View>
+            ) : (
+              /* Event Grid */
+              <View style={styles.grid}>
+                {eventTypes.map((event) => (
+                  <TouchableOpacity
+                    key={event._id}
+                    activeOpacity={0.8}
+                    style={styles.eventContainer}
+                    onPress={() => handleSelectEvent(event)}
+                  >
+                    <View style={styles.iconCard}>
+                      <Image
+                        source={event.image}
+                        style={styles.icon}
+                        resizeMode="contain"
+                      />
+                    </View>
+
+                    <Text style={styles.eventTitle}>
+                      {event.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
           </View>
         </ScrollView>
@@ -148,6 +207,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+
+  background: {
+    flex: 1,
   },
 
   scrollContent: {
@@ -198,40 +261,52 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
 
   eventContainer: {
-  width: '33.333%',
-  alignItems: 'center',
-  marginBottom: 25,
-},
+    width: '33.333%',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
 
   iconCard: {
-  width: (width - 56) / 3,
-  height: (width - 56) / 3,
-  borderRadius: 18,
-  overflow: 'hidden',
-},
-
-  grid: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-},
-
-  icon: {
-    width: '100%',
-    height: '100%',
+    width: (width - 56) / 3,
+    height: (width - 56) / 3,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   eventTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#263957',
     marginTop: 12,
     textAlign: 'center',
   },
-  background: {
-    flex: 1,
+
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+    color: '#7D8799',
+  },
+
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 60,
+  },
+
+  emptyText: {
+    fontSize: 16,
+    color: '#7D8799',
   },
 });
