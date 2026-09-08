@@ -33,8 +33,7 @@ const EventTypeScreen = ({ navigation }) => {
 
       console.log('Event Types Response:', response);
 
-      if(response.success) {
-
+      if (response.success) {
         const allowedEvents = [
           {
             name: 'Wedding',
@@ -52,11 +51,13 @@ const EventTypeScreen = ({ navigation }) => {
             name: 'Birthday',
             image: require('../../../../assets/images/birthday.png'),
           },
-        ]
+        ];
 
         const filteredEvents = response.data
           .filter((event) =>
-            allowedEvents.some((allowed) => allowed.name === event.name)
+            allowedEvents.some(
+              (allowed) => allowed.name === event.name
+            )
           )
           .map((event) => {
             const allowed = allowedEvents.find(
@@ -70,7 +71,6 @@ const EventTypeScreen = ({ navigation }) => {
           });
 
         setEventTypes(filteredEvents);
-
       } else {
         Alert.alert(
           'Error',
@@ -111,7 +111,10 @@ const EventTypeScreen = ({ navigation }) => {
         break;
 
       default:
-        console.log('No screen configured for:', event.name);
+        console.log(
+          'No screen configured for:',
+          event.name
+        );
     }
   };
 
@@ -142,13 +145,15 @@ const EventTypeScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             {/* Header */}
-            <Text style={styles.title}>
-              Select Event Type
-            </Text>
+            <View style={styles.headerContainer}>
+              <Text style={styles.title}>
+                Select Event Type
+              </Text>
 
-            <Text style={styles.subtitle}>
-              Choose an event to get started
-            </Text>
+              <Text style={styles.subtitle}>
+                Choose an event to get started
+              </Text>
+            </View>
 
             {/* Loading */}
             {loading ? (
@@ -169,26 +174,34 @@ const EventTypeScreen = ({ navigation }) => {
                 </Text>
               </View>
             ) : (
-              /* Event Grid */
               <View style={styles.grid}>
                 {eventTypes.map((event) => (
                   <TouchableOpacity
                     key={event._id}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     style={styles.eventContainer}
                     onPress={() => handleSelectEvent(event)}
                   >
+
+                    {/* Shadow Card */}
                     <View style={styles.iconCard}>
-                      <Image
-                        source={event.image}
-                        style={styles.icon}
-                        resizeMode="contain"
-                      />
+
+                      {/* Image Holder */}
+                      <View style={styles.imageContainer}>
+                        <Image
+                          source={event.image}
+                          style={styles.icon}
+                          resizeMode="cover"
+                        />
+                      </View>
+
                     </View>
 
+                    {/* Event Name */}
                     <Text style={styles.eventTitle}>
                       {event.name}
                     </Text>
+
                   </TouchableOpacity>
                 ))}
               </View>
@@ -215,32 +228,46 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 30,
+    paddingBottom: 40,
   },
 
   content: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 18,
   },
+
+  /* ---------------- BACK ---------------- */
 
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    height: 40,
     marginBottom: 20,
   },
 
   backArrow: {
-    fontSize: 36,
-    lineHeight: 36,
+    fontSize: 28,
+    fontWeight: '400',
     color: '#263957',
-    marginRight: 6,
+    marginRight: 2,
+    includeFontPadding: false,   // Android: strips extra glyph padding that causes drift
+    textAlignVertical: 'center', // Android
+    lineHeight: 28,              // match fontSize so it centers vertically against sibling text
   },
 
   backText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#263957',
+    lineHeight: 28,               // same lineHeight as arrow keeps both perfectly on one baseline
+  },
+
+  /* ---------------- HEADER ---------------- */
+
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 38,
   },
 
   title: {
@@ -255,37 +282,76 @@ const styles = StyleSheet.create({
     color: '#7D8799',
     textAlign: 'center',
     marginTop: 8,
-    marginBottom: 32,
   },
+
+  /* ---------------- GRID ---------------- */
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
   },
 
   eventContainer: {
-    width: '33.333%',
+    width: '30%',
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 30,
   },
 
+  /* ---------------- OUTER CARD ---------------- */
+
   iconCard: {
-    width: (width - 56) / 3,
-    height: (width - 56) / 3,
-    borderRadius: 18,
-    overflow: 'hidden',
+    width: 82,
+    height: 82,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+
+    // Android shadow
+    elevation: 5,
   },
 
+  /* ---------------- IMAGE ---------------- */
+
+  imageContainer: {
+    width: 74,
+    height: 74,
+    borderRadius: 16,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 8,     
+  },  
+
+  icon: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12
+  },
+
+  /* ---------------- EVENT NAME ---------------- */
+
   eventTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#263957',
-    marginTop: 12,
+    marginTop: 10,
     textAlign: 'center',
   },
+
+  /* ---------------- LOADING ---------------- */
 
   loadingContainer: {
     alignItems: 'center',
@@ -298,6 +364,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#7D8799',
   },
+
+  /* ---------------- EMPTY ---------------- */
 
   emptyContainer: {
     alignItems: 'center',
