@@ -191,7 +191,7 @@ const EventTypeScreen = ({ navigation }) => {
                         <Image
                           source={event.image}
                           style={styles.icon}
-                          resizeMode="cover"
+                          resizeMode="stretch"
                         />
                       </View>
 
@@ -313,32 +313,29 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
 
     // Android shadow
-    elevation: 5,
+    elevation: 8,
   },
 
   /* ---------------- IMAGE ---------------- */
 
   imageContainer: {
-    width: 74,
-    height: 74,
-    borderRadius: 16,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 8,     
+    width: 82,
+  height: 82,
+  borderRadius: 20,
+  overflow: 'hidden',
+  backgroundColor: '#FFFFFF',
   },  
 
   icon: {
     width: '100%',
     height: '100%',
-    borderRadius: 12
+    // borderRadius: 12
   },
 
   /* ---------------- EVENT NAME ---------------- */
