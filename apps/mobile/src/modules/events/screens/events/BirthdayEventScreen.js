@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 
-export default function RegisterScreen() {
+export default function BirthdayEventScreen() {
   return (
     <View
       style={{
@@ -10,7 +10,7 @@ export default function RegisterScreen() {
         alignItems: "center",
       }}
     >
-      <Text>ResetPasswordScreen</Text>
+      <Text>Birthday Event Screen</Text>
     </View>
   );
 }

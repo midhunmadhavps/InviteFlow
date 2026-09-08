@@ -1,10 +1,10 @@
-import AppNavigator from "./src/navigation/AppNavigator";
+import AuthNavigator from "./src/navigation/AuthNavigator";
 import { ToastProvider } from "./src/context/ToastContext";
 
 export default function App() {
   return (
     <ToastProvider>
-      <AppNavigator />
+      <AuthNavigator />
     </ToastProvider>
   );
 }

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-const events = [
+const UpComingevents = [
   {
     id: "1",
     title: "Birthday Party",
@@ -98,7 +98,11 @@ export default function MainScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate("EventTypes")}
+          onPress={() =>
+            navigation.navigate("Events", {
+              screen: "EventTypes",
+            })
+          }
         >
           <View style={styles.actionIcon}>
             <Ionicons
@@ -115,7 +119,11 @@ export default function MainScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate("MyEvents")}
+          onPress={() =>
+            navigation.navigate("Events", {
+              screen: "MyEvents",
+            })
+          }
         >
           <View style={styles.actionIcon}>
             <Ionicons
@@ -140,7 +148,7 @@ export default function MainScreen({ navigation }) {
         </Text>
 
         <FlatList
-          data={events}
+          data={UpComingevents}
           keyExtractor={(item) => item.id}
           renderItem={renderEvent}
           showsVerticalScrollIndicator={false}

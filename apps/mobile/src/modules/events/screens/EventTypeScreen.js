@@ -13,7 +13,7 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const eventTypes = [
+const eventType = [
   {
     id: 'wedding',
     title: 'Wedding',
@@ -60,19 +60,19 @@ const EventTypeScreen = ({ navigation }) => {
   const handleSelectEvent = (event) => {
     switch (event.id) {
       case 'wedding':
-        navigation.navigate('WeddingDetails');
+        navigation.navigate('WeddingEvent');
         break;
 
       case 'anniversary':
-        navigation.navigate('AnniversaryDetails');
+        navigation.navigate('AnniversaryEvent');
         break;
 
       case 'engagement':
-        navigation.navigate('EngagementDetails');
+        navigation.navigate('EngagementEvent');
         break;
 
       case 'birthday':
-        navigation.navigate('BirthdayDetails');
+        navigation.navigate('BirthdayEvent');
         break;
 
       default:
@@ -113,7 +113,7 @@ const EventTypeScreen = ({ navigation }) => {
 
             {/* Event Grid */}
             <View style={styles.grid}>
-              {eventTypes.map((event) => (
+              {eventType.map((event) => (
                 <TouchableOpacity
                   key={event.id}
                   activeOpacity={0.8}
