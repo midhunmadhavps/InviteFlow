@@ -76,6 +76,7 @@ mobile/src
     npx expo install expo-image-picker expo-document-picker
     npx expo install expo-secure-store
     npm install jwt-decode
+    npx expo install @react-native-community/datetimepicker
     npm start 
     npx expo start
 
