@@ -193,7 +193,7 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     if (!weddingLocation.address.trim()) {
-      Alert.alert("Required", "Please enter engagement location.");
+      Alert.alert("Required", "Please enter wedding location.");
       return false;
     }
 
@@ -240,12 +240,14 @@ export default function WeddingEventScreen({ navigation, route }) {
     try {
       setSaving(true);
 
+      const user = await getUser();
       const formData = new FormData();
 
+      formData.append("userId", String(user.id));
       formData.append("eventTypeId", String(eventTypeId));
       formData.append(
         "title",
-        `${groomName.trim()} & ${brideName.trim()} Engagement`
+        `${groomName.trim()} & ${brideName.trim()} Wedding`
       );
       formData.append("hostOne", groomName.trim());
       formData.append("hostTwo", brideName.trim());
@@ -282,7 +284,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       if (invitation) {
         formData.append("invitation", {
           uri: invitation.uri,
-          name: invitation.name || "engagement-invitation.pdf",
+          name: invitation.name || "wedding-invitation.pdf",
           type: invitation.mimeType || "application/pdf",
         });
       }
@@ -292,11 +294,11 @@ export default function WeddingEventScreen({ navigation, route }) {
         formData
       );
 
-      console.log("Engagement created:", response.data);
+      console.log("wedding created:", response.data);
 
       Alert.alert(
         "Success",
-        "Engagement event created successfully.",
+        "wedding event created successfully.",
         [
           {
             text: "Continue",
@@ -310,14 +312,14 @@ export default function WeddingEventScreen({ navigation, route }) {
       );
     } catch (error) {
       console.log(
-        "Create engagement error:",
+        "Create wedding error:",
         error.response?.data || error
       );
 
       Alert.alert(
         "Error",
         error.response?.data?.message ||
-          "Failed to create Engagement event."
+          "Failed to create wedding event."
       );
     } finally {
       setSaving(false);
@@ -435,6 +437,19 @@ export default function WeddingEventScreen({ navigation, route }) {
             />
           )}
 
+          {showDatePicker && Platform.OS !== "web" && (
+  <DateTimePicker
+    value={new Date()}
+    mode="date"
+    display={
+      Platform.OS === "ios"
+        ? "spinner"
+        : "default"
+    }
+    onChange={handleDateChange}
+  />
+)}
+
           {/* Description */}
           <Text style={styles.label}>
             Description *
@@ -532,7 +547,7 @@ export default function WeddingEventScreen({ navigation, route }) {
 
             <TextInput
               style={styles.locationTextInput}
-              placeholder="Enter engagement location"
+              placeholder="Enter wedding location"
               placeholderTextColor="#999"
               value={weddingLocation.address}
               onChangeText={(text) =>
