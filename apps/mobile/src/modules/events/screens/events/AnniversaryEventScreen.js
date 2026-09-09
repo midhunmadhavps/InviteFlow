@@ -187,19 +187,25 @@ export default function AnniversaryEventScreen({
     }
 
     let errorMessage;
-    errorMessage = validateDate(anniversaryDate);
+    errorMessage = validateDate(anniversaryDate,"Anniversary Date");
     if (errorMessage) {
       showError(errorMessage);
       return;
     }
 
-    errorMessage = validateTime(anniversaryTime);
+    errorMessage = validateTime(anniversaryTime,"Anniversary Time");
     if (errorMessage) {
       showError(errorMessage);
       return;
     }
 
-    errorMessage = validateLocation(anniversaryLocation);
+    errorMessage = validateLocation(anniversaryLocation,"Anniversary Location");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
+    }
+
+    errorMessage = validateRequired(anniversaryAddress,"Anniversary Address");
     if (errorMessage) {
       showError(errorMessage);
       return;

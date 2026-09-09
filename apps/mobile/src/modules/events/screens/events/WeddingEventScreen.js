@@ -171,25 +171,25 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     let errorMessage;
-    errorMessage = validateDate(weddingDate);
+    errorMessage = validateDate(weddingDate,"Wedding Date");
     if (errorMessage) {
       showError(errorMessage);
       return;
     }
 
-    errorMessage = validateTime(weddingTime);
+    errorMessage = validateTime(weddingTime, "Wedding Time");
     if (errorMessage) {
       showError(errorMessage);
       return;
     }
 
-    errorMessage = validateLocation(weddingLocation);
+    errorMessage = validateLocation(weddingLocation,"Wedding Location");
     if (errorMessage) {
       showError(errorMessage);
       return;
     }
 
-    errorMessage = validateRequired(weddingLocation);
+    errorMessage = validateRequired(weddingLocation,"Wedding Address");
     if (errorMessage) {
       showError(errorMessage);
       return;

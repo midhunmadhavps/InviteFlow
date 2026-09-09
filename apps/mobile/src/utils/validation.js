@@ -85,7 +85,7 @@ export const validatePassword = (password) => {
   return null;
 };
 
-export const validateLocation = (location, fieldName = "location") => {
+export const validateLocation = (location, fieldName) => {
   if (!location) {
     return `Please select your ${fieldName}.`;
   }
@@ -104,7 +104,7 @@ export const validateLocation = (location, fieldName = "location") => {
   return null;
 };
 
-export const validateDate = (date, fieldName = "date") => {
+export const validateDate = (date, fieldName) => {
   if (!date || !date.trim()) {
     return `Please select your ${fieldName}.`;
   }
@@ -118,7 +118,7 @@ export const validateDate = (date, fieldName = "date") => {
   return null;
 };
 
-export const validateTime = (time, fieldName = "time") => {
+export const validateTime = (time, fieldName) => {
   if (!time || !time.trim()) {
     return `Please select your ${fieldName}.`;
   }
