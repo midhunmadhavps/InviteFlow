@@ -33,14 +33,10 @@ export default function WeddingEventScreen({ navigation, route }) {
 
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
-
   const [weddingDate, setWeddingDate] = useState("");
   const [weddingTime, setWeddingTime] = useState("");
-
   const [description, setDescription] = useState("");
-
   const [weddingAddress, setWeddingAddress] = useState("");
-
   const [weddingLocation, setWeddingLocation] = useState({
     address: "",
     latitude: null,
@@ -50,13 +46,19 @@ export default function WeddingEventScreen({ navigation, route }) {
 
   const [groomImage, setGroomImage] = useState(null);
   const [brideImage, setBrideImage] = useState(null);
-
   const [invitation, setInvitation] = useState(null);
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
   const [saving, setSaving] = useState(false);
+
+  const uriToFile = async (uri, name, type) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new File([blob], name, {
+      type: type || blob.type,
+    });
+  };
 
   const pickImage = async (type) => {
     const permission =
@@ -71,12 +73,12 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     const result =
-      await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+    await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
 
     if (!result.canceled) {
       const image = result.assets[0];
@@ -152,15 +154,6 @@ export default function WeddingEventScreen({ navigation, route }) {
   // const validateForm = () => {
   //   return true;
   // };
-
-  const uriToFile = async (uri, name, type) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
-    return new File([blob], name, {
-      type: type || blob.type,
-    });
-  };
 
   const saveEvent = async () => {
     // if (!validateForm()) {
@@ -275,13 +268,9 @@ export default function WeddingEventScreen({ navigation, route }) {
       //   console.log("FORMDATA:", key, value);
       // }
 
-      const response =
-        await createEvent(formData);
+      const response = await createEvent(formData);
 
-      console.log(
-        "Wedding created:",
-        response.data
-      );
+      console.log("Wedding created:",response.data);
 
       if (Platform.OS === "web") {
         window.alert("Success\n\nWedding event created successfully.");

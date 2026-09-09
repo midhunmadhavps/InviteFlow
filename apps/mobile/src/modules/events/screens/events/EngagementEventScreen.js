@@ -17,18 +17,25 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import api from "../../../../api/client";
+import { createEvent } from "../../api/event.api";
+import { getUser } from "../../../../utils/auth";
 
 export default function EngagementEventScreen({ navigation,route }) {
   const { eventTypeId } = route.params || {};
 
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
-
-  const [weddingDate, setWeddingDate] = useState("");
+  const [engagementDate, setEngagementDate] = useState("");
   const [description, setDescription] = useState("");
-  const [weddingTime, setWeddingTime] = useState("");
-
+  const [engagementTime, setEngagementTime] = useState("");
   const [weddingAddress, setWeddingAddress] = useState("");
   const [weddingLocation, setWeddingLocation] = useState({
     address: "",
@@ -39,29 +46,31 @@ export default function EngagementEventScreen({ navigation,route }) {
 
   const [groomImage, setGroomImage] = useState(null);
   const [brideImage, setBrideImage] = useState(null);
-
   const [invitation, setInvitation] = useState(null);
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
-  // =========================
-  // Pick Groom / Bride Image
-  // =========================
+  const uriToFile = async (uri, name, type) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new File([blob], name, {
+      type: type || blob.type,
+    });
+  };
+
   const pickImage = async (type) => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
+      showAlert(
         "Permission Required",
         "Please allow photo library access."
       );
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
@@ -80,212 +89,190 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
   };
 
-  // =========================
-  // Pick Invitation PDF
-  // =========================
   const pickInvitation = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-    });
+    const result =
+      await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "image/*",
+        ],
+        copyToCacheDirectory: true,
+      });
 
     if (!result.canceled) {
       setInvitation(result.assets[0]);
     }
   };
 
-  // =========================
-  // Date Picker
-  // =========================
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
 
     if (selectedDate) {
       const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
 
-      const month = String(
-        selectedDate.getMonth() + 1
-      ).padStart(2, "0");
-
-      const day = String(
-        selectedDate.getDate()
-      ).padStart(2, "0");
-
-      setWeddingDate(`${year}-${month}-${day}`);
+      setEngagementDate(`${year}-${month}-${day}`);
     }
   };
 
-  // =========================
-  // Time Picker
-  // =========================
   const handleTimeChange = (event, selectedTime) => {
     setShowTimePicker(false);
 
     if (selectedTime) {
-      const hours = String(
-        selectedTime.getHours()
-      ).padStart(2, "0");
+      const hours = String(selectedTime.getHours()).padStart(2, "0");
+      const minutes = String(selectedTime.getMinutes()).padStart(2, "0");
 
-      const minutes = String(
-        selectedTime.getMinutes()
-      ).padStart(2, "0");
-
-      setWeddingTime(`${hours}:${minutes}`);
+      setEngagementTime(`${hours}:${minutes}`);
     }
   };
 
-  // =========================
-  // Validation
-  // =========================
-  const validateForm = () => {
-    if (!groomName.trim()) {
-      Alert.alert("Required", "Please enter groom name.");
-      return false;
-    }
+  // const validateForm = () => {
+  //   return true;
+  // };
 
-    if (!brideName.trim()) {
-      Alert.alert("Required", "Please enter bride name.");
-      return false;
-    }
-
-    if (!weddingDate) {
-      Alert.alert("Required", "Please select engagement date.");
-      return false;
-    }
-
-    if (!description.trim()) {
-      Alert.alert("Required", "Please enter engagement description.");
-      return false;
-    }
-
-    if (!weddingTime) {
-      Alert.alert("Required", "Please select engagement time.");
-      return false;
-    }
-
-    if (!weddingAddress.trim()) {
-      Alert.alert("Required", "Please enter engagement address.");
-      return false;
-    }
-
-    if (!weddingLocation.address.trim()) {
-      Alert.alert("Required", "Please enter engagement location.");
-      return false;
-    }
-
-    if (!groomImage) {
-      Alert.alert("Required", "Please select groom image.");
-      return false;
-    }
-
-    if (!brideImage) {
-      Alert.alert("Required", "Please select bride image.");
-      return false;
-    }
-
-    if (!invitation) {
-      Alert.alert(
-        "Required",
-        "Please select invitation PDF."
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  // =========================
-  // Save Event API
-  // =========================
   const saveEvent = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    // if (!validateForm()) {
+    //   return;
+    // }
 
     if (!eventTypeId) {
-      Alert.alert("Error", "Event type ID is missing.");
+      showAlert("Error", "Event type ID is missing.");
       return;
     }
 
     try {
       setSaving(true);
 
+      if (!user?.id) {
+        showAlert(
+          "Error",
+          "User information not found."
+        );
+        return;
+      }
+
       const formData = new FormData();
 
+      formData.append("userId", String(user.id));
       formData.append("eventTypeId", String(eventTypeId));
-      formData.append(
-        "title",
-        `${groomName.trim()} & ${brideName.trim()} Engagement`
-      );
+      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Wedding`);
       formData.append("hostOne", groomName.trim());
       formData.append("hostTwo", brideName.trim());
-      formData.append("eventDate", weddingDate);
-      formData.append("eventTime", weddingTime);
+      formData.append("eventDate", engagementDate);
+      formData.append("eventTime", engagementTime);
       formData.append("message", description.trim());
       formData.append("address", weddingAddress.trim());
+
       formData.append(
         "location",
         JSON.stringify({
-          address: weddingLocation.address.trim(),
-          latitude: weddingLocation.latitude,
-          longitude: weddingLocation.longitude,
-          googleMapsUrl: weddingLocation.googleMapsUrl,
+          address:
+            weddingLocation.address.trim(),
+          latitude:
+            weddingLocation.latitude,
+          longitude:
+            weddingLocation.longitude,
+          googleMapsUrl:
+            weddingLocation.googleMapsUrl,
         })
       );
 
+      formData.append("isPublished", "false");
+      formData.append("status", "Draft");
+      
       if (groomImage) {
-        formData.append("hostOneImage", {
-          uri: groomImage.uri,
-          name: groomImage.fileName || "host-one.jpg",
-          type: groomImage.mimeType || "image/jpeg",
-        });
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            groomImage.uri,
+            groomImage.fileName || "host-one.jpg",
+            groomImage.mimeType || "image/jpeg"
+          );
+
+          formData.append("hostOneImage", file);
+        } else {
+          formData.append("hostOneImage", {
+            uri: groomImage.uri,
+            name: groomImage.fileName || "host-one.jpg",
+            type: groomImage.mimeType || "image/jpeg",
+          });
+        }
       }
 
       if (brideImage) {
-        formData.append("hostTwoImage", {
-          uri: brideImage.uri,
-          name: brideImage.fileName || "host-two.jpg",
-          type: brideImage.mimeType || "image/jpeg",
-        });
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            brideImage.uri,
+            brideImage.fileName || "host-two.jpg",
+            brideImage.mimeType || "image/jpeg"
+          );
+
+          formData.append("hostTwoImage", file);
+        } else {
+          formData.append("hostTwoImage", {
+            uri: brideImage.uri,
+            name: brideImage.fileName || "host-two.jpg",
+            type: brideImage.mimeType || "image/jpeg",
+          });
+        }
       }
 
       if (invitation) {
-        formData.append("invitation", {
-          uri: invitation.uri,
-          name: invitation.name || "engagement-invitation.pdf",
-          type: invitation.mimeType || "application/pdf",
-        });
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            invitation.uri,
+            invitation.name || "wedding-invitation",
+            invitation.mimeType || "application/pdf"
+          );
+
+          formData.append("invitation", file);
+        } else {
+          formData.append("invitation", {
+            uri: invitation.uri,
+            name: invitation.name || "wedding-invitation",
+            type: invitation.mimeType || "application/pdf",
+          });
+        }
       }
 
-      // const response = await api.post(
-      //   "/event/create",
-      //   formData
-      // );
+      // for (const [key, value] of formData.entries()) {
+      //   console.log("FORMDATA:", key, value);
+      // }
+
       const response = await createEvent({formData});
 
       console.log("Engagement created:", response.data);
 
-      Alert.alert(
-        "Success",
-        "Engagement event created successfully.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              navigation.navigate("Reminder", {
-                event: response.data.data,
-              });
+      if (Platform.OS === "web") {
+        window.alert("Success\n\Engagement event created successfully.");
+
+        navigation.navigate("Main", {
+          event: response.data.data,
+        });
+      } else {
+        Alert.alert(
+          "Success",
+          "Engagement event created successfully.",
+          [
+            {
+              text: "Continue",
+              onPress: () => {
+                navigation.navigate("Main", {
+                  event: response.data.data,
+                });
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+
     } catch (error) {
       console.log(
         "Create engagement error:",
         error.response?.data || error
       );
 
-      Alert.alert(
+      showAlert(
         "Error",
         error.response?.data?.message ||
           "Failed to create Engagement event."
@@ -359,39 +346,64 @@ export default function EngagementEventScreen({ navigation,route }) {
             Engagement Date *
           </Text>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                weddingDate
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {weddingDate ||
-                "Select engagement date"}
-            </Text>
+              <input
+                type="date"
+                value={engagementDate}
+                onChange={(e) =>
+                  setEngagementDate(e.target.value)
+                }
+                style={styles.webInput}
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowDatePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    engagementDate
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {engagementDate ||
+                    "Select engagement date"}
+                </Text>
 
-            <Ionicons
-              name="calendar-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="calendar-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="date"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleDateChange}
-            />
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    engagementDate
+                      ? new Date(`${engagementDate}T00:00:00`)
+                      : new Date()
+                  }
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={handleDateChange}
+                />
+              )}
+            </>
           )}
 
           {/* Description */}
@@ -418,39 +430,67 @@ export default function EngagementEventScreen({ navigation,route }) {
             Engagement Time *
           </Text>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                weddingTime
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {weddingTime ||
-                "Select engagement time"}
-            </Text>
+              <input
+                type="time"
+                value={engagementTime}
+                onChange={(e) =>
+                  setEngagementTime(e.target.value)
+                }
+                style={styles.webInput}
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowTimePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    weddingTime
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {engagementTime ||
+                    "Select engagement  time"}
+                </Text>
 
-            <Ionicons
-              name="time-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="time-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showTimePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="time"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleTimeChange}
-            />
+              {showTimePicker && (
+                <DateTimePicker
+                  value={new Date()}
+                  mode="time"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleTimeChange
+                  }
+                />
+              )}
+            </>
           )}
 
           {/* Engagement Address */}
