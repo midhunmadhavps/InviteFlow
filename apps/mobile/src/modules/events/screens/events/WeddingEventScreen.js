@@ -23,6 +23,14 @@ import { getUser } from "../../../../utils/auth";
 export default function WeddingEventScreen({ navigation, route }) {
   const { eventTypeId } = route.params || {};
 
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
 
@@ -55,7 +63,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
+      showAlert(
         "Permission Required",
         "Please allow photo library access."
       );
@@ -145,14 +153,22 @@ export default function WeddingEventScreen({ navigation, route }) {
   //   return true;
   // };
 
+  const uriToFile = async (uri, name, type) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new File([blob], name, {
+      type: type || blob.type,
+    });
+  };
+
   const saveEvent = async () => {
     // if (!validateForm()) {
     //   return;
     // }
 
-    console.log("1111111");
     if (!eventTypeId) {
-      Alert.alert(
+      showAlert(
         "Error",
         "Event type ID is missing."
       );
@@ -162,66 +178,27 @@ export default function WeddingEventScreen({ navigation, route }) {
     try {
       setSaving(true);
 
-      console.log("2222222");
-
       const user = await getUser();
-      console.log("333333");
 
       if (!user?.id) {
-        Alert.alert(
+        showAlert(
           "Error",
           "User information not found."
         );
         return;
       }
-    console.log("444444");
 
       const formData = new FormData();
 
-      formData.append(
-        "userId",
-        String(user.id)
-      );
-
-      formData.append(
-        "eventTypeId",
-        String(eventTypeId)
-      );
-
-      formData.append(
-        "title",
-        `${groomName.trim()} & ${brideName.trim()} Wedding`
-      );
-
-      formData.append(
-        "hostOne",
-        groomName.trim()
-      );
-
-      formData.append(
-        "hostTwo",
-        brideName.trim()
-      );
-
-      formData.append(
-        "eventDate",
-        weddingDate
-      );
-
-      formData.append(
-        "eventTime",
-        weddingTime
-      );
-
-      formData.append(
-        "message",
-        description.trim()
-      );
-
-      formData.append(
-        "address",
-        weddingAddress.trim()
-      );
+      formData.append("userId", String(user.id));
+      formData.append("eventTypeId", String(eventTypeId));
+      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Wedding`);
+      formData.append("hostOne", groomName.trim());
+      formData.append("hostTwo", brideName.trim());
+      formData.append("eventDate", weddingDate);
+      formData.append("eventTime", weddingTime);
+      formData.append("message", description.trim());
+      formData.append("address", weddingAddress.trim());
 
       formData.append(
         "location",
@@ -237,51 +214,66 @@ export default function WeddingEventScreen({ navigation, route }) {
         })
       );
 
+      formData.append("isPublished", "false");
+      formData.append("status", "Draft");
+      
       if (groomImage) {
-        formData.append(
-          "hostOneImage",
-          {
-            uri: groomImage.uri,
-            name:
-              groomImage.fileName ||
-              "host-one.jpg",
-            type:
-              groomImage.mimeType ||
-              "image/jpeg",
-          }
-        );
+  if (Platform.OS === "web") {
+    const file = await uriToFile(
+      groomImage.uri,
+      groomImage.fileName || "host-one.jpg",
+      groomImage.mimeType || "image/jpeg"
+    );
+
+    formData.append("hostOneImage", file);
+  } else {
+    formData.append("hostOneImage", {
+      uri: groomImage.uri,
+      name: groomImage.fileName || "host-one.jpg",
+      type: groomImage.mimeType || "image/jpeg",
+    });
+  }
       }
 
       if (brideImage) {
-        formData.append(
-          "hostTwoImage",
-          {
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            brideImage.uri,
+            brideImage.fileName || "host-two.jpg",
+            brideImage.mimeType || "image/jpeg"
+          );
+
+          formData.append("hostTwoImage", file);
+        } else {
+          formData.append("hostTwoImage", {
             uri: brideImage.uri,
-            name:
-              brideImage.fileName ||
-              "host-two.jpg",
-            type:
-              brideImage.mimeType ||
-              "image/jpeg",
-          }
-        );
+            name: brideImage.fileName || "host-two.jpg",
+            type: brideImage.mimeType || "image/jpeg",
+          });
+        }
       }
 
       if (invitation) {
-        formData.append(
-          "invitation",
-          {
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            invitation.uri,
+            invitation.name || "wedding-invitation",
+            invitation.mimeType || "application/pdf"
+          );
+
+          formData.append("invitation", file);
+        } else {
+          formData.append("invitation", {
             uri: invitation.uri,
-            name:
-              invitation.name ||
-              "wedding-invitation",
-            type:
-              invitation.mimeType ||
-              "application/pdf",
-          }
-        );
+            name: invitation.name || "wedding-invitation",
+            type: invitation.mimeType || "application/pdf",
+          });
+        }
       }
-    console.log("55555");
+
+      // for (const [key, value] of formData.entries()) {
+      //   console.log("FORMDATA:", key, value);
+      // }
 
       const response =
         await createEvent(formData);
@@ -291,24 +283,29 @@ export default function WeddingEventScreen({ navigation, route }) {
         response.data
       );
 
-      Alert.alert(
-        "Success",
-        "Wedding event created successfully.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              navigation.navigate(
-                "Reminder",
-                {
-                  event:
-                    response.data.data,
-                }
-              );
+      if (Platform.OS === "web") {
+        window.alert("Success\n\nWedding event created successfully.");
+
+        navigation.navigate("Main", {
+          event: response.data.data,
+        });
+      } else {
+        Alert.alert(
+          "Success",
+          "Wedding event created successfully.",
+          [
+            {
+              text: "Continue",
+              onPress: () => {
+                navigation.navigate("Main", {
+                  event: response.data.data,
+                });
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+      
     } catch (error) {
       console.log(
         "Create wedding error:",
@@ -316,7 +313,7 @@ export default function WeddingEventScreen({ navigation, route }) {
           error
       );
 
-      Alert.alert(
+      showAlert(
         "Error",
         error.response?.data?.message ||
           "Failed to create wedding event."

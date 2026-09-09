@@ -3,6 +3,9 @@ const eventService = require("./event.service");
 createEvent = async (req, res) => {
 
     try {
+        console.log("REQ BODY:", req.body);
+        console.log("REQ FILES:", req.files);
+
         const result = await eventService.createEvent(req.body);
 
         return res.status(201).json({
