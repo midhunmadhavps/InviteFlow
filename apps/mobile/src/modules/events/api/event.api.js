@@ -9,3 +9,8 @@ export const getEventTypes  = async () => {
 export const createEvent = async (formData) => {
   return await api.post("/event/create-event", formData);
 };
+
+export const getMyEvents = async (userId) => {
+  const response = await api.get(`/event/events-list/${userId}`);
+  return response.data;
+};

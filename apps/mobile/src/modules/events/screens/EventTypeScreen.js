@@ -147,9 +147,9 @@ const EventTypeScreen = ({ navigation }) => {
             >
               <Text style={styles.backArrow}>‹</Text>
 
-              <Text style={styles.backText}>
+              {/* <Text style={styles.backText}>
                 Back
-              </Text>
+              </Text> */}
             </TouchableOpacity>
 
             {/* Header */}

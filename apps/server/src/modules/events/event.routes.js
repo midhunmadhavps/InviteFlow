@@ -17,6 +17,7 @@ router.post(
   eventController.createEvent
 );
 router.get("/event-types", authMiddleware, eventController.eventTypes);
+router.get("/events-list/:userId", authMiddleware, eventController.eventLists);
 
 // router.get("/", eventController.getMyEvents);
 // router.get("/:id", eventController.getEventById);

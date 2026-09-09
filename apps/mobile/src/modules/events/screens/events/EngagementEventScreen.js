@@ -211,7 +211,7 @@ export default function EngagementEventScreen({ navigation,route }) {
 
       formData.append("userId", String(user.id));
       formData.append("eventTypeId", String(eventTypeId));
-      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Wedding`);
+      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Engagement`);
       formData.append("hostOne", groomName.trim());
       formData.append("hostTwo", brideName.trim());
       formData.append("eventDate", engagementDate);

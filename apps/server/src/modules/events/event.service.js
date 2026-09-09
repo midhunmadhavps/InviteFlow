@@ -11,6 +11,13 @@ eventTypes = async () => {
     return eventTypes;
 };
 
+eventLists = async (userId) => {
+  const eventLists = await Event.find({ userId }).sort({
+    createdAt: -1,
+  });
+  return eventLists;
+};
+
 module.exports = {
-  createEvent,eventTypes
+  createEvent,eventTypes,eventLists
 };
