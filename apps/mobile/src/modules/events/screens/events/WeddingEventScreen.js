@@ -19,6 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
+import { validateNameOnly, } from "../../../../utils/validation";
+import { useToast } from "../../../../context/ToastContext";
+import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
 
 export default function WeddingEventScreen({ navigation, route }) {
   const { eventTypeId } = route.params || {};
@@ -30,6 +33,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       Alert.alert(title, message);
     }
   };
+  const { showSuccess, showError } = useToast();
 
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
@@ -43,7 +47,6 @@ export default function WeddingEventScreen({ navigation, route }) {
     longitude: null,
     googleMapsUrl: "",
   });
-
   const [groomImage, setGroomImage] = useState(null);
   const [brideImage, setBrideImage] = useState(null);
   const [invitation, setInvitation] = useState(null);
@@ -151,14 +154,35 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
-  // const validateForm = () => {
-  //   return true;
-  // };
+  const validateForm = () => {
+
+    const fields = [
+      { value: groomName, label: "Groom Name" },
+      { value: brideName, label: "Bride Name" },
+      { value: weddingDate, label: "Wedding Date" },
+      { value: weddingTime, label: "Wedding Time" },
+      { value: weddingAddress, label: "Wedding Address" },
+      { value: weddingLocation, label: "Wedding ocation" },
+      { value: groomImage, label: "Groom Image" },
+      { value: brideImage, label: "Bride Image" },
+    ];
+
+    for (const field of fields) {
+      const errorMessage = validateNameOnly(field.value, field.label);
+
+      if (errorMessage) {
+        showError(errorMessage);
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const saveEvent = async () => {
-    // if (!validateForm()) {
-    //   return;
-    // }
+    if (!validateForm()) {
+      return;
+    }
 
     if (!eventTypeId) {
       showAlert(
@@ -352,9 +376,8 @@ export default function WeddingEventScreen({ navigation, route }) {
             styles.content
           }
         >
-          <Text style={styles.label}>
-            Groom Name
-          </Text>
+          
+          <RequiredLabel>Groom Name</RequiredLabel>
 
           <TextInput
             style={styles.input}
@@ -364,9 +387,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             onChangeText={setGroomName}
           />
 
-          <Text style={styles.label}>
-            Bride Name
-          </Text>
+          <RequiredLabel>Bride Name</RequiredLabel>
 
           <TextInput
             style={styles.input}
@@ -376,9 +397,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             onChangeText={setBrideName}
           />
 
-          <Text style={styles.label}>
-            Wedding Date
-          </Text>
+          <RequiredLabel>Wedding Date</RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -453,9 +472,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             </>
           )}
 
-          <Text style={styles.label}>
-            Description
-          </Text>
+          <Label>Description</Label>
 
           <TextInput
             style={[
@@ -473,9 +490,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             }
           />
 
-          <Text style={styles.label}>
-            Wedding Time
-          </Text>
+          <RequiredLabel>Wedding Time</RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -544,9 +559,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             </>
           )}
 
-          <Text style={styles.label}>
-            Wedding Address
-          </Text>
+          <RequiredLabel>Wedding Address</RequiredLabel>
 
           <TextInput
             style={[
@@ -564,9 +577,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             }
           />
 
-          <Text style={styles.label}>
-            Wedding Location
-          </Text>
+          <RequiredLabel>Wedding Location</RequiredLabel>
 
           <View
             style={styles.locationInput}
@@ -785,14 +796,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 50,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#444444",
-    marginBottom: 7,
-    marginTop: 17,
   },
 
   input: {

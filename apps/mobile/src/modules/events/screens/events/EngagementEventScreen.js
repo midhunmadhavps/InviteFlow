@@ -19,6 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
+import { validateNameOnly, } from "../../../../utils/validation";
+import { useToast } from "../../../../context/ToastContext";
+import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
 
 export default function EngagementEventScreen({ navigation,route }) {
   const { eventTypeId } = route.params || {};
@@ -30,6 +33,7 @@ export default function EngagementEventScreen({ navigation,route }) {
       Alert.alert(title, message);
     }
   };
+  const { showSuccess, showError } = useToast();
 
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
@@ -127,14 +131,35 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
   };
 
-  // const validateForm = () => {
-  //   return true;
-  // };
+  const validateForm = () => {
+    const fields = [
+      { value: groomName, label: "Groom Name" },
+      { value: brideName, label: "Bride Name" },
+      { value: engagementDate, label: "Wedding Date" },
+      { value: engagementTime, label: "Wedding Time" },
+      { value: weddingAddress, label: "Wedding Address" },
+      { value: weddingLocation, label: "Wedding ocation" },
+      { value: groomImage, label: "Groom Image" },
+      { value: brideImage, label: "Bride Image" },
+    ];
+
+    for (const field of fields) {
+      const errorMessage = validateNameOnly(field.value, field.label);
+
+      if (errorMessage) {
+        showError(errorMessage);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
 
   const saveEvent = async () => {
-    // if (!validateForm()) {
-    //   return;
-    // }
+    if (!validateForm()) {
+      return;
+    }
 
     if (!eventTypeId) {
       showAlert("Error", "Event type ID is missing.");
@@ -317,10 +342,7 @@ export default function EngagementEventScreen({ navigation,route }) {
           contentContainerStyle={styles.content}
         >
 
-          {/* Groom Name */}
-          <Text style={styles.label}>
-            Groom Name *
-          </Text>
+          <RequiredLabel>Groom Name</RequiredLabel>
 
           <TextInput
             style={styles.input}
@@ -330,10 +352,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             onChangeText={setGroomName}
           />
 
-          {/* Bride Name */}
-          <Text style={styles.label}>
-            Bride Name *
-          </Text>
+          <RequiredLabel>Bride Name</RequiredLabel>
 
           <TextInput
             style={styles.input}
@@ -343,10 +362,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             onChangeText={setBrideName}
           />
 
-          {/* Engagement Date */}
-          <Text style={styles.label}>
-            Engagement Date *
-          </Text>
+          <RequiredLabel>Engagement Date</RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -408,10 +424,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             </>
           )}
 
-          {/* Description */}
-          <Text style={styles.label}>
-            Description *
-          </Text>
+          <Label>Description</Label>
 
           <TextInput
             style={[
@@ -427,10 +440,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             onChangeText={setDescription}
           />
 
-          {/* Engagement Time */}
-          <Text style={styles.label}>
-            Engagement Time *
-          </Text>
+          <RequiredLabel>Engagement Time</RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -495,11 +505,8 @@ export default function EngagementEventScreen({ navigation,route }) {
             </>
           )}
 
-          {/* Engagement Address */}
-          <Text style={styles.label}>
-            Engagement Address *
-          </Text>
-
+          <RequiredLabel>Engagement Address</RequiredLabel>
+          
           <TextInput
             style={[
               styles.input,
@@ -514,10 +521,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             onChangeText={setWeddingAddress}
           />
 
-          {/* Engagement Location */}
-          <Text style={styles.label}>
-            Engagement Location *
-          </Text>
+          <RequiredLabel>Engagement Location</RequiredLabel>
 
           <View style={styles.locationInput}>
             <Ionicons
@@ -703,14 +707,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 50,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#444444",
-    marginBottom: 7,
-    marginTop: 17,
   },
 
   input: {
