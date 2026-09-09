@@ -144,6 +144,8 @@ export default function EngagementEventScreen({ navigation,route }) {
     try {
       setSaving(true);
 
+      const user = await getUser();
+      
       if (!user?.id) {
         showAlert(
           "Error",
@@ -239,7 +241,7 @@ export default function EngagementEventScreen({ navigation,route }) {
       //   console.log("FORMDATA:", key, value);
       // }
 
-      const response = await createEvent({formData});
+      const response = await createEvent(formData);
 
       console.log("Engagement created:", response.data);
 
@@ -459,7 +461,7 @@ export default function EngagementEventScreen({ navigation,route }) {
               >
                 <Text
                   style={
-                    weddingTime
+                    engagementTime
                       ? styles.inputButtonText
                       : styles.placeholder
                   }
@@ -862,5 +864,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginLeft: 8,
+  },
+  webInputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  webInput: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "transparent",
+    fontSize: 13,
+    color: "#333333",
+    borderWidth: 0,
+    padding: 0,
   },
 });

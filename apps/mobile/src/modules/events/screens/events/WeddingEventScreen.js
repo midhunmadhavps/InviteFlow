@@ -211,21 +211,21 @@ export default function WeddingEventScreen({ navigation, route }) {
       formData.append("status", "Draft");
       
       if (groomImage) {
-  if (Platform.OS === "web") {
-    const file = await uriToFile(
-      groomImage.uri,
-      groomImage.fileName || "host-one.jpg",
-      groomImage.mimeType || "image/jpeg"
-    );
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            groomImage.uri,
+            groomImage.fileName || "host-one.jpg",
+            groomImage.mimeType || "image/jpeg"
+          );
 
-    formData.append("hostOneImage", file);
-  } else {
-    formData.append("hostOneImage", {
-      uri: groomImage.uri,
-      name: groomImage.fileName || "host-one.jpg",
-      type: groomImage.mimeType || "image/jpeg",
-    });
-  }
+          formData.append("hostOneImage", file);
+        } else {
+          formData.append("hostOneImage", {
+            uri: groomImage.uri,
+            name: groomImage.fileName || "host-one.jpg",
+            type: groomImage.mimeType || "image/jpeg",
+          });
+        }
       }
 
       if (brideImage) {
