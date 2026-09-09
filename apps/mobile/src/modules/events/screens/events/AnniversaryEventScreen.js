@@ -212,12 +212,12 @@ export default function AnniversaryEventScreen({
     }
 
     if (!partnerOneImage) {
-      showError("Please select Partner 1 image.");
+      showError("Please upload Partner 1 image.");
       return false;
     }
 
     if (!partnerTwoImage) {
-      showError("Please select Partner 2 image.");
+      showError("Please upload Partner 2 image.");
       return false;
     }
 

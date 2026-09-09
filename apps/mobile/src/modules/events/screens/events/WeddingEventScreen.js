@@ -196,12 +196,12 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     if (!groomImage) {
-      showError("Please select groom image.");
+      showError("Please uplaod groom image.");
       return false;
     }
 
     if (!brideImage) {
-      showError("Please select bride image.");
+      showError("Please uplaod bride image.");
       return false;
     }
 

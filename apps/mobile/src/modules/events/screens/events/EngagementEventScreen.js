@@ -172,12 +172,12 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
 
     if (!groomImage) {
-      showError("Please select groom image.");
+      showError("Please upload groom image.");
       return false;
     }
 
     if (!brideImage) {
-      showError("Please select bride image.");
+      showError("Please upload bride image.");
       return false;
     }
 

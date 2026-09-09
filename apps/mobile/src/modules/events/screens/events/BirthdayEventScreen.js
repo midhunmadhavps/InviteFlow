@@ -17,76 +17,122 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import api from "../../../../api/client";
+import { createEvent } from "../../api/event.api";
+import { getUser } from "../../../../utils/auth";
+import {
+  validateNameOnly,
+  validateDate,
+  validateTime,
+  validateLocation,
+  validateRequired,
+} from "../../../../utils/validation";
+import { useToast } from "../../../../context/ToastContext";
+import {
+  RequiredLabel,
+  Label,
+} from "../../../../components/RequiredLabel";
 
-export default function BirthdayEventScreen({ navigation,route }) {
+export default function BirthdayEventScreen({
+  navigation,
+  route,
+}) {
   const { eventTypeId } = route.params || {};
-  
+
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const { showSuccess, showError } = useToast();
+
   const [name, setName] = useState("");
-  const [functionDate, setFunctionDate] = useState("");
-  const [functionTime, setFunctionTime] = useState("");
+  const [birthdayDate, setBirthdayDate] = useState("");
+  const [birthdayTime, setBirthdayTime] = useState("");
   const [description, setDescription] = useState("");
 
-  const [functionAddress, setFunctionAddress] = useState("");
-  const [functionLocation, setFunctionLocation] = useState("");
+  const [birthdayAddress, setBirthdayAddress] =
+    useState("");
+
+  const [birthdayLocation, setBirthdayLocation] =
+    useState({
+      address: "",
+      latitude: null,
+      longitude: null,
+      googleMapsUrl: "",
+    });
 
   const [image, setImage] = useState(null);
   const [invitation, setInvitation] = useState(null);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] =
+    useState(false);
+
+  const [showTimePicker, setShowTimePicker] =
+    useState(false);
 
   const [saving, setSaving] = useState(false);
 
-  // =========================
-  // Pick Birthday Image
-  // =========================
+  const uriToFile = async (uri, fileName, type) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new File([blob], fileName, {
+      type: type || blob.type,
+    });
+  };
+
   const pickImage = async () => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
+      showAlert(
         "Permission Required",
         "Please allow photo library access."
       );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
       setImage(result.assets[0]);
     }
   };
 
-  // =========================
-  // Pick Invitation PDF
-  // =========================
   const pickInvitation = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-    });
+    const result =
+      await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "image/*",
+        ],
+        copyToCacheDirectory: true,
+      });
 
     if (!result.canceled) {
       setInvitation(result.assets[0]);
     }
   };
 
-  // =========================
-  // Date Picker
-  // =========================
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (
+    event,
+    selectedDate
+  ) => {
     setShowDatePicker(false);
 
     if (selectedDate) {
-      const year = selectedDate.getFullYear();
+      const year =
+        selectedDate.getFullYear();
 
       const month = String(
         selectedDate.getMonth() + 1
@@ -96,16 +142,16 @@ export default function BirthdayEventScreen({ navigation,route }) {
         selectedDate.getDate()
       ).padStart(2, "0");
 
-      setFunctionDate(
+      setBirthdayDate(
         `${year}-${month}-${day}`
       );
     }
   };
 
-  // =========================
-  // Time Picker
-  // =========================
-  const handleTimeChange = (event, selectedTime) => {
+  const handleTimeChange = (
+    event,
+    selectedTime
+  ) => {
     setShowTimePicker(false);
 
     if (selectedTime) {
@@ -117,74 +163,48 @@ export default function BirthdayEventScreen({ navigation,route }) {
         selectedTime.getMinutes()
       ).padStart(2, "0");
 
-      setFunctionTime(`${hours}:${minutes}`);
+      setBirthdayTime(
+        `${hours}:${minutes}`
+      );
     }
   };
 
-  // =========================
-  // Validation
-  // =========================
   const validateForm = () => {
-    if (!name.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter name."
-      );
-      return false;
+
+    let errorMessage;
+    errorMessage = validateNameOnly(name,"Name");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!functionDate) {
-      Alert.alert(
-        "Required",
-        "Please select function date."
-      );
-      return false;
+    errorMessage = validateDate(birthdayDate,"Function Date");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!functionTime) {
-      Alert.alert(
-        "Required",
-        "Please select function time."
-      );
-      return false;
+    errorMessage = validateTime(birthdayTime,"Function Time");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!description.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter description."
-      );
-      return false;
+    errorMessage = validateLocation(birthdayLocation,"Function Location");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!functionAddress.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter function address."
-      );
-      return false;
-    }
-
-    if (!functionLocation.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter function location."
-      );
-      return false;
+    errorMessage = validateRequired(birthdayAddress,"Function Address");
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
     if (!image) {
-      Alert.alert(
-        "Required",
-        "Please select an image."
-      );
-      return false;
-    }
-
-    if (!invitation) {
-      Alert.alert(
-        "Required",
-        "Please select invitation PDF."
+      showError(
+        "Please Upload image."
       );
       return false;
     }
@@ -192,112 +212,209 @@ export default function BirthdayEventScreen({ navigation,route }) {
     return true;
   };
 
-  // =========================
-  // Save Event API
-  // =========================
   const saveEvent = async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    if (!eventTypeId) {
+      showError(
+        "Event type ID is missing."
+      );
       return;
     }
 
     try {
       setSaving(true);
 
+      const user = await getUser();
+
+      if (!user?.id) {
+        showError(
+          "User information not found."
+        );
+        return;
+      }
+
       const formData = new FormData();
 
       formData.append(
-        "eventType",
-        "Birthday"
+        "userId",
+        String(user.id)
       );
 
       formData.append(
-        "name",
+        "eventTypeId",
+        String(eventTypeId)
+      );
+
+      formData.append(
+        "title",
+        `${name.trim()}'s Birthday`
+      );
+
+      formData.append(
+        "hostOne",
         name.trim()
       );
 
       formData.append(
-        "functionDate",
-        functionDate
+        "hostTwo",
+        ""
       );
 
       formData.append(
-        "functionTime",
-        functionTime
+        "eventDate",
+        birthdayDate
       );
 
       formData.append(
-        "description",
+        "eventTime",
+        birthdayTime
+      );
+
+      formData.append(
+        "message",
         description.trim()
       );
 
       formData.append(
-        "functionAddress",
-        functionAddress.trim()
+        "address",
+        birthdayAddress.trim()
       );
 
       formData.append(
-        "functionLocation",
-        functionLocation.trim()
+        "location",
+        JSON.stringify({
+          address:
+            birthdayLocation.address.trim(),
+          latitude:
+            birthdayLocation.latitude,
+          longitude:
+            birthdayLocation.longitude,
+          googleMapsUrl:
+            birthdayLocation.googleMapsUrl,
+        })
       );
 
-      // Birthday Image
+      formData.append(
+        "isPublished",
+        "false"
+      );
+
+      formData.append(
+        "status",
+        "Draft"
+      );
+
       if (image) {
-        formData.append("image", {
-          uri: image.uri,
-          name:
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            image.uri,
             image.fileName ||
-            "birthday-image.jpg",
-          type:
+              "birthday-image.jpg",
             image.mimeType ||
-            "image/jpeg",
-        });
+              "image/jpeg"
+          );
+
+          formData.append(
+            "hostOneImage",
+            file
+          );
+        } else {
+          formData.append(
+            "hostOneImage",
+            {
+              uri: image.uri,
+              name:
+                image.fileName ||
+                "birthday-image.jpg",
+              type:
+                image.mimeType ||
+                "image/jpeg",
+            }
+          );
+        }
       }
 
-      // Invitation PDF
       if (invitation) {
-        formData.append("invitation", {
-          uri: invitation.uri,
-          name:
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            invitation.uri,
             invitation.name ||
-            "birthday-invitation.pdf",
-          type:
+              "birthday-invitation",
             invitation.mimeType ||
-            "application/pdf",
-        });
+              "application/pdf"
+          );
+
+          formData.append(
+            "invitation",
+            file
+          );
+        } else {
+          formData.append(
+            "invitation",
+            {
+              uri: invitation.uri,
+              name:
+                invitation.name ||
+                "birthday-invitation",
+              type:
+                invitation.mimeType ||
+                "application/pdf",
+            }
+          );
+        }
       }
 
-      const response = await api.post(
-        "/event/create",
-        formData
-      );
+      const response =
+        await createEvent(formData);
 
       console.log(
         "Birthday created:",
         response.data
       );
 
-      Alert.alert(
-        "Success",
-        "Birthday event created successfully.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              navigation.navigate("Reminder", {
-                event: response.data.data,
-              });
-            },
-          },
-        ]
+      showSuccess(
+        "Birthday event created successfully."
       );
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "Success\n\nBirthday event created successfully."
+        );
+
+        navigation.navigate("Main", {
+          event: response.data.data,
+        });
+      } else {
+        Alert.alert(
+          "Success",
+          "Birthday event created successfully.",
+          [
+            {
+              text: "Continue",
+              onPress: () => {
+                navigation.navigate(
+                  "Main",
+                  {
+                    event:
+                      response.data.data,
+                  }
+                );
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.log(
         "Create birthday error:",
-        error.response?.data || error
+        error.response?.data ||
+          error
       );
 
-      Alert.alert(
-        "Error",
+      showError(
         error.response?.data?.message ||
           "Failed to create birthday event."
       );
@@ -307,135 +424,210 @@ export default function BirthdayEventScreen({ navigation,route }) {
   };
 
   return (
-    <ImageBackground
-      source={require("../../../../../assets/Vector1.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <View style={styles.container}>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#ffffff"
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>
-            Create Birthday
-          </Text>
-
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            navigation.goBack()
+          }
         >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="#ffffff"
+          />
+        </TouchableOpacity>
 
-          {/* Name */}
-          <Text style={styles.label}>
-            Name *
-          </Text>
+        <Text
+          style={styles.headerTitle}
+        >
+          Create Birthday
+        </Text>
+
+        <View
+          style={{
+            width: 40,
+          }}
+        />
+      </View>
+
+      <ImageBackground
+        source={require("../../../../../assets/Vector1.png")}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.content
+          }
+        >
+          <RequiredLabel>
+            Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
-            placeholder="Enter name"
+            placeholder="Enter birthday name"
             placeholderTextColor="#999"
             value={name}
             onChangeText={setName}
           />
 
-          {/* Function Date */}
-          <Text style={styles.label}>
-            Function Date *
-          </Text>
+          <RequiredLabel>
+            Function Date
+          </RequiredLabel>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                functionDate
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {functionDate ||
-                "Select function date"}
-            </Text>
+              <input
+                type="date"
+                value={birthdayDate}
+                onChange={(e) =>
+                  setBirthdayDate(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowDatePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    birthdayDate
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {birthdayDate ||
+                    "Select birthday date"}
+                </Text>
 
-            <Ionicons
-              name="calendar-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="calendar-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="date"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleDateChange}
-            />
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    birthdayDate
+                      ? new Date(
+                          `${birthdayDate}T00:00:00`
+                        )
+                      : new Date()
+                  }
+                  mode="date"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleDateChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {/* Function Time */}
-          <Text style={styles.label}>
-            Function Time *
-          </Text>
+          <RequiredLabel>
+            Function Time
+          </RequiredLabel>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                functionTime
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {functionTime ||
-                "Select function time"}
-            </Text>
+              <input
+                type="time"
+                value={birthdayTime}
+                onChange={(e) =>
+                  setBirthdayTime(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowTimePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    birthdayTime
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {birthdayTime ||
+                    "Select birthday time"}
+                </Text>
 
-            <Ionicons
-              name="time-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="time-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showTimePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="time"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleTimeChange}
-            />
+              {showTimePicker && (
+                <DateTimePicker
+                  value={new Date()}
+                  mode="time"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleTimeChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {/* Description */}
-          <Text style={styles.label}>
-            Description *
-          </Text>
+          <Label>
+            Description
+          </Label>
 
           <TextInput
             style={[
@@ -448,34 +640,38 @@ export default function BirthdayEventScreen({ navigation,route }) {
             numberOfLines={4}
             textAlignVertical="top"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={
+              setDescription
+            }
           />
 
-          {/* Function Address */}
-          <Text style={styles.label}>
-            Function Address *
-          </Text>
+          <RequiredLabel>
+            Function Address
+          </RequiredLabel>
 
           <TextInput
             style={[
               styles.input,
               styles.multilineInput,
             ]}
-            placeholder="Enter function address"
+            placeholder="Enter birthday address"
             placeholderTextColor="#999"
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            value={functionAddress}
-            onChangeText={setFunctionAddress}
+            value={birthdayAddress}
+            onChangeText={
+              setBirthdayAddress
+            }
           />
 
-          {/* Function Location */}
-          <Text style={styles.label}>
-            Function Location *
-          </Text>
+          <RequiredLabel>
+            Function Location
+          </RequiredLabel>
 
-          <View style={styles.locationInput}>
+          <View
+            style={styles.locationInput}
+          >
             <Ionicons
               name="location-outline"
               size={21}
@@ -483,18 +679,28 @@ export default function BirthdayEventScreen({ navigation,route }) {
             />
 
             <TextInput
-              style={styles.locationTextInput}
-              placeholder="Enter function location"
+              style={
+                styles.locationTextInput
+              }
+              placeholder="Enter birthday location"
               placeholderTextColor="#999"
-              value={functionLocation}
-              onChangeText={setFunctionLocation}
+              value={
+                birthdayLocation.address
+              }
+              onChangeText={(text) =>
+                setBirthdayLocation(
+                  (prev) => ({
+                    ...prev,
+                    address: text,
+                  })
+                )
+              }
             />
           </View>
 
-          {/* Image */}
-          <Text style={styles.label}>
-            Image *
-          </Text>
+          <RequiredLabel>
+            Image
+          </RequiredLabel>
 
           <TouchableOpacity
             style={styles.imageUpload}
@@ -505,7 +711,9 @@ export default function BirthdayEventScreen({ navigation,route }) {
                 source={{
                   uri: image.uri,
                 }}
-                style={styles.previewImage}
+                style={
+                  styles.previewImage
+                }
               />
             ) : (
               <>
@@ -515,19 +723,28 @@ export default function BirthdayEventScreen({ navigation,route }) {
                   color="#ff7f86"
                 />
 
-                <Text style={styles.uploadText}>
+                <Text
+                  style={
+                    styles.uploadText
+                  }
+                >
                   Birthday Image
                 </Text>
               </>
             )}
           </TouchableOpacity>
 
-          {/* Invitation PDF */}
+          <RequiredLabel>
+            Invitation
+          </RequiredLabel>
+
           <TouchableOpacity
             style={styles.pdfButton}
             onPress={pickInvitation}
           >
-            <View style={styles.pdfIcon}>
+            <View
+              style={styles.pdfIcon}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={25}
@@ -535,20 +752,26 @@ export default function BirthdayEventScreen({ navigation,route }) {
               />
             </View>
 
-            <View style={styles.pdfInfo}>
+            <View
+              style={styles.pdfInfo}
+            >
               <Text
                 style={styles.pdfTitle}
                 numberOfLines={1}
               >
                 {invitation
                   ? invitation.name
-                  : "Upload Invitation PDF"}
+                  : "Upload Invitation"}
               </Text>
 
-              <Text style={styles.pdfSubtitle}>
+              <Text
+                style={
+                  styles.pdfSubtitle
+                }
+              >
                 {invitation
-                  ? "PDF selected"
-                  : "Tap to select PDF"}
+                  ? "File selected"
+                  : "Tap to select PDF or image"}
               </Text>
             </View>
 
@@ -559,11 +782,11 @@ export default function BirthdayEventScreen({ navigation,route }) {
             />
           </TouchableOpacity>
 
-          {/* Save Button */}
           <TouchableOpacity
             style={[
               styles.saveButton,
-              saving && styles.disabledButton,
+              saving &&
+                styles.disabledButton,
             ]}
             onPress={saveEvent}
             disabled={saving}
@@ -578,27 +801,26 @@ export default function BirthdayEventScreen({ navigation,route }) {
               color="#ffffff"
             />
 
-            <Text style={styles.saveButtonText}>
+            <Text
+              style={
+                styles.saveButtonText
+              }
+            >
               {saving
                 ? "Saving..."
                 : "Save Birthday Event"}
             </Text>
           </TouchableOpacity>
-
         </ScrollView>
-      </View>
-    </ImageBackground>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#ffffff",
   },
 
   header: {
@@ -623,17 +845,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  background: {
+    flex: 1,
+  },
+
   content: {
     padding: 20,
     paddingBottom: 50,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#444444",
-    marginBottom: 7,
-    marginTop: 17,
   },
 
   input: {
@@ -648,7 +866,7 @@ const styles = StyleSheet.create({
   },
 
   descriptionInput: {
-    height: 100,
+    height: 95,
     paddingTop: 12,
     textAlignVertical: "top",
   },
@@ -679,6 +897,26 @@ const styles = StyleSheet.create({
   placeholder: {
     fontSize: 13,
     color: "#999999",
+  },
+
+  webInputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  webInput: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "transparent",
+    fontSize: 13,
+    color: "#333333",
+    borderWidth: 0,
+    padding: 0,
   },
 
   locationInput: {
@@ -731,7 +969,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    marginTop: 18,
+    marginTop: 8,
     backgroundColor: "#ffffff",
   },
 
