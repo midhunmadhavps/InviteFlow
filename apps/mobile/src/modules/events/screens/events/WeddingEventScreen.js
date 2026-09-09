@@ -32,6 +32,7 @@ export default function WeddingEventScreen({ navigation, route }) {
   const [description, setDescription] = useState("");
 
   const [weddingAddress, setWeddingAddress] = useState("");
+
   const [weddingLocation, setWeddingLocation] = useState({
     address: "",
     latitude: null,
@@ -49,9 +50,6 @@ export default function WeddingEventScreen({ navigation, route }) {
 
   const [saving, setSaving] = useState(false);
 
-  // =========================
-  // Pick Groom / Bride Image
-  // =========================
   const pickImage = async (type) => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -64,12 +62,13 @@ export default function WeddingEventScreen({ navigation, route }) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
       const image = result.assets[0];
@@ -82,28 +81,30 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
-  // =========================
-  // Pick Invitation PDF
-  // =========================
   const pickInvitation = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-    });
+    const result =
+      await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "image/*",
+        ],
+        copyToCacheDirectory: true,
+      });
 
     if (!result.canceled) {
       setInvitation(result.assets[0]);
     }
   };
 
-  // =========================
-  // Date Picker
-  // =========================
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (
+    event,
+    selectedDate
+  ) => {
     setShowDatePicker(false);
 
     if (selectedDate) {
-      const year = selectedDate.getFullYear();
+      const year =
+        selectedDate.getFullYear();
 
       const month = String(
         selectedDate.getMonth() + 1
@@ -119,10 +120,10 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
-  // =========================
-  // Time Picker
-  // =========================
-  const handleTimeChange = (event, selectedTime) => {
+  const handleTimeChange = (
+    event,
+    selectedTime
+  ) => {
     setShowTimePicker(false);
 
     if (selectedTime) {
@@ -140,172 +141,170 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
-  // =========================
-  // Validation
-  // =========================
-  const validateForm = () => {
-    if (!groomName.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter groom name."
-      );
-      return false;
-    }
+  // const validateForm = () => {
+  //   return true;
+  // };
 
-    if (!brideName.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter bride name."
-      );
-      return false;
-    }
-
-    if (!weddingDate) {
-      Alert.alert(
-        "Required",
-        "Please select wedding date."
-      );
-      return false;
-    }
-
-    if (!description.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter wedding description."
-      );
-      return false;
-    }
-
-    if (!weddingTime) {
-      Alert.alert(
-        "Required",
-        "Please select wedding time."
-      );
-      return false;
-    }
-
-    if (!weddingAddress.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter wedding address."
-      );
-      return false;
-    }
-
-    if (!weddingLocation.address.trim()) {
-      Alert.alert("Required", "Please enter wedding location.");
-      return false;
-    }
-
-    if (!groomImage) {
-      Alert.alert(
-        "Required",
-        "Please select groom image."
-      );
-      return false;
-    }
-
-    if (!brideImage) {
-      Alert.alert(
-        "Required",
-        "Please select bride image."
-      );
-      return false;
-    }
-
-    if (!invitation) {
-      Alert.alert(
-        "Required",
-        "Please select invitation PDF."
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  // =========================
-  // Save Event API
-  // =========================
   const saveEvent = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    // if (!validateForm()) {
+    //   return;
+    // }
 
+    console.log("1111111");
     if (!eventTypeId) {
-      Alert.alert("Error", "Event type ID is missing.");
+      Alert.alert(
+        "Error",
+        "Event type ID is missing."
+      );
       return;
     }
 
     try {
       setSaving(true);
 
+      console.log("2222222");
+
       const user = await getUser();
+      console.log("333333");
+
+      if (!user?.id) {
+        Alert.alert(
+          "Error",
+          "User information not found."
+        );
+        return;
+      }
+    console.log("444444");
+
       const formData = new FormData();
 
-      formData.append("userId", String(user.id));
-      formData.append("eventTypeId", String(eventTypeId));
+      formData.append(
+        "userId",
+        String(user.id)
+      );
+
+      formData.append(
+        "eventTypeId",
+        String(eventTypeId)
+      );
+
       formData.append(
         "title",
         `${groomName.trim()} & ${brideName.trim()} Wedding`
       );
-      formData.append("hostOne", groomName.trim());
-      formData.append("hostTwo", brideName.trim());
-      formData.append("eventDate", weddingDate);
-      formData.append("eventTime", weddingTime);
-      formData.append("message", description.trim());
-      formData.append("address", weddingAddress.trim());
+
+      formData.append(
+        "hostOne",
+        groomName.trim()
+      );
+
+      formData.append(
+        "hostTwo",
+        brideName.trim()
+      );
+
+      formData.append(
+        "eventDate",
+        weddingDate
+      );
+
+      formData.append(
+        "eventTime",
+        weddingTime
+      );
+
+      formData.append(
+        "message",
+        description.trim()
+      );
+
+      formData.append(
+        "address",
+        weddingAddress.trim()
+      );
+
       formData.append(
         "location",
         JSON.stringify({
-          address: weddingLocation.address.trim(),
-          latitude: weddingLocation.latitude,
-          longitude: weddingLocation.longitude,
-          googleMapsUrl: weddingLocation.googleMapsUrl,
+          address:
+            weddingLocation.address.trim(),
+          latitude:
+            weddingLocation.latitude,
+          longitude:
+            weddingLocation.longitude,
+          googleMapsUrl:
+            weddingLocation.googleMapsUrl,
         })
       );
 
       if (groomImage) {
-        formData.append("hostOneImage", {
-          uri: groomImage.uri,
-          name: groomImage.fileName || "host-one.jpg",
-          type: groomImage.mimeType || "image/jpeg",
-        });
+        formData.append(
+          "hostOneImage",
+          {
+            uri: groomImage.uri,
+            name:
+              groomImage.fileName ||
+              "host-one.jpg",
+            type:
+              groomImage.mimeType ||
+              "image/jpeg",
+          }
+        );
       }
 
       if (brideImage) {
-        formData.append("hostTwoImage", {
-          uri: brideImage.uri,
-          name: brideImage.fileName || "host-two.jpg",
-          type: brideImage.mimeType || "image/jpeg",
-        });
+        formData.append(
+          "hostTwoImage",
+          {
+            uri: brideImage.uri,
+            name:
+              brideImage.fileName ||
+              "host-two.jpg",
+            type:
+              brideImage.mimeType ||
+              "image/jpeg",
+          }
+        );
       }
 
       if (invitation) {
-        formData.append("invitation", {
-          uri: invitation.uri,
-          name: invitation.name || "wedding-invitation.pdf",
-          type: invitation.mimeType || "application/pdf",
-        });
+        formData.append(
+          "invitation",
+          {
+            uri: invitation.uri,
+            name:
+              invitation.name ||
+              "wedding-invitation",
+            type:
+              invitation.mimeType ||
+              "application/pdf",
+          }
+        );
       }
+    console.log("55555");
 
-      const response = await api.post(
-        "/event/create",
-        formData
+      const response =
+        await createEvent(formData);
+
+      console.log(
+        "Wedding created:",
+        response.data
       );
-
-      console.log("wedding created:", response.data);
 
       Alert.alert(
         "Success",
-        "wedding event created successfully.",
+        "Wedding event created successfully.",
         [
           {
             text: "Continue",
             onPress: () => {
-              navigation.navigate("Reminder", {
-                event: response.data.data,
-              });
+              navigation.navigate(
+                "Reminder",
+                {
+                  event:
+                    response.data.data,
+                }
+              );
             },
           },
         ]
@@ -313,7 +312,8 @@ export default function WeddingEventScreen({ navigation, route }) {
     } catch (error) {
       console.log(
         "Create wedding error:",
-        error.response?.data || error
+        error.response?.data ||
+          error
       );
 
       Alert.alert(
@@ -328,15 +328,12 @@ export default function WeddingEventScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-
-      {/* =========================
-          Header
-      ========================= */}
       <View style={styles.header}>
-
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() =>
+            navigation.goBack()
+          }
         >
           <Ionicons
             name="arrow-back"
@@ -349,27 +346,28 @@ export default function WeddingEventScreen({ navigation, route }) {
           Create Wedding
         </Text>
 
-        <View style={{ width: 40 }} />
-
+        <View
+          style={{
+            width: 40,
+          }}
+        />
       </View>
 
-      {/* =========================
-          Background
-      ========================= */}
       <ImageBackground
         source={require("../../../../../assets/Vector1.png")}
         style={styles.background}
         resizeMode="cover"
       >
-
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.content
+          }
         >
-
-          {/* Groom Name */}
           <Text style={styles.label}>
-            Groom Name *
+            Groom Name
           </Text>
 
           <TextInput
@@ -380,9 +378,8 @@ export default function WeddingEventScreen({ navigation, route }) {
             onChangeText={setGroomName}
           />
 
-          {/* Bride Name */}
           <Text style={styles.label}>
-            Bride Name *
+            Bride Name
           </Text>
 
           <TextInput
@@ -393,66 +390,85 @@ export default function WeddingEventScreen({ navigation, route }) {
             onChangeText={setBrideName}
           />
 
-          {/* Wedding Date */}
           <Text style={styles.label}>
-            Wedding Date *
+            Wedding Date
           </Text>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() =>
-              setShowDatePicker(true)
-            }
-          >
-
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                weddingDate
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {weddingDate ||
-                "Select wedding date"}
-            </Text>
+              <input
+                type="date"
+                value={weddingDate}
+                onChange={(e) =>
+                  setWeddingDate(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowDatePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    weddingDate
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {weddingDate ||
+                    "Select wedding date"}
+                </Text>
 
-            <Ionicons
-              name="calendar-outline"
-              size={21}
-              color="#ff7f86"
-            />
+                <Ionicons
+                  name="calendar-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="date"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleDateChange}
-            />
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    weddingDate
+                      ? new Date(
+                          `${weddingDate}T00:00:00`
+                        )
+                      : new Date()
+                  }
+                  mode="date"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleDateChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {showDatePicker && Platform.OS !== "web" && (
-  <DateTimePicker
-    value={new Date()}
-    mode="date"
-    display={
-      Platform.OS === "ios"
-        ? "spinner"
-        : "default"
-    }
-    onChange={handleDateChange}
-  />
-)}
-
-          {/* Description */}
           <Text style={styles.label}>
-            Description *
+            Description
           </Text>
 
           <TextInput
@@ -466,56 +482,84 @@ export default function WeddingEventScreen({ navigation, route }) {
             numberOfLines={4}
             textAlignVertical="top"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={
+              setDescription
+            }
           />
 
-          {/* Wedding Time */}
           <Text style={styles.label}>
-            Wedding Time *
+            Wedding Time
           </Text>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() =>
-              setShowTimePicker(true)
-            }
-          >
-
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                weddingTime
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {weddingTime ||
-                "Select wedding time"}
-            </Text>
+              <input
+                type="time"
+                value={weddingTime}
+                onChange={(e) =>
+                  setWeddingTime(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowTimePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    weddingTime
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {weddingTime ||
+                    "Select wedding time"}
+                </Text>
 
-            <Ionicons
-              name="time-outline"
-              size={21}
-              color="#ff7f86"
-            />
+                <Ionicons
+                  name="time-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          </TouchableOpacity>
-
-          {showTimePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="time"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleTimeChange}
-            />
+              {showTimePicker && (
+                <DateTimePicker
+                  value={new Date()}
+                  mode="time"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleTimeChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {/* Wedding Address */}
           <Text style={styles.label}>
-            Wedding Address *
+            Wedding Address
           </Text>
 
           <TextInput
@@ -529,16 +573,18 @@ export default function WeddingEventScreen({ navigation, route }) {
             numberOfLines={3}
             textAlignVertical="top"
             value={weddingAddress}
-            onChangeText={setWeddingAddress}
+            onChangeText={
+              setWeddingAddress
+            }
           />
 
-          {/* Wedding Location */}
           <Text style={styles.label}>
-            Wedding Location *
+            Wedding Location
           </Text>
 
-          <View style={styles.locationInput}>
-
+          <View
+            style={styles.locationInput}
+          >
             <Ionicons
               name="location-outline"
               size={21}
@@ -546,37 +592,42 @@ export default function WeddingEventScreen({ navigation, route }) {
             />
 
             <TextInput
-              style={styles.locationTextInput}
+              style={
+                styles.locationTextInput
+              }
               placeholder="Enter wedding location"
               placeholderTextColor="#999"
-              value={weddingLocation.address}
+              value={
+                weddingLocation.address
+              }
               onChangeText={(text) =>
-                setWeddingLocation((prev) => ({
-                  ...prev,
-                  address: text,
-                }))
+                setWeddingLocation(
+                  (prev) => ({
+                    ...prev,
+                    address: text,
+                  })
+                )
               }
             />
-
           </View>
 
-          {/* Images */}
           <View style={styles.imageRow}>
-
-            {/* Groom */}
             <TouchableOpacity
-              style={styles.imageUpload}
+              style={
+                styles.imageUpload
+              }
               onPress={() =>
                 pickImage("groom")
               }
             >
-
               {groomImage ? (
                 <Image
                   source={{
                     uri: groomImage.uri,
                   }}
-                  style={styles.previewImage}
+                  style={
+                    styles.previewImage
+                  }
                 />
               ) : (
                 <>
@@ -586,28 +637,33 @@ export default function WeddingEventScreen({ navigation, route }) {
                     color="#ff7f86"
                   />
 
-                  <Text style={styles.uploadText}>
+                  <Text
+                    style={
+                      styles.uploadText
+                    }
+                  >
                     Groom Image
                   </Text>
                 </>
               )}
-
             </TouchableOpacity>
 
-            {/* Bride */}
             <TouchableOpacity
-              style={styles.imageUpload}
+              style={
+                styles.imageUpload
+              }
               onPress={() =>
                 pickImage("bride")
               }
             >
-
               {brideImage ? (
                 <Image
                   source={{
                     uri: brideImage.uri,
                   }}
-                  style={styles.previewImage}
+                  style={
+                    styles.previewImage
+                  }
                 />
               ) : (
                 <>
@@ -617,49 +673,53 @@ export default function WeddingEventScreen({ navigation, route }) {
                     color="#ff7f86"
                   />
 
-                  <Text style={styles.uploadText}>
+                  <Text
+                    style={
+                      styles.uploadText
+                    }
+                  >
                     Bride Image
                   </Text>
                 </>
               )}
-
             </TouchableOpacity>
-
           </View>
 
-          {/* Invitation PDF */}
           <TouchableOpacity
             style={styles.pdfButton}
             onPress={pickInvitation}
           >
-
-            <View style={styles.pdfIcon}>
-
+            <View
+              style={styles.pdfIcon}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={25}
                 color="#ff7f86"
               />
-
             </View>
 
-            <View style={styles.pdfInfo}>
-
+            <View
+              style={styles.pdfInfo}
+            >
               <Text
                 style={styles.pdfTitle}
                 numberOfLines={1}
               >
                 {invitation
                   ? invitation.name
-                  : "Upload Invitation PDF"}
+                  : "Upload Invitation"}
               </Text>
 
-              <Text style={styles.pdfSubtitle}>
+              <Text
+                style={
+                  styles.pdfSubtitle
+                }
+              >
                 {invitation
-                  ? "PDF selected"
-                  : "Tap to select PDF"}
+                  ? "File selected"
+                  : "Tap to select PDF or image"}
               </Text>
-
             </View>
 
             <Ionicons
@@ -667,10 +727,8 @@ export default function WeddingEventScreen({ navigation, route }) {
               size={20}
               color="#999"
             />
-
           </TouchableOpacity>
 
-          {/* Save Button */}
           <TouchableOpacity
             style={[
               styles.saveButton,
@@ -680,7 +738,6 @@ export default function WeddingEventScreen({ navigation, route }) {
             onPress={saveEvent}
             disabled={saving}
           >
-
             <Ionicons
               name={
                 saving
@@ -691,16 +748,17 @@ export default function WeddingEventScreen({ navigation, route }) {
               color="#ffffff"
             />
 
-            <Text style={styles.saveButtonText}>
+            <Text
+              style={
+                styles.saveButtonText
+              }
+            >
               {saving
                 ? "Saving..."
                 : "Save Wedding Event"}
             </Text>
-
           </TouchableOpacity>
-
         </ScrollView>
-
       </ImageBackground>
     </View>
   );
@@ -796,6 +854,25 @@ const styles = StyleSheet.create({
     color: "#999999",
   },
 
+  webInputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  webInput: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "transparent",
+    fontSize: 13,
+    color: "#333333",
+    borderWidth: 0,
+    padding: 0,
+  },
   locationInput: {
     height: 48,
     borderWidth: 1,

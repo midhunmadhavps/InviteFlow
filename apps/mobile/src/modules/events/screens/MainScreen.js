@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { removeToken, removeUser } from "../../../utils/auth";
 
 const UpComingevents = [
   {
@@ -240,11 +241,17 @@ export default function MainScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => {
-                  setProfileVisible(false);
+                onPress={async () => {
+                  try {
+                    await removeToken();
+                    await removeUser();
 
-                  // logout logic here
-                  navigation.replace("Login");
+                    setProfileVisible(false);
+
+                    navigation.replace("Login");
+                  } catch (error) {
+                    console.log("Logout error:", error);
+                  }
                 }}
               >
                 <Ionicons

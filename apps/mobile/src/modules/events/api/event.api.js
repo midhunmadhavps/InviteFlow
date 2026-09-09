@@ -7,7 +7,7 @@ export const getEventTypes  = async () => {
 };
 
 export const createEvent = async (formData) => {
-  return await api.post("/event/create", formData, {
+  return await api.post("/event/create-event", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

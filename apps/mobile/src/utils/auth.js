@@ -3,10 +3,18 @@ import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 
 const TOKEN_KEY = "authToken";
+const USER_KEY = "user";
 
 export const saveUser = async (user) => {
   try {
-    await SecureStore.setItem("user", JSON.stringify(user));
+    const value = JSON.stringify(user);
+
+    if (Platform.OS === "web") {
+      localStorage.setItem(USER_KEY, value);
+      return;
+    }
+
+    await SecureStore.setItemAsync(USER_KEY, value);
   } catch (error) {
     console.log("Error saving user:", error);
   }
@@ -14,7 +22,12 @@ export const saveUser = async (user) => {
 
 export const getUser = async () => {
   try {
-    const user = await SecureStore.getItem("user");
+    if (Platform.OS === "web") {
+      const user = localStorage.getItem(USER_KEY);
+      return user ? JSON.parse(user) : null;
+    }
+
+    const user = await SecureStore.getItemAsync(USER_KEY);
 
     return user ? JSON.parse(user) : null;
   } catch (error) {
@@ -24,33 +37,55 @@ export const getUser = async () => {
 };
 
 export const removeUser = async () => {
-  await SecureStore.removeItem("user");
+  try {
+    if (Platform.OS === "web") {
+      localStorage.removeItem(USER_KEY);
+      return;
+    }
+
+    await SecureStore.deleteItemAsync(USER_KEY);
+  } catch (error) {
+    console.log("Error removing user:", error);
+  }
 };
 
 export const saveToken = async (token) => {
-  if (Platform.OS === "web") {
-    localStorage.setItem(TOKEN_KEY, token);
-    return;
-  }
+  try {
+    if (Platform.OS === "web") {
+      localStorage.setItem(TOKEN_KEY, token);
+      return;
+    }
 
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch (error) {
+    console.log("Error saving token:", error);
+  }
 };
 
 export const getToken = async () => {
-  if (Platform.OS === "web") {
-    return localStorage.getItem(TOKEN_KEY);
-  }
+  try {
+    if (Platform.OS === "web") {
+      return localStorage.getItem(TOKEN_KEY);
+    }
 
-  return await SecureStore.getItemAsync(TOKEN_KEY);
+    return await SecureStore.getItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.log("Error getting token:", error);
+    return null;
+  }
 };
 
 export const removeToken = async () => {
-  if (Platform.OS === "web") {
-    localStorage.removeItem(TOKEN_KEY);
-    return;
-  }
+  try {
+    if (Platform.OS === "web") {
+      localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
 
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.log("Error removing token:", error);
+  }
 };
 
 export const isTokenExpired = (token) => {
