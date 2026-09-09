@@ -159,9 +159,9 @@ export default function MyEventsScreen({ navigation }) {
           console.log("Selected event:", item);
 
           // Later:
-          // navigation.navigate("EventDetails", {
-          //   event: item,
-          // });
+          navigation.navigate("EventDeScreen", {
+            event: item,
+          });
         }}
       >
         {/* CARD TOP */}
