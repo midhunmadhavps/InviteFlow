@@ -84,3 +84,50 @@ export const validatePassword = (password) => {
 
   return null;
 };
+
+export const validateLocation = (location, fieldName = "location") => {
+  if (!location) {
+    return `Please select your ${fieldName}.`;
+  }
+
+  if (typeof location === "string") {
+    if (!location.trim()) {
+      return `Please select your ${fieldName}.`;
+    }
+    return null;
+  }
+
+  if (!location.address || !location.address.trim()) {
+    return `Please select your ${fieldName}.`;
+  }
+
+  return null;
+};
+
+export const validateDate = (date, fieldName = "date") => {
+  if (!date || !date.trim()) {
+    return `Please select your ${fieldName}.`;
+  }
+
+  const selectedDate = new Date(date);
+
+  if (isNaN(selectedDate.getTime())) {
+    return `Please select a valid ${fieldName}.`;
+  }
+
+  return null;
+};
+
+export const validateTime = (time, fieldName = "time") => {
+  if (!time || !time.trim()) {
+    return `Please select your ${fieldName}.`;
+  }
+
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+  if (!timeRegex.test(time.trim())) {
+    return `Please select a valid ${fieldName}.`;
+  }
+
+  return null;
+};

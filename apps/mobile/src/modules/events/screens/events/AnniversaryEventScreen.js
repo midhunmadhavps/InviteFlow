@@ -17,52 +17,75 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import api from "../../../../api/client";
+import { createEvent } from "../../api/event.api";
+import { getUser } from "../../../../utils/auth";
+import { validateNameOnly,validateDate,validateTime,validateLocation,validateRequired } from "../../../../utils/validation";
+import { useToast } from "../../../../context/ToastContext";
+import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
 
-export default function AnniversaryEventScreen({ navigation,route }) {
+export default function AnniversaryEventScreen({
+  navigation,
+  route,
+}) {
   const { eventTypeId } = route.params || {};
+
+  const showAlert = (title, message) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const { showSuccess, showError } = useToast();
 
   const [partnerOneName, setPartnerOneName] = useState("");
   const [partnerTwoName, setPartnerTwoName] = useState("");
-
   const [anniversaryDate, setAnniversaryDate] = useState("");
+  const [anniversaryTime, setAnniversaryTime] = useState("");
   const [description, setDescription] = useState("");
-  const [functionTime, setFunctionTime] = useState("");
-
-  const [functionAddress, setFunctionAddress] = useState("");
-  const [functionLocation, setFunctionLocation] = useState("");
-
+  const [anniversaryAddress, setAnniversaryAddress] = useState("");
+  const [anniversaryLocation, setAnniversaryLocation] = useState({
+    address: "",
+    latitude: null,
+    longitude: null,
+    googleMapsUrl: "",
+  });
   const [partnerOneImage, setPartnerOneImage] = useState(null);
   const [partnerTwoImage, setPartnerTwoImage] = useState(null);
-
   const [invitation, setInvitation] = useState(null);
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
-  // =========================
-  // Pick Partner Image
-  // =========================
+  const uriToFile = async (uri, name, type) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new File([blob], name, {
+      type: type || blob.type,
+    });
+  };
+
   const pickImage = async (type) => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
+      showAlert(
         "Permission Required",
         "Please allow photo library access."
       );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
       const image = result.assets[0];
@@ -75,28 +98,30 @@ export default function AnniversaryEventScreen({ navigation,route }) {
     }
   };
 
-  // =========================
-  // Pick Invitation PDF
-  // =========================
   const pickInvitation = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-    });
+    const result =
+      await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "image/*",
+        ],
+        copyToCacheDirectory: true,
+      });
 
     if (!result.canceled) {
       setInvitation(result.assets[0]);
     }
   };
 
-  // =========================
-  // Date Picker
-  // =========================
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (
+    event,
+    selectedDate
+  ) => {
     setShowDatePicker(false);
 
     if (selectedDate) {
-      const year = selectedDate.getFullYear();
+      const year =
+        selectedDate.getFullYear();
 
       const month = String(
         selectedDate.getMonth() + 1
@@ -112,10 +137,10 @@ export default function AnniversaryEventScreen({ navigation,route }) {
     }
   };
 
-  // =========================
-  // Time Picker
-  // =========================
-  const handleTimeChange = (event, selectedTime) => {
+  const handleTimeChange = (
+    event,
+    selectedTime
+  ) => {
     setShowTimePicker(false);
 
     if (selectedTime) {
@@ -127,221 +152,268 @@ export default function AnniversaryEventScreen({ navigation,route }) {
         selectedTime.getMinutes()
       ).padStart(2, "0");
 
-      setFunctionTime(`${hours}:${minutes}`);
+      setAnniversaryTime(
+        `${hours}:${minutes}`
+      );
     }
   };
 
-  // =========================
-  // Validation
-  // =========================
   const validateForm = () => {
-    if (!partnerOneName.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter Partner 1 name."
+    const fields = [
+      {
+        value: partnerOneName,
+        label: "Partner 1 Name",
+      },
+      {
+        value: partnerTwoName,
+        label: "Partner 2 Name",
+      },
+      {
+        value: anniversaryAddress,
+        label: "Anniversary Address",
+      }
+    ];
+
+    for (const field of fields) {
+      const errorMessage = validateNameOnly(
+        field.value,
+        field.label
       );
-      return false;
+
+      if (errorMessage) {
+        showError(errorMessage);
+        return false;
+      }
     }
 
-    if (!partnerTwoName.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter Partner 2 name."
-      );
-      return false;
+    let errorMessage;
+    errorMessage = validateDate(anniversaryDate);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!anniversaryDate) {
-      Alert.alert(
-        "Required",
-        "Please select anniversary date."
-      );
-      return false;
+    errorMessage = validateTime(anniversaryTime);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
-    if (!description.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter description."
-      );
-      return false;
-    }
-
-    if (!functionTime) {
-      Alert.alert(
-        "Required",
-        "Please select function time."
-      );
-      return false;
-    }
-
-    if (!functionAddress.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter function address."
-      );
-      return false;
-    }
-
-    if (!functionLocation.trim()) {
-      Alert.alert(
-        "Required",
-        "Please enter function location."
-      );
-      return false;
+    errorMessage = validateLocation(anniversaryLocation);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
     }
 
     if (!partnerOneImage) {
-      Alert.alert(
-        "Required",
-        "Please select Partner 1 image."
-      );
+      showError("Please select Partner 1 image.");
       return false;
     }
 
     if (!partnerTwoImage) {
-      Alert.alert(
-        "Required",
-        "Please select Partner 2 image."
-      );
-      return false;
-    }
-
-    if (!invitation) {
-      Alert.alert(
-        "Required",
-        "Please select invitation PDF."
-      );
+      showError("Please select Partner 2 image.");
       return false;
     }
 
     return true;
   };
 
-  // =========================
-  // Save Event API
-  // =========================
   const saveEvent = async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    if (!eventTypeId) {
+      showAlert(
+        "Error",
+        "Event type ID is missing."
+      );
       return;
     }
 
     try {
       setSaving(true);
 
+      const user = await getUser();
+
+      if (!user?.id) {
+        showAlert(
+          "Error",
+          "User information not found."
+        );
+        return;
+      }
+
       const formData = new FormData();
 
-      formData.append(
-        "eventType",
-        "Anniversary"
-      );
+      formData.append("userId", String(user.id));
+      formData.append("eventTypeId", String(eventTypeId));
+      formData.append("title", `${partnerOneName.trim()} & ${partnerTwoName.trim()} Anniversary`);
+      formData.append("hostOne", partnerOneName.trim());
+      formData.append("hostTwo", partnerTwoName.trim());
+      formData.append("eventDate", anniversaryDate);
+      formData.append("eventTime", anniversaryTime);
+      formData.append("message", description.trim());
+      formData.append("address", anniversaryAddress.trim());
 
       formData.append(
-        "partnerOneName",
-        partnerOneName.trim()
+        "location",
+        JSON.stringify({
+          address:
+            anniversaryLocation.address.trim(),
+          latitude:
+            anniversaryLocation.latitude,
+          longitude:
+            anniversaryLocation.longitude,
+          googleMapsUrl:
+            anniversaryLocation.googleMapsUrl,
+        })
       );
 
-      formData.append(
-        "partnerTwoName",
-        partnerTwoName.trim()
-      );
-
-      formData.append(
-        "anniversaryDate",
-        anniversaryDate
-      );
-
-      formData.append(
-        "description",
-        description.trim()
-      );
-
-      formData.append(
-        "functionTime",
-        functionTime
-      );
-
-      formData.append(
-        "functionAddress",
-        functionAddress.trim()
-      );
-
-      formData.append(
-        "functionLocation",
-        functionLocation.trim()
-      );
+      formData.append("isPublished","false");
+      formData.append("status","Draft");
 
       // Partner 1 Image
       if (partnerOneImage) {
-        formData.append("partnerOneImage", {
-          uri: partnerOneImage.uri,
-          name:
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            partnerOneImage.uri,
             partnerOneImage.fileName ||
-            "partner-one-image.jpg",
-          type:
+              "partner-one.jpg",
             partnerOneImage.mimeType ||
-            "image/jpeg",
-        });
+              "image/jpeg"
+          );
+
+          formData.append(
+            "hostOneImage",
+            file
+          );
+        } else {
+          formData.append(
+            "hostOneImage",
+            {
+              uri: partnerOneImage.uri,
+              name:
+                partnerOneImage.fileName ||
+                "partner-one.jpg",
+              type:
+                partnerOneImage.mimeType ||
+                "image/jpeg",
+            }
+          );
+        }
       }
 
       // Partner 2 Image
       if (partnerTwoImage) {
-        formData.append("partnerTwoImage", {
-          uri: partnerTwoImage.uri,
-          name:
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            partnerTwoImage.uri,
             partnerTwoImage.fileName ||
-            "partner-two-image.jpg",
-          type:
+              "partner-two.jpg",
             partnerTwoImage.mimeType ||
-            "image/jpeg",
-        });
+              "image/jpeg"
+          );
+
+          formData.append(
+            "hostTwoImage",
+            file
+          );
+        } else {
+          formData.append(
+            "hostTwoImage",
+            {
+              uri: partnerTwoImage.uri,
+              name:
+                partnerTwoImage.fileName ||
+                "partner-two.jpg",
+              type:
+                partnerTwoImage.mimeType ||
+                "image/jpeg",
+            }
+          );
+        }
       }
 
-      // Invitation PDF
+      // Invitation
       if (invitation) {
-        formData.append("invitation", {
-          uri: invitation.uri,
-          name:
+        if (Platform.OS === "web") {
+          const file = await uriToFile(
+            invitation.uri,
             invitation.name ||
-            "anniversary-invitation.pdf",
-          type:
+              "anniversary-invitation",
             invitation.mimeType ||
-            "application/pdf",
-        });
+              "application/pdf"
+          );
+
+          formData.append(
+            "invitation",
+            file
+          );
+        } else {
+          formData.append(
+            "invitation",
+            {
+              uri: invitation.uri,
+              name:
+                invitation.name ||
+                "anniversary-invitation",
+              type:
+                invitation.mimeType ||
+                "application/pdf",
+            }
+          );
+        }
       }
 
-      const response = await api.post(
-        "/event/create",
-        formData
-      );
+      const response =
+        await createEvent(formData);
 
       console.log(
         "Anniversary created:",
         response.data
       );
 
-      Alert.alert(
-        "Success",
-        "Anniversary event created successfully.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              navigation.navigate("Reminder", {
-                event: response.data.data,
-              });
-            },
-          },
-        ]
+      showSuccess(
+        "Anniversary event created successfully."
       );
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "Success\n\nAnniversary event created successfully."
+        );
+
+        navigation.navigate("Main", {
+          event: response.data.data,
+        });
+      } else {
+        Alert.alert(
+          "Success",
+          "Anniversary event created successfully.",
+          [
+            {
+              text: "Continue",
+              onPress: () => {
+                navigation.navigate(
+                  "Main",
+                  {
+                    event:
+                      response.data.data,
+                  }
+                );
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.log(
         "Create anniversary error:",
-        error.response?.data || error
+        error.response?.data ||
+          error
       );
 
-      Alert.alert(
-        "Error",
+      showError(
         error.response?.data?.message ||
           "Failed to create anniversary event."
       );
@@ -351,113 +423,160 @@ export default function AnniversaryEventScreen({ navigation,route }) {
   };
 
   return (
-    <ImageBackground
-      source={require("../../../../../assets/Vector1.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <View style={styles.container}>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#ffffff"
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>
-            Create Anniversary
-          </Text>
-
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            navigation.goBack()
+          }
         >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="#ffffff"
+          />
+        </TouchableOpacity>
 
-          {/* Partner 1 */}
-          <Text style={styles.label}>
-            Male Partner Name *
-          </Text>
+        <Text style={styles.headerTitle}>
+          Create Anniversary
+        </Text>
+
+        <View
+          style={{
+            width: 40,
+          }}
+        />
+      </View>
+
+      <ImageBackground
+        source={require("../../../../../assets/Vector1.png")}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.content
+          }
+        >
+          <RequiredLabel>
+            Partner 1 Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
-            placeholder="Enter Male partner name"
+            placeholder="Enter partner 1 name"
             placeholderTextColor="#999"
             value={partnerOneName}
-            onChangeText={setPartnerOneName}
+            onChangeText={
+              setPartnerOneName
+            }
           />
 
-          {/* Partner 2 */}
-          <Text style={styles.label}>
-            Female Partner Name *
-          </Text>
+          <RequiredLabel>
+            Partner 2 Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
-            placeholder="Enter Female partner name"
+            placeholder="Enter partner 2 name"
             placeholderTextColor="#999"
             value={partnerTwoName}
-            onChangeText={setPartnerTwoName}
+            onChangeText={
+              setPartnerTwoName
+            }
           />
 
-          {/* Anniversary Date */}
-          <Text style={styles.label}>
-            Anniversary Date *
-          </Text>
+          <RequiredLabel>
+            Anniversary Date
+          </RequiredLabel>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                anniversaryDate
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {anniversaryDate ||
-                "Select anniversary date"}
-            </Text>
+              <input
+                type="date"
+                value={
+                  anniversaryDate
+                }
+                onChange={(e) =>
+                  setAnniversaryDate(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowDatePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    anniversaryDate
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {anniversaryDate ||
+                    "Select anniversary date"}
+                </Text>
 
-            <Ionicons
-              name="calendar-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="calendar-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="date"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleDateChange}
-            />
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    anniversaryDate
+                      ? new Date(
+                          `${anniversaryDate}T00:00:00`
+                        )
+                      : new Date()
+                  }
+                  mode="date"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleDateChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {/* Description */}
-          <Text style={styles.label}>
-            Description *
-          </Text>
+          <Label>
+            Description
+          </Label>
 
           <TextInput
             style={[
               styles.input,
-              styles.multilineInput,
+              styles.descriptionInput,
             ]}
             placeholder="Enter anniversary description"
             placeholderTextColor="#999"
@@ -465,74 +584,115 @@ export default function AnniversaryEventScreen({ navigation,route }) {
             numberOfLines={4}
             textAlignVertical="top"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={
+              setDescription
+            }
           />
 
-          {/* Function Time */}
-          <Text style={styles.label}>
-            Function Time *
-          </Text>
+          <RequiredLabel>
+            Anniversary Time
+          </RequiredLabel>
 
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Text
+          {Platform.OS === "web" ? (
+            <View
               style={
-                functionTime
-                  ? styles.inputButtonText
-                  : styles.placeholder
+                styles.webInputWrapper
               }
             >
-              {functionTime ||
-                "Select function time"}
-            </Text>
+              <input
+                type="time"
+                value={
+                  anniversaryTime
+                }
+                onChange={(e) =>
+                  setAnniversaryTime(
+                    e.target.value
+                  )
+                }
+                style={
+                  styles.webInput
+                }
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={
+                  styles.inputButton
+                }
+                onPress={() =>
+                  setShowTimePicker(
+                    true
+                  )
+                }
+              >
+                <Text
+                  style={
+                    anniversaryTime
+                      ? styles.inputButtonText
+                      : styles.placeholder
+                  }
+                >
+                  {anniversaryTime ||
+                    "Select anniversary time"}
+                </Text>
 
-            <Ionicons
-              name="time-outline"
-              size={21}
-              color="#ff7f86"
-            />
-          </TouchableOpacity>
+                <Ionicons
+                  name="time-outline"
+                  size={21}
+                  color="#ff7f86"
+                />
+              </TouchableOpacity>
 
-          {showTimePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="time"
-              display={
-                Platform.OS === "ios"
-                  ? "spinner"
-                  : "default"
-              }
-              onChange={handleTimeChange}
-            />
+              {showTimePicker && (
+                <DateTimePicker
+                  value={new Date()}
+                  mode="time"
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleTimeChange
+                  }
+                />
+              )}
+            </>
           )}
 
-          {/* Function Address */}
-          <Text style={styles.label}>
-            Function Address *
-          </Text>
+          <RequiredLabel>
+            Anniversary Address
+          </RequiredLabel>
 
           <TextInput
             style={[
               styles.input,
               styles.multilineInput,
             ]}
-            placeholder="Enter function address"
+            placeholder="Enter anniversary address"
             placeholderTextColor="#999"
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            value={functionAddress}
-            onChangeText={setFunctionAddress}
+            value={
+              anniversaryAddress
+            }
+            onChangeText={
+              setAnniversaryAddress
+            }
           />
 
-          {/* Function Location */}
-          <Text style={styles.label}>
-            Function Location *
-          </Text>
+          <RequiredLabel>
+            Anniversary Location
+          </RequiredLabel>
 
-          <View style={styles.locationInput}>
+          <View
+            style={
+              styles.locationInput
+            }
+          >
             <Ionicons
               name="location-outline"
               size={21}
@@ -540,22 +700,36 @@ export default function AnniversaryEventScreen({ navigation,route }) {
             />
 
             <TextInput
-              style={styles.locationTextInput}
-              placeholder="Enter function location"
+              style={
+                styles.locationTextInput
+              }
+              placeholder="Enter anniversary location"
               placeholderTextColor="#999"
-              value={functionLocation}
-              onChangeText={setFunctionLocation}
+              value={
+                anniversaryLocation.address
+              }
+              onChangeText={(text) =>
+                setAnniversaryLocation(
+                  (prev) => ({
+                    ...prev,
+                    address: text,
+                  })
+                )
+              }
             />
           </View>
 
-          {/* Images */}
-          <View style={styles.imageRow}>
-
-            {/* Partner 1 */}
+          <View
+            style={styles.imageRow}
+          >
             <TouchableOpacity
-              style={styles.imageUpload}
+              style={
+                styles.imageUpload
+              }
               onPress={() =>
-                pickImage("partnerOne")
+                pickImage(
+                  "partnerOne"
+                )
               }
             >
               {partnerOneImage ? (
@@ -563,7 +737,9 @@ export default function AnniversaryEventScreen({ navigation,route }) {
                   source={{
                     uri: partnerOneImage.uri,
                   }}
-                  style={styles.previewImage}
+                  style={
+                    styles.previewImage
+                  }
                 />
               ) : (
                 <>
@@ -573,18 +749,25 @@ export default function AnniversaryEventScreen({ navigation,route }) {
                     color="#ff7f86"
                   />
 
-                  <Text style={styles.uploadText}>
+                  <Text
+                    style={
+                      styles.uploadText
+                    }
+                  >
                     Partner 1 Image
                   </Text>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Partner 2 */}
             <TouchableOpacity
-              style={styles.imageUpload}
+              style={
+                styles.imageUpload
+              }
               onPress={() =>
-                pickImage("partnerTwo")
+                pickImage(
+                  "partnerTwo"
+                )
               }
             >
               {partnerTwoImage ? (
@@ -592,7 +775,9 @@ export default function AnniversaryEventScreen({ navigation,route }) {
                   source={{
                     uri: partnerTwoImage.uri,
                   }}
-                  style={styles.previewImage}
+                  style={
+                    styles.previewImage
+                  }
                 />
               ) : (
                 <>
@@ -602,21 +787,27 @@ export default function AnniversaryEventScreen({ navigation,route }) {
                     color="#ff7f86"
                   />
 
-                  <Text style={styles.uploadText}>
+                  <Text
+                    style={
+                      styles.uploadText
+                    }
+                  >
                     Partner 2 Image
                   </Text>
                 </>
               )}
             </TouchableOpacity>
-
           </View>
 
-          {/* Invitation PDF */}
           <TouchableOpacity
             style={styles.pdfButton}
-            onPress={pickInvitation}
+            onPress={
+              pickInvitation
+            }
           >
-            <View style={styles.pdfIcon}>
+            <View
+              style={styles.pdfIcon}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={25}
@@ -624,20 +815,28 @@ export default function AnniversaryEventScreen({ navigation,route }) {
               />
             </View>
 
-            <View style={styles.pdfInfo}>
+            <View
+              style={styles.pdfInfo}
+            >
               <Text
-                style={styles.pdfTitle}
+                style={
+                  styles.pdfTitle
+                }
                 numberOfLines={1}
               >
                 {invitation
                   ? invitation.name
-                  : "Upload Invitation PDF"}
+                  : "Upload Invitation"}
               </Text>
 
-              <Text style={styles.pdfSubtitle}>
+              <Text
+                style={
+                  styles.pdfSubtitle
+                }
+              >
                 {invitation
-                  ? "PDF selected"
-                  : "Tap to select PDF"}
+                  ? "File selected"
+                  : "Tap to select PDF or image"}
               </Text>
             </View>
 
@@ -648,11 +847,11 @@ export default function AnniversaryEventScreen({ navigation,route }) {
             />
           </TouchableOpacity>
 
-          {/* Save Button */}
           <TouchableOpacity
             style={[
               styles.saveButton,
-              saving && styles.disabledButton,
+              saving &&
+                styles.disabledButton,
             ]}
             onPress={saveEvent}
             disabled={saving}
@@ -667,27 +866,26 @@ export default function AnniversaryEventScreen({ navigation,route }) {
               color="#ffffff"
             />
 
-            <Text style={styles.saveButtonText}>
+            <Text
+              style={
+                styles.saveButtonText
+              }
+            >
               {saving
                 ? "Saving..."
                 : "Save Anniversary Event"}
             </Text>
           </TouchableOpacity>
-
         </ScrollView>
-      </View>
-    </ImageBackground>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#ffffff",
   },
 
   header: {
@@ -712,17 +910,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  background: {
+    flex: 1,
+  },
+
   content: {
     padding: 20,
     paddingBottom: 50,
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#444444",
-    marginBottom: 7,
-    marginTop: 17,
   },
 
   input: {
@@ -734,6 +928,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#333333",
     backgroundColor: "#ffffff",
+  },
+
+  descriptionInput: {
+    height: 95,
+    paddingTop: 12,
+    textAlignVertical: "top",
   },
 
   multilineInput: {
@@ -762,6 +962,26 @@ const styles = StyleSheet.create({
   placeholder: {
     fontSize: 13,
     color: "#999999",
+  },
+
+  webInputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  webInput: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "transparent",
+    fontSize: 13,
+    color: "#333333",
+    borderWidth: 0,
+    padding: 0,
   },
 
   locationInput: {

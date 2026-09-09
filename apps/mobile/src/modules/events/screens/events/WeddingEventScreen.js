@@ -19,7 +19,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
-import { validateNameOnly, } from "../../../../utils/validation";
+import { validateNameOnly,validateDate,validateTime,validateLocation,validateRequired } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
 import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
 
@@ -159,12 +159,6 @@ export default function WeddingEventScreen({ navigation, route }) {
     const fields = [
       { value: groomName, label: "Groom Name" },
       { value: brideName, label: "Bride Name" },
-      { value: weddingDate, label: "Wedding Date" },
-      { value: weddingTime, label: "Wedding Time" },
-      { value: weddingAddress, label: "Wedding Address" },
-      { value: weddingLocation, label: "Wedding ocation" },
-      { value: groomImage, label: "Groom Image" },
-      { value: brideImage, label: "Bride Image" },
     ];
 
     for (const field of fields) {
@@ -175,6 +169,42 @@ export default function WeddingEventScreen({ navigation, route }) {
         return false;
       }
     }
+
+    let errorMessage;
+    errorMessage = validateDate(weddingDate);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
+    }
+
+    errorMessage = validateTime(weddingTime);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
+    }
+
+    errorMessage = validateLocation(weddingLocation);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
+    }
+
+    errorMessage = validateRequired(weddingLocation);
+    if (errorMessage) {
+      showError(errorMessage);
+      return;
+    }
+
+    if (!groomImage) {
+      showError("Please select groom image.");
+      return false;
+    }
+
+    if (!brideImage) {
+      showError("Please select bride image.");
+      return false;
+    }
+
 
     return true;
   };
