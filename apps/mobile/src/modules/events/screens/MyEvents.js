@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Image,
   ImageBackground,
-  Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +20,33 @@ export default function MyEventsScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // --------------------------------------------------
+  // EVENT TYPE IMAGES
+  // --------------------------------------------------
+
+  const allowedEvents = [
+    {
+      name: "Wedding",
+      image: require("../../../../assets/images/wedding.png"),
+    },
+    {
+      name: "Anniversary",
+      image: require("../../../../assets/images/anniversary.png"),
+    },
+    {
+      name: "Engagement",
+      image: require("../../../../assets/images/engagement.png"),
+    },
+    {
+      name: "Birthday",
+      image: require("../../../../assets/images/birthday.png"),
+    },
+  ];
+
+  // --------------------------------------------------
+  // LOAD EVENTS
+  // --------------------------------------------------
 
   const loadEvents = async () => {
     try {
@@ -65,6 +91,10 @@ export default function MyEventsScreen({ navigation }) {
     loadEvents();
   };
 
+  // --------------------------------------------------
+  // FORMAT DATE
+  // --------------------------------------------------
+
   const formatDate = (date) => {
     if (!date) {
       return "-";
@@ -77,20 +107,49 @@ export default function MyEventsScreen({ navigation }) {
     }
   };
 
+  // --------------------------------------------------
+  // GET EVENT TYPE IMAGE
+  // --------------------------------------------------
+
+  const getEventTypeImage = (item) => {
+    const eventTypeName = item?.eventTypeId?.name;
+
+    if (!eventTypeName) {
+      return null;
+    }
+
+    const eventType = allowedEvents.find(
+      (event) =>
+        event.name.toLowerCase() ===
+        eventTypeName.toLowerCase()
+    );
+
+    return eventType?.image || null;
+  };
+
+  // --------------------------------------------------
+  // GET USER UPLOADED IMAGE
+  // --------------------------------------------------
+
   const getEventImage = (item) => {
-    if (item.hostOneImage) {
+    if (item?.hostOneImage) {
       return item.hostOneImage;
     }
 
-    if (item.hostTwoImage) {
+    if (item?.hostTwoImage) {
       return item.hostTwoImage;
     }
 
     return null;
   };
 
+  // --------------------------------------------------
+  // RENDER EVENT
+  // --------------------------------------------------
+
   const renderEvent = ({ item }) => {
     const eventImage = getEventImage(item);
+    const eventTypeImage = getEventTypeImage(item);
 
     return (
       <TouchableOpacity
@@ -99,18 +158,27 @@ export default function MyEventsScreen({ navigation }) {
         onPress={() => {
           console.log("Selected event:", item);
 
-          // You can navigate to event details later
+          // Later:
           // navigation.navigate("EventDetails", {
           //   event: item,
           // });
         }}
       >
+        {/* CARD TOP */}
+
         <View style={styles.cardTop}>
+          {/* EVENT IMAGE */}
+
           {eventImage ? (
             <Image
               source={{
                 uri: eventImage,
               }}
+              style={styles.eventImage}
+            />
+          ) : eventTypeImage ? (
+            <Image
+              source={eventTypeImage}
               style={styles.eventImage}
             />
           ) : (
@@ -123,6 +191,8 @@ export default function MyEventsScreen({ navigation }) {
             </View>
           )}
 
+          {/* TITLE + META */}
+
           <View style={styles.titleContainer}>
             <Text
               style={styles.eventTitle}
@@ -131,15 +201,27 @@ export default function MyEventsScreen({ navigation }) {
               {item.title || "Untitled Event"}
             </Text>
 
-            <View style={styles.statusContainer}>
-              <Text style={styles.statusText}>
-                {item.status || "Draft"}
+            {/* EVENT TYPE + STATUS */}
+
+            <View style={styles.eventMetaRow}>
+              <Text style={styles.eventTypeText}>
+                {item.eventTypeId?.name || "Event"}
               </Text>
+
+              <View style={styles.statusContainer}>
+                <Text style={styles.statusText}>
+                  {item.status || "Draft"}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
+        {/* DIVIDER */}
+
         <View style={styles.divider} />
+
+        {/* DATE */}
 
         <View style={styles.infoRow}>
           <View style={styles.iconContainer}>
@@ -161,6 +243,8 @@ export default function MyEventsScreen({ navigation }) {
           </View>
         </View>
 
+        {/* TIME */}
+
         <View style={styles.infoRow}>
           <View style={styles.iconContainer}>
             <Ionicons
@@ -181,28 +265,7 @@ export default function MyEventsScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.infoRow}>
-          <View style={styles.iconContainer}>
-            <Ionicons
-              name="location-outline"
-              size={18}
-              color="#ff7f86"
-            />
-          </View>
-
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>
-              Address
-            </Text>
-
-            <Text
-              style={styles.infoValue}
-              numberOfLines={2}
-            >
-              {item.address || "-"}
-            </Text>
-          </View>
-        </View>
+        {/* HOSTS */}
 
         <View style={styles.hostContainer}>
           <Ionicons
@@ -221,32 +284,19 @@ export default function MyEventsScreen({ navigation }) {
               : ""}
           </Text>
         </View>
+
+        {/* ADDRESS REMOVED */}
       </TouchableOpacity>
     );
   };
 
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
+
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#ffffff"
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>
-            My Events
-          </Text>
-
-          <View style={styles.headerRight} />
-        </View>
-
         <ImageBackground
           source={require("../../../../assets/Vector1.png")}
           style={styles.background}
@@ -267,31 +317,12 @@ export default function MyEventsScreen({ navigation }) {
     );
   }
 
+  // --------------------------------------------------
+  // MAIN
+  // --------------------------------------------------
+
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#ffffff"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          My Events
-        </Text>
-
-        <View style={styles.headerRight} />
-      </View>
-
-      {/* BACKGROUND */}
-
       <ImageBackground
         source={require("../../../../assets/Vector1.png")}
         style={styles.background}
@@ -317,12 +348,29 @@ export default function MyEventsScreen({ navigation }) {
               : styles.listContainer
           }
           showsVerticalScrollIndicator={false}
+
+          // --------------------------------------------------
+          // HEADER
+          // --------------------------------------------------
+
           ListHeaderComponent={
             events.length > 0 ? (
               <View style={styles.listHeader}>
-                <Text style={styles.pageTitle}>
-                  My Events
-                </Text>
+                <TouchableOpacity
+                  style={styles.pageBackButton}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={22}
+                    color="#263957"
+                  />
+
+                  <Text style={styles.pageTitle}>
+                    My Events
+                  </Text>
+                </TouchableOpacity>
 
                 <Text style={styles.pageSubtitle}>
                   {events.length}{" "}
@@ -334,8 +382,29 @@ export default function MyEventsScreen({ navigation }) {
               </View>
             ) : null
           }
+
+          // --------------------------------------------------
+          // EMPTY
+          // --------------------------------------------------
+
           ListEmptyComponent={
             <View style={styles.emptyBox}>
+              <TouchableOpacity
+                style={styles.pageBackButtonEmpty}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={22}
+                  color="#263957"
+                />
+
+                <Text style={styles.pageTitle}>
+                  My Events
+                </Text>
+              </TouchableOpacity>
+
               <View style={styles.emptyIcon}>
                 <Ionicons
                   name="calendar-outline"
@@ -364,9 +433,7 @@ export default function MyEventsScreen({ navigation }) {
                   color="#ffffff"
                 />
 
-                <Text
-                  style={styles.createButtonText}
-                >
+                <Text style={styles.createButtonText}>
                   Create Event
                 </Text>
               </TouchableOpacity>
@@ -378,36 +445,14 @@ export default function MyEventsScreen({ navigation }) {
   );
 }
 
+// ======================================================
+// STYLES
+// ======================================================
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-  },
-
-  header: {
-    height: 75,
-    backgroundColor: "#ff7f86",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 15,
-  },
-
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-
-  headerRight: {
-    width: 40,
   },
 
   background: {
@@ -421,19 +466,38 @@ const styles = StyleSheet.create({
 
   listHeader: {
     marginBottom: 18,
+    paddingTop: 10,
+  },
+
+  pageBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  pageBackButtonEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginBottom: 20,
   },
 
   pageTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: "#263957",
+    marginLeft: 4,
   },
 
   pageSubtitle: {
     fontSize: 13,
     color: "#888888",
     marginTop: 4,
+    marginLeft: 26,
   },
+
+  // --------------------------------------------------
+  // CARD
+  // --------------------------------------------------
 
   card: {
     backgroundColor: "#ffffff",
@@ -477,19 +541,35 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
+  // --------------------------------------------------
+  // EVENT TYPE + STATUS
+  // --------------------------------------------------
+
+  eventMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+
+  eventTypeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#ff7f86",
+  },
+
   statusContainer: {
-    alignSelf: "flex-start",
     backgroundColor: "#fff1f2",
     borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginLeft: 8,
   },
 
   statusText: {
     fontSize: 11,
     fontWeight: "600",
     color: "#ff7f86",
+    textTransform: "capitalize",
   },
 
   divider: {
@@ -497,6 +577,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#eeeeee",
     marginVertical: 14,
   },
+
+  // --------------------------------------------------
+  // INFO
+  // --------------------------------------------------
 
   infoRow: {
     flexDirection: "row",
@@ -530,6 +614,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  // --------------------------------------------------
+  // HOST
+  // --------------------------------------------------
+
   hostContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -547,6 +635,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
+  // --------------------------------------------------
+  // LOADING
+  // --------------------------------------------------
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -558,6 +650,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777777",
   },
+
+  // --------------------------------------------------
+  // EMPTY
+  // --------------------------------------------------
 
   emptyContainer: {
     flexGrow: 1,

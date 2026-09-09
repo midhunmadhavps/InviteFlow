@@ -4,7 +4,8 @@
   "scripts": {
     "server": "npm --prefix apps/server run dev",
     "server:start": "npm --prefix apps/server start",
-    "mobile": "npm --prefix apps/mobile start"
+    "mobile": "npm --prefix apps/mobile start",
+    "server:seed": "node apps/server/seed/seed.js"
   },
   "dependencies": {
     "axios": "^1.19.0"

@@ -202,12 +202,12 @@ export default function BirthdayEventScreen({
       return;
     }
 
-    if (!image) {
-      showError(
-        "Please Upload image."
-      );
-      return false;
-    }
+    // if (!image) {
+    //   showError(
+    //     "Please Upload image."
+    //   );
+    //   return false;
+    // }
 
     return true;
   };
@@ -365,6 +365,10 @@ export default function BirthdayEventScreen({
             }
           );
         }
+      }
+
+      for (const [key, value] of formData.entries()) {
+        console.log("FORMDATA:", key, value);
       }
 
       const response =

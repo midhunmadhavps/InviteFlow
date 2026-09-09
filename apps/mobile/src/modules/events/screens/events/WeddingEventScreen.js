@@ -189,7 +189,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       return;
     }
 
-    errorMessage = validateRequired(weddingLocation,"Wedding Address");
+    errorMessage = validateRequired(weddingAddress,"Wedding Address");
     if (errorMessage) {
       showError(errorMessage);
       return;

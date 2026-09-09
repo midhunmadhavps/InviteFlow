@@ -1,7 +1,10 @@
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
+const path = require("path");
+const envPath = path.join(__dirname, "../../../.env");
+require("dotenv").config({
+  path: envPath,
+});
 
-dotenv.config();
+const mongoose = require("mongoose");
 
 const EventType = require("../src/models/eventType.model");
 
@@ -70,7 +73,9 @@ const eventTypes = [
 
 async function seedEventTypes() {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+
+    const mongoUri = `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+    await mongoose.connect(mongoUri);
 
     console.log("MongoDB Connected");
 
