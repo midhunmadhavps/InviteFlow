@@ -20,6 +20,7 @@ export default function MyEventsScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // --------------------------------------------------
   // EVENT TYPE IMAGES
@@ -148,7 +149,16 @@ export default function MyEventsScreen({ navigation }) {
   // --------------------------------------------------
 
   const renderPageHeader = () => (
-    <View style={styles.pageHeader}>
+    <View
+      style={styles.pageHeader}
+      onLayout={(event) => {
+        const { height } = event.nativeEvent.layout;
+
+        if (height && height !== headerHeight) {
+          setHeaderHeight(height);
+        }
+      }}
+    >
       <TouchableOpacity
         style={styles.pageBackButton}
         onPress={() => navigation.goBack()}
@@ -331,22 +341,22 @@ export default function MyEventsScreen({ navigation }) {
       <View style={styles.container}>
         <ImageBackground
           source={require("../../../../assets/Vector1.png")}
-          style={styles.background}
+          style={styles.backgroundFixed}
           resizeMode="cover"
-        >
-          {renderPageHeader()}
+        />
 
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator
-              size="large"
-              color="#ff7f86"
-            />
+        {renderPageHeader()}
 
-            <Text style={styles.loadingText}>
-              Loading your events...
-            </Text>
-          </View>
-        </ImageBackground>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color="#ff7f86"
+          />
+
+          <Text style={styles.loadingText}>
+            Loading your events...
+          </Text>
+        </View>
       </View>
     );
   }
@@ -359,78 +369,79 @@ export default function MyEventsScreen({ navigation }) {
     <View style={styles.container}>
       <ImageBackground
         source={require("../../../../assets/Vector1.png")}
-        style={styles.background}
+        style={styles.backgroundFixed}
         resizeMode="cover"
-      >
-        {/* HEADER — pinned to top for both empty & non-empty states */}
-        {renderPageHeader()}
+      />
 
-        <FlatList
-          style={styles.list}
-          data={events}
-          keyExtractor={(item, index) =>
-            item?._id || String(index)
-          }
-          renderItem={renderEvent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor="#ff7f86"
-              colors={["#ff7f86"]}
-            />
-          }
-          contentContainerStyle={
-            events.length === 0
-              ? styles.emptyContainer
-              : styles.listContainer
-          }
-          showsVerticalScrollIndicator={false}
+      {/* HEADER — pinned to top for both empty & non-empty states */}
+      {renderPageHeader()}
 
-          // --------------------------------------------------
-          // EMPTY
-          // --------------------------------------------------
+      <FlatList
+        style={styles.list}
+        data={events}
+        keyExtractor={(item, index) =>
+          item?._id || String(index)
+        }
+        renderItem={renderEvent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#ff7f86"
+            colors={["#ff7f86"]}
+          />
+        }
+        contentContainerStyle={[
+          events.length === 0
+            ? styles.emptyContainer
+            : styles.listContainer,
+          { paddingTop: headerHeight },
+        ]}
+        showsVerticalScrollIndicator={false}
 
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <View style={styles.emptyIcon}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={45}
-                  color="#ff7f86"
-                />
-              </View>
+        // --------------------------------------------------
+        // EMPTY
+        // --------------------------------------------------
 
-              <Text style={styles.emptyTitle}>
-                No Events Yet
-              </Text>
-
-              <Text style={styles.emptyText}>
-                Your created events will appear here.
-              </Text>
-
-              <TouchableOpacity
-                style={styles.createButton}
-                onPress={() =>
-                  navigation.navigate("Events", {
-                    screen: "EventTypes",
-                  })
-                }
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={21}
-                  color="#ffffff"
-                />
-
-                <Text style={styles.createButtonText}>
-                  Create Event
-                </Text>
-              </TouchableOpacity>
+        ListEmptyComponent={
+          <View style={styles.emptyBox}>
+            <View style={styles.emptyIcon}>
+              <Ionicons
+                name="calendar-outline"
+                size={45}
+                color="#ff7f86"
+              />
             </View>
-          }
-        />
-      </ImageBackground>
+
+            <Text style={styles.emptyTitle}>
+              No Events Yet
+            </Text>
+
+            <Text style={styles.emptyText}>
+              Your created events will appear here.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() =>
+                navigation.navigate("Events", {
+                  screen: "EventTypes",
+                })
+              }
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={21}
+                color="#ffffff"
+              />
+
+              <Text style={styles.createButtonText}>
+                Create Event
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
     </View>
   );
 }
@@ -442,11 +453,16 @@ export default function MyEventsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: "relative",
     backgroundColor: "#ffffff",
   },
 
-  background: {
-    flex: 1,
+  backgroundFixed: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 
   // --------------------------------------------------
@@ -454,6 +470,11 @@ const styles = StyleSheet.create({
   // --------------------------------------------------
 
   pageHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 18,
