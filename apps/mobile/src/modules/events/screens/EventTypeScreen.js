@@ -20,6 +20,7 @@ const { width } = Dimensions.get('window');
 const EventTypeScreen = ({ navigation }) => {
   const [eventTypes, setEventTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     fetchEventTypes();
@@ -128,96 +129,105 @@ const EventTypeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* BACKGROUND — fixed backdrop, never moves */}
       <ImageBackground
         source={require('../../../../assets/Vector1.png')}
-        style={styles.background}
+        style={styles.backgroundFixed}
         resizeMode="stretch"
+      />
+
+      {/* HEADER — back arrow + title + subtitle, pinned to top, stays put while scrolling */}
+      <View
+        style={styles.pageHeader}
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+
+          if (height && height !== headerHeight) {
+            setHeaderHeight(height);
+          }
+        }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
         >
-          <View style={styles.content}>
+          <Text style={styles.backArrow}>‹</Text>
 
-            {/* Back Button */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.backArrow}>‹</Text>
+          <Text style={styles.title}>
+            Select Event Type
+          </Text>
+        </TouchableOpacity>
 
-              {/* <Text style={styles.backText}>
-                Back
-              </Text> */}
-            </TouchableOpacity>
+        <Text style={styles.subtitle}>
+          Choose an event to get started
+        </Text>
+      </View>
 
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.title}>
-                Select Event Type
-              </Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: headerHeight },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
 
-              <Text style={styles.subtitle}>
-                Choose an event to get started
+          {/* Loading */}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator
+                size="large"
+                color="#ff7f86"
+              />
+
+              <Text style={styles.loadingText}>
+                Loading event types...
               </Text>
             </View>
+          ) : eventTypes.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                No event types available
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {eventTypes.map((event) => (
+                <TouchableOpacity
+                  key={event._id}
+                  activeOpacity={0.85}
+                  style={styles.eventContainer}
+                  onPress={() => handleSelectEvent(event)}
+                >
 
-            {/* Loading */}
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator
-                  size="large"
-                  color="#ff7f86"
-                />
+                  {/* Shadow Card */}
+                  <View style={styles.iconCard}>
 
-                <Text style={styles.loadingText}>
-                  Loading event types...
-                </Text>
-              </View>
-            ) : eventTypes.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  No event types available
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.grid}>
-                {eventTypes.map((event) => (
-                  <TouchableOpacity
-                    key={event._id}
-                    activeOpacity={0.85}
-                    style={styles.eventContainer}
-                    onPress={() => handleSelectEvent(event)}
-                  >
-
-                    {/* Shadow Card */}
-                    <View style={styles.iconCard}>
-
-                      {/* Image Holder */}
-                      <View style={styles.imageContainer}>
-                        <Image
-                          source={event.image}
-                          style={styles.icon}
-                          resizeMode="stretch"
-                        />
-                      </View>
-
+                    {/* Image Holder */}
+                    <View style={styles.imageContainer}>
+                      <Image
+                        source={event.image}
+                        style={styles.icon}
+                        resizeMode="stretch"
+                      />
                     </View>
 
-                    {/* Event Name */}
-                    <Text style={styles.eventTitle}>
-                      {event.name}
-                    </Text>
+                  </View>
 
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                  {/* Event Name */}
+                  <Text style={styles.eventTitle}>
+                    {event.name}
+                  </Text>
 
-          </View>
-        </ScrollView>
-      </ImageBackground>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -227,10 +237,32 @@ export default EventTypeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
     backgroundColor: '#FFFFFF',
   },
 
-  background: {
+  backgroundFixed: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  /* ---------------- HEADER (pinned) ---------------- */
+
+  pageHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 20,
+  },
+
+  scroll: {
     flex: 1,
   },
 
@@ -241,7 +273,6 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 24,
-    paddingTop: 18,
   },
 
   /* ---------------- BACK ---------------- */
@@ -251,14 +282,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     height: 40,
-    marginBottom: 20,
   },
 
   backArrow: {
-    fontSize: 28,
+    fontSize: 40,
     fontWeight: '400',
     color: '#263957',
-    marginRight: 2,
+    marginRight: 4,
+    marginBottom: 5,
     includeFontPadding: false,   // Android: strips extra glyph padding that causes drift
     textAlignVertical: 'center', // Android
     lineHeight: 28,              // match fontSize so it centers vertically against sibling text
@@ -271,25 +302,19 @@ const styles = StyleSheet.create({
     lineHeight: 28,               // same lineHeight as arrow keeps both perfectly on one baseline
   },
 
-  /* ---------------- HEADER ---------------- */
-
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 38,
-  },
+  /* ---------------- HEADER TEXT ---------------- */
 
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#263957',
-    textAlign: 'center',
   },
 
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#7D8799',
-    textAlign: 'center',
-    marginTop: 8,
+    marginTop: 4,
+    marginLeft: 10,
   },
 
   /* ---------------- GRID ---------------- */
