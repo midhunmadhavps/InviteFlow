@@ -1,8 +1,24 @@
 const Event = require("../../models/event.model");
 const EventTypes = require("../../models/eventType.model");
 
+const generateEventId = () => {
+  const randomNumber = Math.floor(100000 + Math.random() * 900000);
+  return `EVENT${randomNumber}`;
+};
+
 const createEvent = async (data) => {
-  const event = await Event.create(data);
+  let eventId;
+  let exists = true;
+
+  while (exists) {
+    eventId = generateEventId();
+    exists = await Event.exists({ eventId });
+  }
+
+  const event = await Event.create({
+    ...data,
+    eventId,
+  });
 
   return event;
 };

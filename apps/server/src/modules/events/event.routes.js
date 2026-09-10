@@ -4,11 +4,13 @@ const router = express.Router();
 const authMiddleware = require("../../middleware/auth.middleware");
 const eventController = require("./event.controller");
 const upload = require("../../middleware/upload");
+const generateEventId = require("../../middleware/generateEventId");
 
 //Add Multer to the POST route
 router.post(
   "/create-event",
   authMiddleware,
+  generateEventId,
   upload.fields([
     { name: "hostOneImage", maxCount: 1 },
     { name: "hostTwoImage", maxCount: 1 },

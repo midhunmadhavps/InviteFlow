@@ -329,7 +329,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       if (Platform.OS === "web") {
         window.alert("Success\n\nWedding event created successfully.");
 
-        navigation.navigate("Main", {
+        navigation.navigate("MyEvents", {
           event: response.data.data,
         });
       } else {
@@ -340,7 +340,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             {
               text: "Continue",
               onPress: () => {
-                navigation.navigate("Main", {
+                navigation.navigate("MyEvents", {
                   event: response.data.data,
                 });
               },

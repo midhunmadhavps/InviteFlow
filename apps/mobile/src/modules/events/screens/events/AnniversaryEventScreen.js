@@ -389,7 +389,7 @@ export default function AnniversaryEventScreen({
           "Success\n\nAnniversary event created successfully."
         );
 
-        navigation.navigate("Main", {
+        navigation.navigate("MyEvents", {
           event: response.data.data,
         });
       } else {
@@ -401,7 +401,7 @@ export default function AnniversaryEventScreen({
               text: "Continue",
               onPress: () => {
                 navigation.navigate(
-                  "Main",
+                  "MyEvents",
                   {
                     event:
                       response.data.data,

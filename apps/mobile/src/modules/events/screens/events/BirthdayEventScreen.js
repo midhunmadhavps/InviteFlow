@@ -388,7 +388,7 @@ export default function BirthdayEventScreen({
           "Success\n\nBirthday event created successfully."
         );
 
-        navigation.navigate("Main", {
+        navigation.navigate("MyEvents", {
           event: response.data.data,
         });
       } else {
@@ -400,7 +400,7 @@ export default function BirthdayEventScreen({
               text: "Continue",
               onPress: () => {
                 navigation.navigate(
-                  "Main",
+                  "MyEvents",
                   {
                     event:
                       response.data.data,

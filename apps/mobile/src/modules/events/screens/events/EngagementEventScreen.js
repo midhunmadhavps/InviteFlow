@@ -301,7 +301,7 @@ export default function EngagementEventScreen({ navigation,route }) {
       if (Platform.OS === "web") {
         window.alert("Success\n\Engagement event created successfully.");
 
-        navigation.navigate("Main", {
+        navigation.navigate("MyEvents", {
           event: response.data.data,
         });
       } else {
@@ -312,7 +312,7 @@ export default function EngagementEventScreen({ navigation,route }) {
             {
               text: "Continue",
               onPress: () => {
-                navigation.navigate("Main", {
+                navigation.navigate("MyEvents", {
                   event: response.data.data,
                 });
               },
