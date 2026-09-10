@@ -204,9 +204,9 @@ export const validateImageOrPdf = (
   file,
   fieldName = "Invitation"
 ) => {
-  // if (!file) {
-  //   return `Please upload your ${fieldName}.`;
-  // }
+  if (!file) {
+    return;
+  }
 
   const mimeType = (
     file.mimeType ||
