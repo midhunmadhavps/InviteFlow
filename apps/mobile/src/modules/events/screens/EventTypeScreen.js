@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#263957',
     marginRight: 4,
-    marginBottom: 5,
+    marginBottom: 9,
     includeFontPadding: false,   // Android: strips extra glyph padding that causes drift
     textAlignVertical: 'center', // Android
     lineHeight: 28,              // match fontSize so it centers vertically against sibling text
