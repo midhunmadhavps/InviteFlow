@@ -2,30 +2,6 @@ const eventService = require("./event.service");
 
 const createEvent = async (req, res) => {
   try {
-    console.log("=================================");
-    console.log("CREATE EVENT");
-    console.log("=================================");
-
-    console.log("REQ BODY:", req.body);
-    console.log("REQ FILES:", req.files);
-
-    // Check exactly what Multer returned
-    console.log(
-      "HOST ONE FILENAME:",
-      req.files?.hostOneImage?.[0]?.filename
-    );
-
-    console.log(
-      "HOST TWO FILENAME:",
-      req.files?.hostTwoImage?.[0]?.filename
-    );
-
-    console.log(
-      "INVITATION FILENAME:",
-      req.files?.invitation?.[0]?.filename
-    );
-
-    console.log("EVENT ID FROM MIDDLEWARE:", req.eventId);
 
     const location = req.body.location
       ? JSON.parse(req.body.location)
@@ -55,9 +31,6 @@ const createEvent = async (req, res) => {
       hostOneImage:
         req.files?.hostOneImage?.[0]?.filename || null,
 
-      hostTwoImage:
-        req.files?.hostTwoImage?.[0]?.filename || null,
-
       invitation:
         req.files?.invitation?.[0]?.filename || null,
 
@@ -70,11 +43,6 @@ const createEvent = async (req, res) => {
       status:
         req.body.status || "Draft",
     };
-
-    console.log("=================================");
-    console.log("EVENT DATA TO SAVE:");
-    console.log(data);
-    console.log("=================================");
 
     const result = await eventService.createEvent(data);
 
@@ -136,10 +104,6 @@ const eventLists = async (req, res) => {
         // Convert filename into public URL
         hostOneImage: eventData.hostOneImage
           ? `${baseUrl}/uploads/${eventData.hostOneImage}`
-          : null,
-
-        hostTwoImage: eventData.hostTwoImage
-          ? `${baseUrl}/uploads/${eventData.hostTwoImage}`
           : null,
 
         invitation: eventData.invitation

@@ -136,9 +136,9 @@ export default function MyEventsScreen({ navigation }) {
       return item.hostOneImage;
     }
 
-    if (item?.hostTwoImage) {
-      return item.hostTwoImage;
-    }
+    // if (item?.hostTwoImage) {
+    //   return item.hostTwoImage;
+    // }
 
     return null;
   };

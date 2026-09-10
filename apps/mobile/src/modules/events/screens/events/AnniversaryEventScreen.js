@@ -19,9 +19,18 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
-import { validateNameOnly,validateDate,validateTime,validateLocation,validateRequired } from "../../../../utils/validation";
+import {
+  validateNameOnly,
+  validateDate,
+  validateTime,
+  validateLocation,
+  validateRequired,
+} from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
-import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
+import {
+  RequiredLabel,
+  Label,
+} from "../../../../components/RequiredLabel";
 
 export default function AnniversaryEventScreen({
   navigation,
@@ -45,14 +54,17 @@ export default function AnniversaryEventScreen({
   const [anniversaryTime, setAnniversaryTime] = useState("");
   const [description, setDescription] = useState("");
   const [anniversaryAddress, setAnniversaryAddress] = useState("");
+
   const [anniversaryLocation, setAnniversaryLocation] = useState({
     address: "",
     latitude: null,
     longitude: null,
     googleMapsUrl: "",
   });
-  const [partnerOneImage, setPartnerOneImage] = useState(null);
-  const [partnerTwoImage, setPartnerTwoImage] = useState(null);
+
+  // ONE IMAGE ONLY
+  const [partnerImage, setPartnerImage] = useState(null);
+
   const [invitation, setInvitation] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -67,7 +79,8 @@ export default function AnniversaryEventScreen({
     });
   };
 
-  const pickImage = async (type) => {
+  // Partner 1 & Partner 2 - ONE IMAGE
+  const pickImage = async () => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -88,13 +101,7 @@ export default function AnniversaryEventScreen({
       });
 
     if (!result.canceled) {
-      const image = result.assets[0];
-
-      if (type === "partnerOne") {
-        setPartnerOneImage(image);
-      } else {
-        setPartnerTwoImage(image);
-      }
+      setPartnerImage(result.assets[0]);
     }
   };
 
@@ -168,10 +175,6 @@ export default function AnniversaryEventScreen({
         value: partnerTwoName,
         label: "Partner 2 Name",
       },
-      {
-        value: anniversaryAddress,
-        label: "Anniversary Address",
-      }
     ];
 
     for (const field of fields) {
@@ -187,37 +190,52 @@ export default function AnniversaryEventScreen({
     }
 
     let errorMessage;
-    errorMessage = validateDate(anniversaryDate,"Anniversary Date");
+
+    errorMessage = validateDate(
+      anniversaryDate,
+      "Anniversary Date"
+    );
+
     if (errorMessage) {
       showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateTime(anniversaryTime,"Anniversary Time");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateLocation(anniversaryLocation,"Anniversary Location");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateRequired(anniversaryAddress,"Anniversary Address");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    if (!partnerOneImage) {
-      showError("Please upload Partner 1 image.");
       return false;
     }
 
-    if (!partnerTwoImage) {
-      showError("Please upload Partner 2 image.");
+    errorMessage = validateTime(
+      anniversaryTime,
+      "Anniversary Time"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateLocation(
+      anniversaryLocation,
+      "Anniversary Location"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateRequired(
+      anniversaryAddress,
+      "Anniversary Address"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    // ONE IMAGE VALIDATION
+    if (!partnerImage) {
+      showError(
+        "Please upload Partner 1 & Partner 2 Image."
+      );
       return false;
     }
 
@@ -252,15 +270,50 @@ export default function AnniversaryEventScreen({
 
       const formData = new FormData();
 
-      formData.append("userId", String(user.id));
-      formData.append("eventTypeId", String(eventTypeId));
-      formData.append("title", `${partnerOneName.trim()} & ${partnerTwoName.trim()} Anniversary`);
-      formData.append("hostOne", partnerOneName.trim());
-      formData.append("hostTwo", partnerTwoName.trim());
-      formData.append("eventDate", anniversaryDate);
-      formData.append("eventTime", anniversaryTime);
-      formData.append("message", description.trim());
-      formData.append("address", anniversaryAddress.trim());
+      formData.append(
+        "userId",
+        String(user.id)
+      );
+
+      formData.append(
+        "eventTypeId",
+        String(eventTypeId)
+      );
+
+      formData.append(
+        "title",
+        `${partnerOneName.trim()} & ${partnerTwoName.trim()} Anniversary`
+      );
+
+      formData.append(
+        "hostOne",
+        partnerOneName.trim()
+      );
+
+      formData.append(
+        "hostTwo",
+        partnerTwoName.trim()
+      );
+
+      formData.append(
+        "eventDate",
+        anniversaryDate
+      );
+
+      formData.append(
+        "eventTime",
+        anniversaryTime
+      );
+
+      formData.append(
+        "message",
+        description.trim()
+      );
+
+      formData.append(
+        "address",
+        anniversaryAddress.trim()
+      );
 
       formData.append(
         "location",
@@ -276,17 +329,27 @@ export default function AnniversaryEventScreen({
         })
       );
 
-      formData.append("isPublished","false");
-      formData.append("status","Draft");
+      formData.append(
+        "isPublished",
+        "false"
+      );
 
-      // Partner 1 Image
-      if (partnerOneImage) {
+      formData.append(
+        "status",
+        "Draft"
+      );
+
+      // ==========================================
+      // ONE IMAGE ONLY
+      // Backend field: hostOneImage
+      // ==========================================
+      if (partnerImage) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
-            partnerOneImage.uri,
-            partnerOneImage.fileName ||
-              "partner-one.jpg",
-            partnerOneImage.mimeType ||
+            partnerImage.uri,
+            partnerImage.fileName ||
+              "partner-one-partner-two.jpg",
+            partnerImage.mimeType ||
               "image/jpeg"
           );
 
@@ -298,50 +361,21 @@ export default function AnniversaryEventScreen({
           formData.append(
             "hostOneImage",
             {
-              uri: partnerOneImage.uri,
+              uri: partnerImage.uri,
               name:
-                partnerOneImage.fileName ||
-                "partner-one.jpg",
+                partnerImage.fileName ||
+                "partner-one-partner-two.jpg",
               type:
-                partnerOneImage.mimeType ||
+                partnerImage.mimeType ||
                 "image/jpeg",
             }
           );
         }
       }
 
-      // Partner 2 Image
-      if (partnerTwoImage) {
-        if (Platform.OS === "web") {
-          const file = await uriToFile(
-            partnerTwoImage.uri,
-            partnerTwoImage.fileName ||
-              "partner-two.jpg",
-            partnerTwoImage.mimeType ||
-              "image/jpeg"
-          );
-
-          formData.append(
-            "hostTwoImage",
-            file
-          );
-        } else {
-          formData.append(
-            "hostTwoImage",
-            {
-              uri: partnerTwoImage.uri,
-              name:
-                partnerTwoImage.fileName ||
-                "partner-two.jpg",
-              type:
-                partnerTwoImage.mimeType ||
-                "image/jpeg",
-            }
-          );
-        }
-      }
-
-      // Invitation
+      // ==========================================
+      // INVITATION
+      // ==========================================
       if (invitation) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
@@ -389,9 +423,12 @@ export default function AnniversaryEventScreen({
           "Success\n\nAnniversary event created successfully."
         );
 
-        navigation.navigate("MyEvents", {
-          event: response.data.data,
-        });
+        navigation.navigate(
+          "MyEvents",
+          {
+            event: response.data.data,
+          }
+        );
       } else {
         Alert.alert(
           "Success",
@@ -468,6 +505,7 @@ export default function AnniversaryEventScreen({
             styles.content
           }
         >
+          {/* Partner 1 Name */}
           <RequiredLabel>
             Partner 1 Name
           </RequiredLabel>
@@ -482,6 +520,7 @@ export default function AnniversaryEventScreen({
             }
           />
 
+          {/* Partner 2 Name */}
           <RequiredLabel>
             Partner 2 Name
           </RequiredLabel>
@@ -496,6 +535,7 @@ export default function AnniversaryEventScreen({
             }
           />
 
+          {/* Anniversary Date */}
           <RequiredLabel>
             Anniversary Date
           </RequiredLabel>
@@ -575,6 +615,7 @@ export default function AnniversaryEventScreen({
             </>
           )}
 
+          {/* Description */}
           <Label>
             Description
           </Label>
@@ -595,6 +636,7 @@ export default function AnniversaryEventScreen({
             }
           />
 
+          {/* Anniversary Time */}
           <RequiredLabel>
             Anniversary Time
           </RequiredLabel>
@@ -668,6 +710,7 @@ export default function AnniversaryEventScreen({
             </>
           )}
 
+          {/* Anniversary Address */}
           <RequiredLabel>
             Anniversary Address
           </RequiredLabel>
@@ -690,6 +733,7 @@ export default function AnniversaryEventScreen({
             }
           />
 
+          {/* Anniversary Location */}
           <RequiredLabel>
             Anniversary Location
           </RequiredLabel>
@@ -725,86 +769,49 @@ export default function AnniversaryEventScreen({
             />
           </View>
 
-          <View
-            style={styles.imageRow}
+          {/* ===================================== */}
+          {/* Partner 1 & Partner 2 Image - ONE ONLY */}
+          {/* ===================================== */}
+
+          <RequiredLabel>
+            Partner 1 & Partner 2 Image
+          </RequiredLabel>
+
+          <TouchableOpacity
+            style={
+              styles.imageUpload
+            }
+            onPress={pickImage}
           >
-            <TouchableOpacity
-              style={
-                styles.imageUpload
-              }
-              onPress={() =>
-                pickImage(
-                  "partnerOne"
-                )
-              }
-            >
-              {partnerOneImage ? (
-                <Image
-                  source={{
-                    uri: partnerOneImage.uri,
-                  }}
-                  style={
-                    styles.previewImage
-                  }
+            {partnerImage ? (
+              <Image
+                source={{
+                  uri: partnerImage.uri,
+                }}
+                style={
+                  styles.previewImage
+                }
+              />
+            ) : (
+              <>
+                <Ionicons
+                  name="camera-outline"
+                  size={30}
+                  color="#ff7f86"
                 />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
 
-                  <Text
-                    style={
-                      styles.uploadText
-                    }
-                  >
-                    Partner 1 Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={
-                styles.imageUpload
-              }
-              onPress={() =>
-                pickImage(
-                  "partnerTwo"
-                )
-              }
-            >
-              {partnerTwoImage ? (
-                <Image
-                  source={{
-                    uri: partnerTwoImage.uri,
-                  }}
+                <Text
                   style={
-                    styles.previewImage
+                    styles.uploadText
                   }
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
+                >
+                  Partner 1 & Partner 2 Image
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-                  <Text
-                    style={
-                      styles.uploadText
-                    }
-                  >
-                    Partner 2 Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
+          {/* Invitation */}
           <TouchableOpacity
             style={styles.pdfButton}
             onPress={
@@ -853,6 +860,7 @@ export default function AnniversaryEventScreen({
             />
           </TouchableOpacity>
 
+          {/* Save */}
           <TouchableOpacity
             style={[
               styles.saveButton,
@@ -1008,15 +1016,11 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
 
-  imageRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-
+  // ONE IMAGE UPLOAD
   imageUpload: {
-    flex: 1,
-    height: 150,
+    width: "100%",
+    height: 180,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: "#eeeeee",
     borderRadius: 12,
@@ -1037,6 +1041,7 @@ const styles = StyleSheet.create({
     color: "#666666",
     marginTop: 8,
     fontWeight: "600",
+    textAlign: "center",
   },
 
   pdfButton: {

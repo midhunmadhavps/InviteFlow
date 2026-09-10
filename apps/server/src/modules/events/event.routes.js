@@ -13,7 +13,6 @@ router.post(
   generateEventId,
   upload.fields([
     { name: "hostOneImage", maxCount: 1 },
-    { name: "hostTwoImage", maxCount: 1 },
     { name: "invitation", maxCount: 1 },
   ]),
   eventController.createEvent

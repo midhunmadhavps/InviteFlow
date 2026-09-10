@@ -19,12 +19,49 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
-import { validateNameOnly,validateDate,validateTime,validateLocation,validateRequired } from "../../../../utils/validation";
+import {
+  validateNameOnly,
+  validateDate,
+  validateTime,
+  validateLocation,
+  validateRequired,
+} from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
-import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
+import {
+  RequiredLabel,
+  Label,
+} from "../../../../components/RequiredLabel";
 
 export default function WeddingEventScreen({ navigation, route }) {
   const { eventTypeId } = route.params || {};
+
+  const { showSuccess, showError } = useToast();
+
+  const [groomName, setGroomName] = useState("");
+  const [brideName, setBrideName] = useState("");
+
+  const [weddingDate, setWeddingDate] = useState("");
+  const [weddingTime, setWeddingTime] = useState("");
+
+  const [description, setDescription] = useState("");
+  const [weddingAddress, setWeddingAddress] = useState("");
+
+  const [weddingLocation, setWeddingLocation] = useState({
+    address: "",
+    latitude: null,
+    longitude: null,
+    googleMapsUrl: "",
+  });
+
+  // One image for both Groom & Bride
+  const [coupleImage, setCoupleImage] = useState(null);
+
+  const [invitation, setInvitation] = useState(null);
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [saving, setSaving] = useState(false);
 
   const showAlert = (title, message) => {
     if (Platform.OS === "web") {
@@ -33,26 +70,10 @@ export default function WeddingEventScreen({ navigation, route }) {
       Alert.alert(title, message);
     }
   };
-  const { showSuccess, showError } = useToast();
 
-  const [groomName, setGroomName] = useState("");
-  const [brideName, setBrideName] = useState("");
-  const [weddingDate, setWeddingDate] = useState("");
-  const [weddingTime, setWeddingTime] = useState("");
-  const [description, setDescription] = useState("");
-  const [weddingAddress, setWeddingAddress] = useState("");
-  const [weddingLocation, setWeddingLocation] = useState({
-    address: "",
-    latitude: null,
-    longitude: null,
-    googleMapsUrl: "",
-  });
-  const [groomImage, setGroomImage] = useState(null);
-  const [brideImage, setBrideImage] = useState(null);
-  const [invitation, setInvitation] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // --------------------------------------------------
+  // Convert URI to File for Web
+  // --------------------------------------------------
 
   const uriToFile = async (uri, name, type) => {
     const response = await fetch(uri);
@@ -63,7 +84,11 @@ export default function WeddingEventScreen({ navigation, route }) {
     });
   };
 
-  const pickImage = async (type) => {
+  // --------------------------------------------------
+  // Pick Groom & Bride Image
+  // --------------------------------------------------
+
+  const pickCoupleImage = async () => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -76,23 +101,23 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     const result =
-    await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
       const image = result.assets[0];
 
-      if (type === "groom") {
-        setGroomImage(image);
-      } else {
-        setBrideImage(image);
-      }
+      setCoupleImage(image);
     }
   };
+
+  // --------------------------------------------------
+  // Pick Invitation
+  // --------------------------------------------------
 
   const pickInvitation = async () => {
     const result =
@@ -108,6 +133,10 @@ export default function WeddingEventScreen({ navigation, route }) {
       setInvitation(result.assets[0]);
     }
   };
+
+  // --------------------------------------------------
+  // Date Picker
+  // --------------------------------------------------
 
   const handleDateChange = (
     event,
@@ -133,6 +162,10 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
+  // --------------------------------------------------
+  // Time Picker
+  // --------------------------------------------------
+
   const handleTimeChange = (
     event,
     selectedTime
@@ -154,15 +187,28 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
-  const validateForm = () => {
+  // --------------------------------------------------
+  // Validate Form
+  // --------------------------------------------------
 
+  const validateForm = () => {
     const fields = [
-      { value: groomName, label: "Groom Name" },
-      { value: brideName, label: "Bride Name" },
+      {
+        value: groomName,
+        label: "Groom Name",
+      },
+      {
+        value: brideName,
+        label: "Bride Name",
+      },
     ];
 
     for (const field of fields) {
-      const errorMessage = validateNameOnly(field.value, field.label);
+      const errorMessage =
+        validateNameOnly(
+          field.value,
+          field.label
+        );
 
       if (errorMessage) {
         showError(errorMessage);
@@ -171,43 +217,61 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
 
     let errorMessage;
-    errorMessage = validateDate(weddingDate,"Wedding Date");
+
+    errorMessage = validateDate(
+      weddingDate,
+      "Wedding Date"
+    );
+
     if (errorMessage) {
       showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateTime(weddingTime, "Wedding Time");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateLocation(weddingLocation,"Wedding Location");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateRequired(weddingAddress,"Wedding Address");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    if (!groomImage) {
-      showError("Please uplaod groom image.");
       return false;
     }
 
-    if (!brideImage) {
-      showError("Please uplaod bride image.");
+    errorMessage = validateTime(
+      weddingTime,
+      "Wedding Time"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
       return false;
     }
 
+    errorMessage = validateLocation(
+      weddingLocation,
+      "Wedding Location"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateRequired(
+      weddingAddress,
+      "Wedding Address"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    // Only ONE image is required
+    if (!coupleImage) {
+      showError(
+        "Please upload Groom & Bride image."
+      );
+      return false;
+    }
 
     return true;
   };
+
+  // --------------------------------------------------
+  // Save Event
+  // --------------------------------------------------
 
   const saveEvent = async () => {
     if (!validateForm()) {
@@ -237,101 +301,182 @@ export default function WeddingEventScreen({ navigation, route }) {
 
       const formData = new FormData();
 
-      formData.append("userId", String(user.id));
-      formData.append("eventTypeId", String(eventTypeId));
-      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Wedding`);
-      formData.append("hostOne", groomName.trim());
-      formData.append("hostTwo", brideName.trim());
-      formData.append("eventDate", weddingDate);
-      formData.append("eventTime", weddingTime);
-      formData.append("message", description.trim());
-      formData.append("address", weddingAddress.trim());
+      // --------------------------------------------------
+      // Basic Event Information
+      // --------------------------------------------------
+
+      formData.append(
+        "userId",
+        String(user.id)
+      );
+
+      formData.append(
+        "eventTypeId",
+        String(eventTypeId)
+      );
+
+      formData.append(
+        "title",
+        `${groomName.trim()} & ${brideName.trim()} Wedding`
+      );
+
+      formData.append(
+        "hostOne",
+        groomName.trim()
+      );
+
+      formData.append(
+        "hostTwo",
+        brideName.trim()
+      );
+
+      formData.append(
+        "eventDate",
+        weddingDate
+      );
+
+      formData.append(
+        "eventTime",
+        weddingTime
+      );
+
+      formData.append(
+        "message",
+        description.trim()
+      );
+
+      formData.append(
+        "address",
+        weddingAddress.trim()
+      );
+
+      // --------------------------------------------------
+      // Location
+      // --------------------------------------------------
 
       formData.append(
         "location",
         JSON.stringify({
           address:
             weddingLocation.address.trim(),
+
           latitude:
             weddingLocation.latitude,
+
           longitude:
             weddingLocation.longitude,
+
           googleMapsUrl:
             weddingLocation.googleMapsUrl,
         })
       );
 
-      formData.append("isPublished", "false");
-      formData.append("status", "Draft");
-      
-      if (groomImage) {
+      // --------------------------------------------------
+      // Event Status
+      // --------------------------------------------------
+
+      formData.append(
+        "isPublished",
+        "false"
+      );
+
+      formData.append(
+        "status",
+        "Draft"
+      );
+
+      // --------------------------------------------------
+      // ONE Groom & Bride Image
+      // --------------------------------------------------
+
+      if (coupleImage) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
-            groomImage.uri,
-            groomImage.fileName || "host-one.jpg",
-            groomImage.mimeType || "image/jpeg"
+            coupleImage.uri,
+            coupleImage.fileName ||
+              "groom-bride.jpg",
+            coupleImage.mimeType ||
+              "image/jpeg"
           );
 
-          formData.append("hostOneImage", file);
+          formData.append(
+            "hostOneImage",
+            file
+          );
         } else {
-          formData.append("hostOneImage", {
-            uri: groomImage.uri,
-            name: groomImage.fileName || "host-one.jpg",
-            type: groomImage.mimeType || "image/jpeg",
-          });
+          formData.append(
+            "hostOneImage",
+            {
+              uri: coupleImage.uri,
+              name:
+                coupleImage.fileName ||
+                "groom-bride.jpg",
+              type:
+                coupleImage.mimeType ||
+                "image/jpeg",
+            }
+          );
         }
       }
 
-      if (brideImage) {
-        if (Platform.OS === "web") {
-          const file = await uriToFile(
-            brideImage.uri,
-            brideImage.fileName || "host-two.jpg",
-            brideImage.mimeType || "image/jpeg"
-          );
-
-          formData.append("hostTwoImage", file);
-        } else {
-          formData.append("hostTwoImage", {
-            uri: brideImage.uri,
-            name: brideImage.fileName || "host-two.jpg",
-            type: brideImage.mimeType || "image/jpeg",
-          });
-        }
-      }
+      // --------------------------------------------------
+      // Invitation
+      // --------------------------------------------------
 
       if (invitation) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
             invitation.uri,
-            invitation.name || "wedding-invitation",
-            invitation.mimeType || "application/pdf"
+            invitation.name ||
+              "wedding-invitation",
+            invitation.mimeType ||
+              "application/pdf"
           );
 
-          formData.append("invitation", file);
+          formData.append(
+            "invitation",
+            file
+          );
         } else {
-          formData.append("invitation", {
-            uri: invitation.uri,
-            name: invitation.name || "wedding-invitation",
-            type: invitation.mimeType || "application/pdf",
-          });
+          formData.append(
+            "invitation",
+            {
+              uri: invitation.uri,
+              name:
+                invitation.name ||
+                "wedding-invitation",
+              type:
+                invitation.mimeType ||
+                "application/pdf",
+            }
+          );
         }
       }
 
-      // for (const [key, value] of formData.entries()) {
-      //   console.log("FORMDATA:", key, value);
-      // }
+      // --------------------------------------------------
+      // Create Event
+      // --------------------------------------------------
 
-      const response = await createEvent(formData);
+      const response =
+        await createEvent(formData);
 
-      console.log("Wedding created:",response.data);
+      console.log(
+        "Wedding created:",
+        response.data
+      );
 
       if (Platform.OS === "web") {
-        window.alert("Success\n\nWedding event created successfully.");
+        window.alert(
+          "Success\n\nWedding event created successfully."
+        );
 
-        navigation.navigate("MyEvents", {
-          event: response.data.data,
-        });
+        navigation.navigate(
+          "MyEvents",
+          {
+            event:
+              response.data.data,
+          }
+        );
       } else {
         Alert.alert(
           "Success",
@@ -340,15 +485,18 @@ export default function WeddingEventScreen({ navigation, route }) {
             {
               text: "Continue",
               onPress: () => {
-                navigation.navigate("MyEvents", {
-                  event: response.data.data,
-                });
+                navigation.navigate(
+                  "MyEvents",
+                  {
+                    event:
+                      response.data.data,
+                  }
+                );
               },
             },
           ]
         );
       }
-      
     } catch (error) {
       console.log(
         "Create wedding error:",
@@ -366,9 +514,16 @@ export default function WeddingEventScreen({ navigation, route }) {
     }
   };
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
+
   return (
     <View style={styles.container}>
+
+      {/* Header */}
       <View style={styles.header}>
+
         <TouchableOpacity
           style={styles.backButton}
           onPress={() =>
@@ -382,7 +537,9 @@ export default function WeddingEventScreen({ navigation, route }) {
           />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
+        <Text
+          style={styles.headerTitle}
+        >
           Create Wedding
         </Text>
 
@@ -391,6 +548,7 @@ export default function WeddingEventScreen({ navigation, route }) {
             width: 40,
           }}
         />
+
       </View>
 
       <ImageBackground
@@ -398,6 +556,7 @@ export default function WeddingEventScreen({ navigation, route }) {
         style={styles.background}
         resizeMode="cover"
       >
+
         <ScrollView
           showsVerticalScrollIndicator={
             false
@@ -406,28 +565,44 @@ export default function WeddingEventScreen({ navigation, route }) {
             styles.content
           }
         >
-          
-          <RequiredLabel>Groom Name</RequiredLabel>
+
+          {/* Groom Name */}
+
+          <RequiredLabel>
+            Groom Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
             placeholder="Enter groom name"
             placeholderTextColor="#999"
             value={groomName}
-            onChangeText={setGroomName}
+            onChangeText={
+              setGroomName
+            }
           />
 
-          <RequiredLabel>Bride Name</RequiredLabel>
+          {/* Bride Name */}
+
+          <RequiredLabel>
+            Bride Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
             placeholder="Enter bride name"
             placeholderTextColor="#999"
             value={brideName}
-            onChangeText={setBrideName}
+            onChangeText={
+              setBrideName
+            }
           />
 
-          <RequiredLabel>Wedding Date</RequiredLabel>
+          {/* Wedding Date */}
+
+          <RequiredLabel>
+            Wedding Date
+          </RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -502,7 +677,11 @@ export default function WeddingEventScreen({ navigation, route }) {
             </>
           )}
 
-          <Label>Description</Label>
+          {/* Description */}
+
+          <Label>
+            Description
+          </Label>
 
           <TextInput
             style={[
@@ -520,7 +699,11 @@ export default function WeddingEventScreen({ navigation, route }) {
             }
           />
 
-          <RequiredLabel>Wedding Time</RequiredLabel>
+          {/* Wedding Time */}
+
+          <RequiredLabel>
+            Wedding Time
+          </RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -589,7 +772,11 @@ export default function WeddingEventScreen({ navigation, route }) {
             </>
           )}
 
-          <RequiredLabel>Wedding Address</RequiredLabel>
+          {/* Wedding Address */}
+
+          <RequiredLabel>
+            Wedding Address
+          </RequiredLabel>
 
           <TextInput
             style={[
@@ -607,7 +794,11 @@ export default function WeddingEventScreen({ navigation, route }) {
             }
           />
 
-          <RequiredLabel>Wedding Location</RequiredLabel>
+          {/* Wedding Location */}
+
+          <RequiredLabel>
+            Wedding Location
+          </RequiredLabel>
 
           <View
             style={styles.locationInput}
@@ -638,83 +829,65 @@ export default function WeddingEventScreen({ navigation, route }) {
             />
           </View>
 
-          <View style={styles.imageRow}>
-            <TouchableOpacity
-              style={
-                styles.imageUpload
-              }
-              onPress={() =>
-                pickImage("groom")
-              }
-            >
-              {groomImage ? (
-                <Image
-                  source={{
-                    uri: groomImage.uri,
-                  }}
-                  style={
-                    styles.previewImage
-                  }
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
+          {/* Groom & Bride Image */}
 
-                  <Text
-                    style={
-                      styles.uploadText
-                    }
-                  >
-                    Groom Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={
-                styles.imageUpload
-              }
-              onPress={() =>
-                pickImage("bride")
-              }
-            >
-              {brideImage ? (
-                <Image
-                  source={{
-                    uri: brideImage.uri,
-                  }}
-                  style={
-                    styles.previewImage
-                  }
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
-
-                  <Text
-                    style={
-                      styles.uploadText
-                    }
-                  >
-                    Bride Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <RequiredLabel>
+            Groom & Bride Image
+          </RequiredLabel>
 
           <TouchableOpacity
-            style={styles.pdfButton}
-            onPress={pickInvitation}
+            style={
+              styles.imageUpload
+            }
+            onPress={
+              pickCoupleImage
+            }
+          >
+            {coupleImage ? (
+              <Image
+                source={{
+                  uri: coupleImage.uri,
+                }}
+                style={
+                  styles.previewImage
+                }
+              />
+            ) : (
+              <>
+                <Ionicons
+                  name="camera-outline"
+                  size={35}
+                  color="#ff7f86"
+                />
+
+                <Text
+                  style={
+                    styles.uploadText
+                  }
+                >
+                  Upload Groom & Bride Image
+                </Text>
+
+                <Text
+                  style={
+                    styles.uploadHint
+                  }
+                >
+                  Tap to select image
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Invitation */}
+
+          <TouchableOpacity
+            style={
+              styles.pdfButton
+            }
+            onPress={
+              pickInvitation
+            }
           >
             <View
               style={styles.pdfIcon}
@@ -756,13 +929,17 @@ export default function WeddingEventScreen({ navigation, route }) {
             />
           </TouchableOpacity>
 
+          {/* Save */}
+
           <TouchableOpacity
             style={[
               styles.saveButton,
               saving &&
                 styles.disabledButton,
             ]}
-            onPress={saveEvent}
+            onPress={
+              saveEvent
+            }
             disabled={saving}
           >
             <Ionicons
@@ -785,6 +962,7 @@ export default function WeddingEventScreen({ navigation, route }) {
                 : "Save Wedding Event"}
             </Text>
           </TouchableOpacity>
+
         </ScrollView>
       </ImageBackground>
     </View>
@@ -892,6 +1070,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     padding: 0,
   },
+
   locationInput: {
     height: 48,
     borderWidth: 1,
@@ -910,15 +1089,9 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
 
-  imageRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-
   imageUpload: {
-    flex: 1,
-    height: 150,
+    width: "100%",
+    height: 220,
     borderWidth: 1,
     borderColor: "#eeeeee",
     borderRadius: 12,
@@ -927,18 +1100,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     backgroundColor: "#ffffff",
+    marginTop: 8,
   },
 
   previewImage: {
     width: "100%",
     height: "100%",
+    resizeMode: "cover",
   },
 
   uploadText: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#666666",
-    marginTop: 8,
+    marginTop: 10,
     fontWeight: "600",
+  },
+
+  uploadHint: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 5,
   },
 
   pdfButton: {

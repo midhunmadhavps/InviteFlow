@@ -19,12 +19,26 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { createEvent } from "../../api/event.api";
 import { getUser } from "../../../../utils/auth";
-import { validateNameOnly,validateDate,validateTime,validateLocation,validateRequired } from "../../../../utils/validation";
+import {
+  validateNameOnly,
+  validateDate,
+  validateTime,
+  validateLocation,
+  validateRequired,
+} from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
-import { RequiredLabel, Label } from "../../../../components/RequiredLabel";
+import {
+  RequiredLabel,
+  Label,
+} from "../../../../components/RequiredLabel";
 
-export default function EngagementEventScreen({ navigation,route }) {
+export default function EngagementEventScreen({
+  navigation,
+  route,
+}) {
   const { eventTypeId } = route.params || {};
+
+  const { showSuccess, showError } = useToast();
 
   const showAlert = (title, message) => {
     if (Platform.OS === "web") {
@@ -33,27 +47,46 @@ export default function EngagementEventScreen({ navigation,route }) {
       Alert.alert(title, message);
     }
   };
-  const { showSuccess, showError } = useToast();
+
+  // --------------------------------------------------
+  // Form State
+  // --------------------------------------------------
 
   const [groomName, setGroomName] = useState("");
   const [brideName, setBrideName] = useState("");
-  const [engagementDate, setEngagementDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [engagementTime, setEngagementTime] = useState("");
-  const [weddingAddress, setWeddingAddress] = useState("");
-  const [weddingLocation, setWeddingLocation] = useState({
-    address: "",
-    latitude: null,
-    longitude: null,
-    googleMapsUrl: "",
-  });
 
-  const [groomImage, setGroomImage] = useState(null);
-  const [brideImage, setBrideImage] = useState(null);
+  const [engagementDate, setEngagementDate] = useState("");
+  const [engagementTime, setEngagementTime] = useState("");
+
+  const [description, setDescription] = useState("");
+
+  const [engagementAddress, setEngagementAddress] =
+    useState("");
+
+  const [engagementLocation, setEngagementLocation] =
+    useState({
+      address: "",
+      latitude: null,
+      longitude: null,
+      googleMapsUrl: "",
+    });
+
+  // ONE image for Groom & Bride
+  const [coupleImage, setCoupleImage] = useState(null);
+
   const [invitation, setInvitation] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [showDatePicker, setShowDatePicker] =
+    useState(false);
+
+  const [showTimePicker, setShowTimePicker] =
+    useState(false);
+
   const [saving, setSaving] = useState(false);
+
+  // --------------------------------------------------
+  // Convert URI to File - Web
+  // --------------------------------------------------
 
   const uriToFile = async (uri, name, type) => {
     const response = await fetch(uri);
@@ -64,7 +97,11 @@ export default function EngagementEventScreen({ navigation,route }) {
     });
   };
 
-  const pickImage = async (type) => {
+  // --------------------------------------------------
+  // Pick Groom & Bride Image
+  // --------------------------------------------------
+
+  const pickCoupleImage = async () => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -75,23 +112,25 @@ export default function EngagementEventScreen({ navigation,route }) {
       );
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (!result.canceled) {
       const image = result.assets[0];
 
-      if (type === "groom") {
-        setGroomImage(image);
-      } else {
-        setBrideImage(image);
-      }
+      setCoupleImage(image);
     }
   };
+
+  // --------------------------------------------------
+  // Pick Invitation
+  // --------------------------------------------------
 
   const pickInvitation = async () => {
     const result =
@@ -108,37 +147,81 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
   };
 
-  const handleDateChange = (event, selectedDate) => {
+  // --------------------------------------------------
+  // Date Picker
+  // --------------------------------------------------
+
+  const handleDateChange = (
+    event,
+    selectedDate
+  ) => {
     setShowDatePicker(false);
 
     if (selectedDate) {
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-      const day = String(selectedDate.getDate()).padStart(2, "0");
+      const year =
+        selectedDate.getFullYear();
 
-      setEngagementDate(`${year}-${month}-${day}`);
+      const month = String(
+        selectedDate.getMonth() + 1
+      ).padStart(2, "0");
+
+      const day = String(
+        selectedDate.getDate()
+      ).padStart(2, "0");
+
+      setEngagementDate(
+        `${year}-${month}-${day}`
+      );
     }
   };
 
-  const handleTimeChange = (event, selectedTime) => {
+  // --------------------------------------------------
+  // Time Picker
+  // --------------------------------------------------
+
+  const handleTimeChange = (
+    event,
+    selectedTime
+  ) => {
     setShowTimePicker(false);
 
     if (selectedTime) {
-      const hours = String(selectedTime.getHours()).padStart(2, "0");
-      const minutes = String(selectedTime.getMinutes()).padStart(2, "0");
+      const hours = String(
+        selectedTime.getHours()
+      ).padStart(2, "0");
 
-      setEngagementTime(`${hours}:${minutes}`);
+      const minutes = String(
+        selectedTime.getMinutes()
+      ).padStart(2, "0");
+
+      setEngagementTime(
+        `${hours}:${minutes}`
+      );
     }
   };
 
+  // --------------------------------------------------
+  // Validate Form
+  // --------------------------------------------------
+
   const validateForm = () => {
     const fields = [
-      { value: groomName, label: "Groom Name" },
-      { value: brideName, label: "Bride Name" },
+      {
+        value: groomName,
+        label: "Groom Name",
+      },
+      {
+        value: brideName,
+        label: "Bride Name",
+      },
     ];
 
     for (const field of fields) {
-      const errorMessage = validateNameOnly(field.value, field.label);
+      const errorMessage =
+        validateNameOnly(
+          field.value,
+          field.label
+        );
 
       if (errorMessage) {
         showError(errorMessage);
@@ -147,42 +230,61 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
 
     let errorMessage;
-    errorMessage = validateDate(weddingDate,"Wedding Date");
+
+    errorMessage = validateDate(
+      engagementDate,
+      "Engagement Date"
+    );
+
     if (errorMessage) {
       showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateTime(weddingTime,"Wedding Time");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateLocation(weddingLocation,"Wedding Location");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    errorMessage = validateRequired(weddingAddress,"Wedding Address");
-    if (errorMessage) {
-      showError(errorMessage);
-      return;
-    }
-
-    if (!groomImage) {
-      showError("Please upload groom image.");
       return false;
     }
 
-    if (!brideImage) {
-      showError("Please upload bride image.");
+    errorMessage = validateTime(
+      engagementTime,
+      "Engagement Time"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateLocation(
+      engagementLocation,
+      "Engagement Location"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateRequired(
+      engagementAddress,
+      "Engagement Address"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    // Only ONE image is required
+    if (!coupleImage) {
+      showError(
+        "Please upload Groom & Bride image."
+      );
       return false;
     }
 
     return true;
   };
+
+  // --------------------------------------------------
+  // Save Event
+  // --------------------------------------------------
 
   const saveEvent = async () => {
     if (!validateForm()) {
@@ -190,7 +292,10 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
 
     if (!eventTypeId) {
-      showAlert("Error", "Event type ID is missing.");
+      showAlert(
+        "Error",
+        "Event type ID is missing."
+      );
       return;
     }
 
@@ -198,7 +303,7 @@ export default function EngagementEventScreen({ navigation,route }) {
       setSaving(true);
 
       const user = await getUser();
-      
+
       if (!user?.id) {
         showAlert(
           "Error",
@@ -209,101 +314,182 @@ export default function EngagementEventScreen({ navigation,route }) {
 
       const formData = new FormData();
 
-      formData.append("userId", String(user.id));
-      formData.append("eventTypeId", String(eventTypeId));
-      formData.append("title", `${groomName.trim()} & ${brideName.trim()} Engagement`);
-      formData.append("hostOne", groomName.trim());
-      formData.append("hostTwo", brideName.trim());
-      formData.append("eventDate", engagementDate);
-      formData.append("eventTime", engagementTime);
-      formData.append("message", description.trim());
-      formData.append("address", weddingAddress.trim());
+      // --------------------------------------------------
+      // Basic Event Information
+      // --------------------------------------------------
+
+      formData.append(
+        "userId",
+        String(user.id)
+      );
+
+      formData.append(
+        "eventTypeId",
+        String(eventTypeId)
+      );
+
+      formData.append(
+        "title",
+        `${groomName.trim()} & ${brideName.trim()} Engagement`
+      );
+
+      formData.append(
+        "hostOne",
+        groomName.trim()
+      );
+
+      formData.append(
+        "hostTwo",
+        brideName.trim()
+      );
+
+      formData.append(
+        "eventDate",
+        engagementDate
+      );
+
+      formData.append(
+        "eventTime",
+        engagementTime
+      );
+
+      formData.append(
+        "message",
+        description.trim()
+      );
+
+      formData.append(
+        "address",
+        engagementAddress.trim()
+      );
+
+      // --------------------------------------------------
+      // Location
+      // --------------------------------------------------
 
       formData.append(
         "location",
         JSON.stringify({
           address:
-            weddingLocation.address.trim(),
+            engagementLocation.address.trim(),
+
           latitude:
-            weddingLocation.latitude,
+            engagementLocation.latitude,
+
           longitude:
-            weddingLocation.longitude,
+            engagementLocation.longitude,
+
           googleMapsUrl:
-            weddingLocation.googleMapsUrl,
+            engagementLocation.googleMapsUrl,
         })
       );
 
-      formData.append("isPublished", "false");
-      formData.append("status", "Draft");
-      
-      if (groomImage) {
+      // --------------------------------------------------
+      // Status
+      // --------------------------------------------------
+
+      formData.append(
+        "isPublished",
+        "false"
+      );
+
+      formData.append(
+        "status",
+        "Draft"
+      );
+
+      // --------------------------------------------------
+      // ONE Groom & Bride Image
+      // --------------------------------------------------
+
+      if (coupleImage) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
-            groomImage.uri,
-            groomImage.fileName || "host-one.jpg",
-            groomImage.mimeType || "image/jpeg"
+            coupleImage.uri,
+            coupleImage.fileName ||
+              "groom-bride.jpg",
+            coupleImage.mimeType ||
+              "image/jpeg"
           );
 
-          formData.append("hostOneImage", file);
+          formData.append(
+            "hostOneImage",
+            file
+          );
         } else {
-          formData.append("hostOneImage", {
-            uri: groomImage.uri,
-            name: groomImage.fileName || "host-one.jpg",
-            type: groomImage.mimeType || "image/jpeg",
-          });
+          formData.append(
+            "hostOneImage",
+            {
+              uri: coupleImage.uri,
+              name:
+                coupleImage.fileName ||
+                "groom-bride.jpg",
+              type:
+                coupleImage.mimeType ||
+                "image/jpeg",
+            }
+          );
         }
       }
 
-      if (brideImage) {
-        if (Platform.OS === "web") {
-          const file = await uriToFile(
-            brideImage.uri,
-            brideImage.fileName || "host-two.jpg",
-            brideImage.mimeType || "image/jpeg"
-          );
-
-          formData.append("hostTwoImage", file);
-        } else {
-          formData.append("hostTwoImage", {
-            uri: brideImage.uri,
-            name: brideImage.fileName || "host-two.jpg",
-            type: brideImage.mimeType || "image/jpeg",
-          });
-        }
-      }
+      // --------------------------------------------------
+      // Invitation
+      // --------------------------------------------------
 
       if (invitation) {
         if (Platform.OS === "web") {
           const file = await uriToFile(
             invitation.uri,
-            invitation.name || "wedding-invitation",
-            invitation.mimeType || "application/pdf"
+            invitation.name ||
+              "engagement-invitation",
+            invitation.mimeType ||
+              "application/pdf"
           );
 
-          formData.append("invitation", file);
+          formData.append(
+            "invitation",
+            file
+          );
         } else {
-          formData.append("invitation", {
-            uri: invitation.uri,
-            name: invitation.name || "wedding-invitation",
-            type: invitation.mimeType || "application/pdf",
-          });
+          formData.append(
+            "invitation",
+            {
+              uri: invitation.uri,
+              name:
+                invitation.name ||
+                "engagement-invitation",
+              type:
+                invitation.mimeType ||
+                "application/pdf",
+            }
+          );
         }
       }
 
-      // for (const [key, value] of formData.entries()) {
-      //   console.log("FORMDATA:", key, value);
-      // }
+      // --------------------------------------------------
+      // Create Event
+      // --------------------------------------------------
 
-      const response = await createEvent(formData);
+      const response =
+        await createEvent(formData);
 
-      console.log("Engagement created:", response.data);
+      console.log(
+        "Engagement created:",
+        response.data
+      );
 
       if (Platform.OS === "web") {
-        window.alert("Success\n\Engagement event created successfully.");
+        window.alert(
+          "Success\n\nEngagement event created successfully."
+        );
 
-        navigation.navigate("MyEvents", {
-          event: response.data.data,
-        });
+        navigation.navigate(
+          "MyEvents",
+          {
+            event:
+              response.data.data,
+          }
+        );
       } else {
         Alert.alert(
           "Success",
@@ -312,19 +498,23 @@ export default function EngagementEventScreen({ navigation,route }) {
             {
               text: "Continue",
               onPress: () => {
-                navigation.navigate("MyEvents", {
-                  event: response.data.data,
-                });
+                navigation.navigate(
+                  "MyEvents",
+                  {
+                    event:
+                      response.data.data,
+                  }
+                );
               },
             },
           ]
         );
       }
-
     } catch (error) {
       console.log(
         "Create engagement error:",
-        error.response?.data || error
+        error.response?.data ||
+          error
       );
 
       showAlert(
@@ -337,6 +527,10 @@ export default function EngagementEventScreen({ navigation,route }) {
     }
   };
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
+
   return (
     <ImageBackground
       source={require("../../../../../assets/Vector1.png")}
@@ -346,10 +540,14 @@ export default function EngagementEventScreen({ navigation,route }) {
       <View style={styles.container}>
 
         {/* Header */}
+
         <View style={styles.header}>
+
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() =>
+              navigation.goBack()
+            }
           >
             <Ionicons
               name="arrow-back"
@@ -358,39 +556,66 @@ export default function EngagementEventScreen({ navigation,route }) {
             />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>
+          <Text
+            style={styles.headerTitle}
+          >
             Create Engagement
           </Text>
 
-          <View style={{ width: 40 }} />
+          <View
+            style={{
+              width: 40,
+            }}
+          />
+
         </View>
 
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.content
+          }
         >
 
-          <RequiredLabel>Groom Name</RequiredLabel>
+          {/* Groom Name */}
+
+          <RequiredLabel>
+            Groom Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
             placeholder="Enter groom name"
             placeholderTextColor="#999"
             value={groomName}
-            onChangeText={setGroomName}
+            onChangeText={
+              setGroomName
+            }
           />
 
-          <RequiredLabel>Bride Name</RequiredLabel>
+          {/* Bride Name */}
+
+          <RequiredLabel>
+            Bride Name
+          </RequiredLabel>
 
           <TextInput
             style={styles.input}
             placeholder="Enter bride name"
             placeholderTextColor="#999"
             value={brideName}
-            onChangeText={setBrideName}
+            onChangeText={
+              setBrideName
+            }
           />
 
-          <RequiredLabel>Engagement Date</RequiredLabel>
+          {/* Engagement Date */}
+
+          <RequiredLabel>
+            Engagement Date
+          </RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -402,9 +627,13 @@ export default function EngagementEventScreen({ navigation,route }) {
                 type="date"
                 value={engagementDate}
                 onChange={(e) =>
-                  setEngagementDate(e.target.value)
+                  setEngagementDate(
+                    e.target.value
+                  )
                 }
-                style={styles.webInput}
+                style={
+                  styles.webInput
+                }
               />
             </View>
           ) : (
@@ -441,18 +670,31 @@ export default function EngagementEventScreen({ navigation,route }) {
                 <DateTimePicker
                   value={
                     engagementDate
-                      ? new Date(`${engagementDate}T00:00:00`)
+                      ? new Date(
+                          `${engagementDate}T00:00:00`
+                        )
                       : new Date()
                   }
                   mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={handleDateChange}
+                  display={
+                    Platform.OS ===
+                    "ios"
+                      ? "spinner"
+                      : "default"
+                  }
+                  onChange={
+                    handleDateChange
+                  }
                 />
               )}
             </>
           )}
 
-          <Label>Description</Label>
+          {/* Description */}
+
+          <Label>
+            Description
+          </Label>
 
           <TextInput
             style={[
@@ -465,10 +707,16 @@ export default function EngagementEventScreen({ navigation,route }) {
             numberOfLines={4}
             textAlignVertical="top"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={
+              setDescription
+            }
           />
 
-          <RequiredLabel>Engagement Time</RequiredLabel>
+          {/* Engagement Time */}
+
+          <RequiredLabel>
+            Engagement Time
+          </RequiredLabel>
 
           {Platform.OS === "web" ? (
             <View
@@ -480,9 +728,13 @@ export default function EngagementEventScreen({ navigation,route }) {
                 type="time"
                 value={engagementTime}
                 onChange={(e) =>
-                  setEngagementTime(e.target.value)
+                  setEngagementTime(
+                    e.target.value
+                  )
                 }
-                style={styles.webInput}
+                style={
+                  styles.webInput
+                }
               />
             </View>
           ) : (
@@ -505,7 +757,7 @@ export default function EngagementEventScreen({ navigation,route }) {
                   }
                 >
                   {engagementTime ||
-                    "Select engagement  time"}
+                    "Select engagement time"}
                 </Text>
 
                 <Ionicons
@@ -533,8 +785,12 @@ export default function EngagementEventScreen({ navigation,route }) {
             </>
           )}
 
-          <RequiredLabel>Engagement Address</RequiredLabel>
-          
+          {/* Engagement Address */}
+
+          <RequiredLabel>
+            Engagement Address
+          </RequiredLabel>
+
           <TextInput
             style={[
               styles.input,
@@ -545,13 +801,25 @@ export default function EngagementEventScreen({ navigation,route }) {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            value={weddingAddress}
-            onChangeText={setWeddingAddress}
+            value={
+              engagementAddress
+            }
+            onChangeText={
+              setEngagementAddress
+            }
           />
 
-          <RequiredLabel>Engagement Location</RequiredLabel>
+          {/* Engagement Location */}
 
-          <View style={styles.locationInput}>
+          <RequiredLabel>
+            Engagement Location
+          </RequiredLabel>
+
+          <View
+            style={
+              styles.locationInput
+            }
+          >
             <Ionicons
               name="location-outline"
               size={21}
@@ -559,84 +827,88 @@ export default function EngagementEventScreen({ navigation,route }) {
             />
 
             <TextInput
-              style={styles.locationTextInput}
+              style={
+                styles.locationTextInput
+              }
               placeholder="Enter engagement location"
               placeholderTextColor="#999"
-              value={weddingLocation.address}
+              value={
+                engagementLocation.address
+              }
               onChangeText={(text) =>
-                setWeddingLocation((prev) => ({
-                  ...prev,
-                  address: text,
-                }))
+                setEngagementLocation(
+                  (prev) => ({
+                    ...prev,
+                    address: text,
+                  })
+                )
               }
             />
           </View>
 
-          {/* Images */}
-          <View style={styles.imageRow}>
+          {/* Groom & Bride Image */}
 
-            {/* Groom */}
-            <TouchableOpacity
-              style={styles.imageUpload}
-              onPress={() => pickImage("groom")}
-            >
-              {groomImage ? (
-                <Image
-                  source={{
-                    uri: groomImage.uri,
-                  }}
-                  style={styles.previewImage}
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
+          <RequiredLabel>
+            Groom & Bride Image
+          </RequiredLabel>
 
-                  <Text style={styles.uploadText}>
-                    Groom Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {/* Bride */}
-            <TouchableOpacity
-              style={styles.imageUpload}
-              onPress={() => pickImage("bride")}
-            >
-              {brideImage ? (
-                <Image
-                  source={{
-                    uri: brideImage.uri,
-                  }}
-                  style={styles.previewImage}
-                />
-              ) : (
-                <>
-                  <Ionicons
-                    name="camera-outline"
-                    size={30}
-                    color="#ff7f86"
-                  />
-
-                  <Text style={styles.uploadText}>
-                    Bride Image
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-          </View>
-
-          {/* Invitation PDF */}
           <TouchableOpacity
-            style={styles.pdfButton}
-            onPress={pickInvitation}
+            style={
+              styles.imageUpload
+            }
+            onPress={
+              pickCoupleImage
+            }
           >
-            <View style={styles.pdfIcon}>
+            {coupleImage ? (
+              <Image
+                source={{
+                  uri: coupleImage.uri,
+                }}
+                style={
+                  styles.previewImage
+                }
+              />
+            ) : (
+              <>
+                <Ionicons
+                  name="camera-outline"
+                  size={35}
+                  color="#ff7f86"
+                />
+
+                <Text
+                  style={
+                    styles.uploadText
+                  }
+                >
+                  Upload Groom & Bride Image
+                </Text>
+
+                <Text
+                  style={
+                    styles.uploadHint
+                  }
+                >
+                  Tap to select image
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Invitation */}
+
+          <TouchableOpacity
+            style={
+              styles.pdfButton
+            }
+            onPress={
+              pickInvitation
+            }
+          >
+            <View
+              style={styles.pdfIcon}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={25}
@@ -644,7 +916,9 @@ export default function EngagementEventScreen({ navigation,route }) {
               />
             </View>
 
-            <View style={styles.pdfInfo}>
+            <View
+              style={styles.pdfInfo}
+            >
               <Text
                 style={styles.pdfTitle}
                 numberOfLines={1}
@@ -654,7 +928,11 @@ export default function EngagementEventScreen({ navigation,route }) {
                   : "Upload Invitation PDF"}
               </Text>
 
-              <Text style={styles.pdfSubtitle}>
+              <Text
+                style={
+                  styles.pdfSubtitle
+                }
+              >
                 {invitation
                   ? "PDF selected"
                   : "Tap to select PDF"}
@@ -669,12 +947,16 @@ export default function EngagementEventScreen({ navigation,route }) {
           </TouchableOpacity>
 
           {/* Save Button */}
+
           <TouchableOpacity
             style={[
               styles.saveButton,
-              saving && styles.disabledButton,
+              saving &&
+                styles.disabledButton,
             ]}
-            onPress={saveEvent}
+            onPress={
+              saveEvent
+            }
             disabled={saving}
           >
             <Ionicons
@@ -687,7 +969,11 @@ export default function EngagementEventScreen({ navigation,route }) {
               color="#ffffff"
             />
 
-            <Text style={styles.saveButtonText}>
+            <Text
+              style={
+                styles.saveButtonText
+              }
+            >
               {saving
                 ? "Saving..."
                 : "Save Engagement Event"}
@@ -782,6 +1068,26 @@ const styles = StyleSheet.create({
     color: "#999999",
   },
 
+  webInputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+
+  webInput: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "transparent",
+    fontSize: 13,
+    color: "#333333",
+    borderWidth: 0,
+    padding: 0,
+  },
+
   locationInput: {
     height: 48,
     borderWidth: 1,
@@ -800,15 +1106,9 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
 
-  imageRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-
   imageUpload: {
-    flex: 1,
-    height: 150,
+    width: "100%",
+    height: 220,
     borderWidth: 1,
     borderColor: "#eeeeee",
     borderRadius: 12,
@@ -817,18 +1117,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     backgroundColor: "#ffffff",
+    marginTop: 8,
   },
 
   previewImage: {
     width: "100%",
     height: "100%",
+    resizeMode: "cover",
   },
 
   uploadText: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#666666",
-    marginTop: 8,
+    marginTop: 10,
     fontWeight: "600",
+  },
+
+  uploadHint: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 5,
   },
 
   pdfButton: {
@@ -888,24 +1196,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginLeft: 8,
-  },
-  webInputWrapper: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#eeeeee",
-    borderRadius: 10,
-    backgroundColor: "#ffffff",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-
-  webInput: {
-    width: "100%",
-    height: 40,
-    backgroundColor: "transparent",
-    fontSize: 13,
-    color: "#333333",
-    borderWidth: 0,
-    padding: 0,
   },
 });
