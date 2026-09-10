@@ -144,6 +144,38 @@ export default function MyEventsScreen({ navigation }) {
   };
 
   // --------------------------------------------------
+  // PAGE HEADER (always pinned to top)
+  // --------------------------------------------------
+
+  const renderPageHeader = () => (
+    <View style={styles.pageHeader}>
+      <TouchableOpacity
+        style={styles.pageBackButton}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name="chevron-back"
+          size={22}
+          color="#263957"
+        />
+
+        <Text style={styles.pageTitle}>
+          My Events
+        </Text>
+      </TouchableOpacity>
+
+      {events.length > 0 ? (
+        <Text style={styles.pageSubtitle}>
+          {events.length}{" "}
+          {events.length === 1 ? "event" : "events"}{" "}
+          created
+        </Text>
+      ) : null}
+    </View>
+  );
+
+  // --------------------------------------------------
   // RENDER EVENT
   // --------------------------------------------------
 
@@ -302,6 +334,8 @@ export default function MyEventsScreen({ navigation }) {
           style={styles.background}
           resizeMode="cover"
         >
+          {renderPageHeader()}
+
           <View style={styles.loadingContainer}>
             <ActivityIndicator
               size="large"
@@ -328,7 +362,11 @@ export default function MyEventsScreen({ navigation }) {
         style={styles.background}
         resizeMode="cover"
       >
+        {/* HEADER — pinned to top for both empty & non-empty states */}
+        {renderPageHeader()}
+
         <FlatList
+          style={styles.list}
           data={events}
           keyExtractor={(item, index) =>
             item?._id || String(index)
@@ -350,61 +388,11 @@ export default function MyEventsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
 
           // --------------------------------------------------
-          // HEADER
-          // --------------------------------------------------
-
-          ListHeaderComponent={
-            events.length > 0 ? (
-              <View style={styles.listHeader}>
-                <TouchableOpacity
-                  style={styles.pageBackButton}
-                  onPress={() => navigation.goBack()}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="chevron-back"
-                    size={22}
-                    color="#263957"
-                  />
-
-                  <Text style={styles.pageTitle}>
-                    My Events
-                  </Text>
-                </TouchableOpacity>
-
-                <Text style={styles.pageSubtitle}>
-                  {events.length}{" "}
-                  {events.length === 1
-                    ? "event"
-                    : "events"}{" "}
-                  created
-                </Text>
-              </View>
-            ) : null
-          }
-
-          // --------------------------------------------------
           // EMPTY
           // --------------------------------------------------
 
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <TouchableOpacity
-                style={styles.pageBackButtonEmpty}
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={22}
-                  color="#263957"
-                />
-
-                <Text style={styles.pageTitle}>
-                  My Events
-                </Text>
-              </TouchableOpacity>
-
               <View style={styles.emptyIcon}>
                 <Ionicons
                   name="calendar-outline"
@@ -424,7 +412,9 @@ export default function MyEventsScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.createButton}
                 onPress={() =>
-                  navigation.navigate("EventType")
+                  navigation.navigate("Events", {
+                    screen: "EventTypes",
+                  })
                 }
               >
                 <Ionicons
@@ -459,26 +449,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  listContainer: {
-    padding: 20,
-    paddingBottom: 50,
+  // --------------------------------------------------
+  // PAGE HEADER (always pinned to top of the screen)
+  // --------------------------------------------------
+
+  pageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
   },
 
-  listHeader: {
-    marginBottom: 18,
-    paddingTop: 10,
+  list: {
+    flex: 1,
+  },
+
+  listContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 50,
   },
 
   pageBackButton: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  pageBackButtonEmpty: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginBottom: 20,
   },
 
   pageTitle: {
@@ -658,7 +650,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: 20,
+    paddingHorizontal: 20,
   },
 
   emptyBox: {
