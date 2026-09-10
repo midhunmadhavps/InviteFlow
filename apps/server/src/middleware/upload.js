@@ -22,8 +22,6 @@ const storage = multer.diskStorage({
 
     if (file.fieldname === "hostOneImage") {
       prefix = "host1image";
-    // } else if (file.fieldname === "hostTwoImage") {
-    //   prefix = "host2image";
     } else if (file.fieldname === "invitation") {
       prefix = "invitation";
     } else {
