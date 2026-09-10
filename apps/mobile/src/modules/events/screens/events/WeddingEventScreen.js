@@ -25,6 +25,8 @@ import {
   validateTime,
   validateLocation,
   validateRequired,
+  validateImage,
+  validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
 import {
@@ -258,11 +260,23 @@ export default function WeddingEventScreen({ navigation, route }) {
       return false;
     }
 
-    // Only ONE image is required
-    if (!coupleImage) {
-      showError(
-        "Please upload Groom & Bride image."
-      );
+    errorMessage = validateImage(
+      coupleImage,
+      "image"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateImageOrPdf(
+      invitation,
+      "Invitation"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
       return false;
     }
 

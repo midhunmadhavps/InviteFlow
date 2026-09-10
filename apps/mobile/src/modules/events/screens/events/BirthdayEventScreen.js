@@ -25,6 +25,8 @@ import {
   validateTime,
   validateLocation,
   validateRequired,
+  validateImage,
+  validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
 import {
@@ -202,12 +204,25 @@ export default function BirthdayEventScreen({
       return;
     }
 
-    // if (!image) {
-    //   showError(
-    //     "Please Upload image."
-    //   );
-    //   return false;
-    // }
+    errorMessage = validateImage(
+      image,
+      "image"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateImageOrPdf(
+      invitation,
+      "Invitation"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
 
     return true;
   };

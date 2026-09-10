@@ -131,3 +131,151 @@ export const validateTime = (time, fieldName) => {
 
   return null;
 };
+
+// ================================
+// IMAGE VALIDATION
+// ================================
+
+export const validateImage = (
+  file,
+  fieldName = "Image"
+) => {
+  if (!file) {
+    return `Please upload your ${fieldName}.`;
+  }
+
+  const mimeType = (
+    file.mimeType ||
+    file.type ||
+    ""
+  ).toLowerCase();
+
+  const fileName = (
+    file.fileName ||
+    file.name ||
+    ""
+  ).toLowerCase();
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+  ];
+
+  const allowedExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+  ];
+
+  const validMimeType =
+    allowedTypes.includes(mimeType);
+
+  const validExtension =
+    allowedExtensions.some((extension) =>
+      fileName.endsWith(extension)
+    );
+
+  if (!validMimeType && !validExtension) {
+    return `${fieldName} must be JPG, JPEG, PNG, or WEBP.`;
+  }
+
+  // Maximum image size: 5 MB
+  const maxSize = 5 * 1024 * 1024;
+
+  if (
+    typeof file.size === "number" &&
+    file.size > maxSize
+  ) {
+    return `${fieldName} must be 5 MB or smaller.`;
+  }
+
+  return null;
+};
+
+
+// ================================
+// INVITATION IMAGE OR PDF VALIDATION
+// ================================
+
+export const validateImageOrPdf = (
+  file,
+  fieldName = "Invitation"
+) => {
+  // if (!file) {
+  //   return `Please upload your ${fieldName}.`;
+  // }
+
+  const mimeType = (
+    file.mimeType ||
+    file.type ||
+    ""
+  ).toLowerCase();
+
+  const fileName = (
+    file.fileName ||
+    file.name ||
+    ""
+  ).toLowerCase();
+
+  // Allowed image types
+  const imageTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+  ];
+
+  const imageExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+  ];
+
+  const isImage =
+    imageTypes.includes(mimeType) ||
+    imageExtensions.some((extension) =>
+      fileName.endsWith(extension)
+    );
+
+  // Allowed PDF
+  const isPdf =
+    mimeType === "application/pdf" ||
+    fileName.endsWith(".pdf");
+
+  // Invalid file type
+  if (!isImage && !isPdf) {
+    return `${fieldName} must be an image (JPG, JPEG, PNG, WEBP) or PDF.`;
+  }
+
+  // Image maximum: 5 MB
+  if (isImage) {
+    const maxImageSize =
+      5 * 1024 * 1024;
+
+    if (
+      typeof file.size === "number" &&
+      file.size > maxImageSize
+    ) {
+      return `${fieldName} image must be 5 MB or smaller.`;
+    }
+  }
+
+  // PDF maximum: 10 MB
+  if (isPdf) {
+    const maxPdfSize =
+      10 * 1024 * 1024;
+
+    if (
+      typeof file.size === "number" &&
+      file.size > maxPdfSize
+    ) {
+      return `${fieldName} PDF must be 10 MB or smaller.`;
+    }
+  }
+
+  return null;
+};

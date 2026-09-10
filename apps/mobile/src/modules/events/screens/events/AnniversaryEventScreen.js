@@ -25,6 +25,8 @@ import {
   validateTime,
   validateLocation,
   validateRequired,
+  validateImage,
+  validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
 import {
@@ -231,11 +233,23 @@ export default function AnniversaryEventScreen({
       return false;
     }
 
-    // ONE IMAGE VALIDATION
-    if (!partnerImage) {
-      showError(
-        "Please upload Partner 1 & Partner 2 Image."
-      );
+    errorMessage = validateImage(
+      partnerImage,
+      "Partner 1 & Partner 2 Image"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateImageOrPdf(
+      invitation,
+      "Invitation"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
       return false;
     }
 
