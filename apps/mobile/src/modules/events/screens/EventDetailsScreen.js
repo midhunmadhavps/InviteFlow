@@ -9,7 +9,6 @@ import {
   ImageBackground,
   TextInput,
   ActivityIndicator,
-  Alert,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,12 +16,23 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { updateEvent } from "../api/event.api";
 import { RequiredLabel, Label } from "../../../components/RequiredLabel";
+import {
+  validateNameOnly,
+  validateDate,
+  validateTime,
+  validateLocation,
+  validateRequired,
+  validateImage,
+  validateImageOrPdf
+} from "../../../utils/validation";
+import { useToast } from "../../../context/ToastContext";
 
 // Event types that support two hosts (e.g. bride & groom, couple, partners)
 const DUAL_HOST_EVENT_TYPES = ["Wedding", "Anniversary", "Engagement"];
 
 export default function EventDetailsScreen({ navigation, route }) {
   const { event } = route.params || {};
+  const { showSuccess, showError } = useToast();
 
   // Dummy event if no event was passed
   const dummyEvent = {
@@ -133,10 +143,7 @@ export default function EventDetailsScreen({ navigation, route }) {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Please allow photo library access."
-      );
+      showError("Please allow photo library access.");
       return;
     }
 
@@ -223,19 +230,106 @@ export default function EventDetailsScreen({ navigation, route }) {
     setIsEditing(false);
   };
 
+  const validateForm = () => {
+    const fields = [
+      {
+        value: editForm.hostOne,
+        label: "Host One Name",
+      },
+      {
+        value: editForm.title,
+        label: "Title",
+      },
+    ];
+    
+    if(allowsSecondHost()) {
+      fields.push({
+        value: editForm.hostTwo,
+        label: "Host Two Name",
+      });
+    }
+
+    for (const field of fields) {
+      const errorMessage =
+        validateNameOnly(
+          field.value,
+          field.label
+        );
+
+      if (errorMessage) {
+        showError(errorMessage);
+        return false;
+      }
+    }
+
+    let errorMessage;
+
+    errorMessage = validateDate(
+      editForm.eventDate,
+      "Event Date"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateTime(
+      editForm.eventTime,
+      "Event Time"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateLocation(
+      editLocation.latitude,
+      "Event Location"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateRequired(
+      editForm.address,
+      "Event Address"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    errorMessage = validateImage(
+      selectedImage,
+      "image"
+    );
+
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
+
+    // errorMessage = validateImageOrPdf(
+    //   invitation,
+    //   "Invitation"
+    // );
+
+    // if (errorMessage) {
+    //   showError(errorMessage);
+    //   return false;
+    // }
+
+    return true;
+  };
+
   const handleSave = async () => {
-    if (!editForm.title.trim()) {
-      Alert.alert("Validation", "Event title is required.");
-      return;
-    }
 
-    if (!editForm.hostOne.trim()) {
-      Alert.alert("Validation", "Host name is required.");
-      return;
-    }
-
-    if (!editForm.eventDate.trim()) {
-      Alert.alert("Validation", "Event date is required.");
+    if (!validateForm()) {
       return;
     }
 
@@ -304,15 +398,10 @@ export default function EventDetailsScreen({ navigation, route }) {
       setEventData(updatedData);
       setIsEditing(false);
       setSelectedImage(null);
-      Alert.alert("Success", "Event updated successfully!");
+      showSuccess("Event updated successfully!");
     } catch (error) {
       console.log("Update event error:", error);
-      Alert.alert(
-        "Update Failed",
-        error.response?.data?.message ||
-          error.message ||
-          "Could not update event. Please try again."
-      );
+      showError(error.response?.data?.message || "Could not update event. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -474,7 +563,7 @@ export default function EventDetailsScreen({ navigation, route }) {
               {/* HOST TWO INPUT (Conditional for Wedding, Anniversary, Engagement) */}
               {allowsSecondHost() && (
                 <>
-                  <Label>Second Host Name</Label>
+                  <RequiredLabel>Second Host Name</RequiredLabel>
                   <TextInput
                     style={styles.input}
                     value={editForm.hostTwo}
@@ -619,7 +708,8 @@ export default function EventDetailsScreen({ navigation, route }) {
               </View>
 
               {/* EVENT ADDRESS */}
-              <Label>Event Address</Label>
+              <RequiredLabel>Event Address</RequiredLabel>
+
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 placeholder="Enter event address / venue"
