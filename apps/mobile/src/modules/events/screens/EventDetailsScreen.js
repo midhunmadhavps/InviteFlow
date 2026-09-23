@@ -74,10 +74,6 @@ export default function EventDetailsScreen({ navigation, route }) {
               />
             </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>
-              Event Details
-            </Text>
-
             <View style={styles.headerRight} />
           </View>
 
@@ -90,7 +86,7 @@ export default function EventDetailsScreen({ navigation, route }) {
               <View style={styles.imagePlaceholder}>
                 <Ionicons
                   name="calendar-outline"
-                  size={55}
+                  size={20}
                   color="#ff7f86"
                 />
               </View>
@@ -290,14 +286,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 21,
-    fontWeight: "700",
-    color: "#263957",
   },
 
   headerRight: {
