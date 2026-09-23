@@ -37,8 +37,24 @@ const eventLists = async (userId) => {
   return eventLists;
 };
 
+const updateEvent = async (id, updateData) => {
+  const mongoose = require("mongoose");
+  const filter = mongoose.Types.ObjectId.isValid(id)
+    ? { _id: id }
+    : { eventId: id };
+
+  const updated = await Event.findOneAndUpdate(
+    filter,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).populate("eventTypeId", "name");
+
+  return updated;
+};
+
 module.exports = {
   createEvent,
   eventTypes,
   eventLists,
+  updateEvent,
 };

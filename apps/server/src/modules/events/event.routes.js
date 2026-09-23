@@ -20,9 +20,28 @@ router.post(
 router.get("/event-types", authMiddleware, eventController.eventTypes);
 router.get("/events-list/:userId", authMiddleware, eventController.eventLists);
 
+router.put(
+  "/update-event/:id",
+  authMiddleware,
+  upload.fields([
+    { name: "hostOneImage", maxCount: 1 },
+    { name: "invitation", maxCount: 1 },
+  ]),
+  eventController.updateEvent
+);
+
+router.put(
+  "/:id",
+  authMiddleware,
+  upload.fields([
+    { name: "hostOneImage", maxCount: 1 },
+    { name: "invitation", maxCount: 1 },
+  ]),
+  eventController.updateEvent
+);
+
 // router.get("/", eventController.getMyEvents);
 // router.get("/:id", eventController.getEventById);
-// router.put("/update:id", eventController.updateEvent);
 // router.delete("/delete:id", eventController.deleteEvent);
 
 module.exports = router;

@@ -14,3 +14,8 @@ export const getMyEvents = async (userId) => {
   const response = await api.get(`/event/events-list/${userId}`);
   return response.data;
 };
+
+export const updateEvent = async (id, data) => {
+  const response = await api.put(`/event/update-event/${id}`, data);
+  return response.data;
+};

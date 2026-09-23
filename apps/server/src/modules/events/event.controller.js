@@ -127,8 +127,72 @@ const eventLists = async (req, res) => {
   }
 };
 
+const updateEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+
+    delete updateData.eventId;
+    delete updateData.userId;
+
+    if (updateData.location && typeof updateData.location === "string") {
+      try {
+        updateData.location = JSON.parse(updateData.location);
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
+    if (req.files?.hostOneImage?.[0]?.filename) {
+      updateData.hostOneImage = req.files.hostOneImage[0].filename;
+    }
+
+    if (req.files?.invitation?.[0]?.filename) {
+      updateData.invitation = req.files.invitation[0].filename;
+    }
+
+    const updated = await eventService.updateEvent(id, updateData);
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found.",
+      });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const eventData = updated.toObject ? updated.toObject() : updated;
+
+    return res.status(200).json({
+      success: true,
+      message: "Event updated successfully.",
+      data: {
+        ...eventData,
+        hostOneImage: eventData.hostOneImage
+          ? (eventData.hostOneImage.startsWith("http")
+              ? eventData.hostOneImage
+              : `${baseUrl}/uploads/${eventData.hostOneImage}`)
+          : null,
+        invitation: eventData.invitation
+          ? (eventData.invitation.startsWith("http")
+              ? eventData.invitation
+              : `${baseUrl}/uploads/${eventData.invitation}`)
+          : null,
+      },
+    });
+  } catch (error) {
+    console.log("Update event error:", error);
+
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   eventTypes,
   eventLists,
+  updateEvent,
 };
