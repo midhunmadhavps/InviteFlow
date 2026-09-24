@@ -784,47 +784,6 @@ export default function EventDetailsScreen({ navigation, route }) {
                 textAlignVertical="top"
               />
 
-              {/* INVITATION UPLOAD */}
-              <TouchableOpacity
-                style={styles.pdfButton}
-                onPress={pickInvitation}
-              >
-                <View style={styles.pdfIcon}>
-                  <Ionicons
-                    name="document-text-outline"
-                    size={25}
-                    color="#ff7f86"
-                  />
-                </View>
-
-                <View style={styles.pdfInfo}>
-                  <Text
-                    style={styles.pdfTitle}
-                    numberOfLines={1}
-                  >
-                    {selectedInvitation
-                      ? selectedInvitation.name
-                      : eventData.invitation
-                      ? "Change Invitation"
-                      : "Upload Invitation"}
-                  </Text>
-
-                  <Text style={styles.pdfSubtitle}>
-                    {selectedInvitation
-                      ? "File selected"
-                      : eventData.invitation
-                      ? "Tap to change PDF or image"
-                      : "Tap to select PDF or image"}
-                  </Text>
-                </View>
-
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color="#999"
-                />
-              </TouchableOpacity>
-
               {/* INVITATION PREVIEW */}
               {(selectedInvitation || eventData.invitation) && (
                 <View style={styles.invitationPreviewContainer}>
@@ -875,6 +834,47 @@ export default function EventDetailsScreen({ navigation, route }) {
                   )}
                 </View>
               )}
+
+              {/* INVITATION UPLOAD */}
+              <TouchableOpacity
+                style={styles.pdfButton}
+                onPress={pickInvitation}
+              >
+                <View style={styles.pdfIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={25}
+                    color="#ff7f86"
+                  />
+                </View>
+
+                <View style={styles.pdfInfo}>
+                  <Text
+                    style={styles.pdfTitle}
+                    numberOfLines={1}
+                  >
+                    {selectedInvitation
+                      ? selectedInvitation.name
+                      : eventData.invitation
+                      ? "Change Invitation"
+                      : "Upload Invitation"}
+                  </Text>
+
+                  <Text style={styles.pdfSubtitle}>
+                    {selectedInvitation
+                      ? "File selected"
+                      : eventData.invitation
+                      ? "Tap to change PDF or image"
+                      : "Tap to select PDF or image"}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color="#999"
+                />
+              </TouchableOpacity>
 
               {/* ACTION BUTTONS */}
               <View style={styles.actionButtonsRow}>
