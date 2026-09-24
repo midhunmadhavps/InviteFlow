@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { updateEvent } from "../api/event.api";
 import { RequiredLabel, Label } from "../../../components/RequiredLabel";
@@ -52,6 +53,7 @@ export default function EventDetailsScreen({ navigation, route }) {
       address: "Wadakkanchery, Thrissur",
     },
     message: "We are happy to invite you to celebrate our special day with us.",
+    invitation: null,
   };
 
   const [eventData, setEventData] = useState(event || dummyEvent);
@@ -59,6 +61,7 @@ export default function EventDetailsScreen({ navigation, route }) {
   const [saving, setSaving] = useState(false);
 
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedInvitation, setSelectedInvitation] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -160,6 +163,24 @@ export default function EventDetailsScreen({ navigation, route }) {
   };
 
   // --------------------------------------------------
+  // INVITATION PICKER (PDF or Image)
+  // --------------------------------------------------
+
+  const pickInvitation = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: [
+        "application/pdf",
+        "image/*",
+      ],
+      copyToCacheDirectory: true,
+    });
+
+    if (!result.canceled) {
+      setSelectedInvitation(result.assets[0]);
+    }
+  };
+
+  // --------------------------------------------------
   // DATE & TIME PICKER HANDLERS
   // --------------------------------------------------
 
@@ -218,6 +239,7 @@ export default function EventDetailsScreen({ navigation, route }) {
     });
 
     setSelectedImage(null);
+    setSelectedInvitation(null);
     setShowDatePicker(false);
     setShowTimePicker(false);
     setIsEditing(true);
@@ -225,6 +247,7 @@ export default function EventDetailsScreen({ navigation, route }) {
 
   const handleCancel = () => {
     setSelectedImage(null);
+    setSelectedInvitation(null);
     setShowDatePicker(false);
     setShowTimePicker(false);
     setIsEditing(false);
@@ -314,15 +337,15 @@ export default function EventDetailsScreen({ navigation, route }) {
       return false;
     }
 
-    // errorMessage = validateImageOrPdf(
-    //   invitation,
-    //   "Invitation"
-    // );
+    errorMessage = validateImageOrPdf(
+      selectedInvitation,
+      "Invitation"
+    );
 
-    // if (errorMessage) {
-    //   showError(errorMessage);
-    //   return false;
-    // }
+    if (errorMessage) {
+      showError(errorMessage);
+      return false;
+    }
 
     return true;
   };
@@ -347,7 +370,7 @@ export default function EventDetailsScreen({ navigation, route }) {
 
       const finalHostTwo = allowsSecondHost() ? editForm.hostTwo || "" : "";
 
-      if (selectedImage) {
+      if (selectedImage || selectedInvitation) {
         payload = new FormData();
         payload.append("title", editForm.title);
         payload.append("hostOne", editForm.hostOne);
@@ -358,19 +381,38 @@ export default function EventDetailsScreen({ navigation, route }) {
         payload.append("location", JSON.stringify(locationData));
         payload.append("message", editForm.message || "");
 
-        if (Platform.OS === "web") {
-          const file = await uriToFile(
-            selectedImage.uri,
-            selectedImage.fileName || "host-photo.jpg",
-            selectedImage.mimeType || "image/jpeg"
-          );
-          payload.append("hostOneImage", file);
-        } else {
-          payload.append("hostOneImage", {
-            uri: selectedImage.uri,
-            name: selectedImage.fileName || "host-photo.jpg",
-            type: selectedImage.mimeType || "image/jpeg",
-          });
+        if (selectedImage) {
+          if (Platform.OS === "web") {
+            const file = await uriToFile(
+              selectedImage.uri,
+              selectedImage.fileName || "host-photo.jpg",
+              selectedImage.mimeType || "image/jpeg"
+            );
+            payload.append("hostOneImage", file);
+          } else {
+            payload.append("hostOneImage", {
+              uri: selectedImage.uri,
+              name: selectedImage.fileName || "host-photo.jpg",
+              type: selectedImage.mimeType || "image/jpeg",
+            });
+          }
+        }
+
+        if (selectedInvitation) {
+          if (Platform.OS === "web") {
+            const file = await uriToFile(
+              selectedInvitation.uri,
+              selectedInvitation.name || "invitation",
+              selectedInvitation.mimeType || "application/pdf"
+            );
+            payload.append("invitation", file);
+          } else {
+            payload.append("invitation", {
+              uri: selectedInvitation.uri,
+              name: selectedInvitation.name || "invitation",
+              type: selectedInvitation.mimeType || "application/pdf",
+            });
+          }
         }
       } else {
         payload = {
@@ -386,6 +428,7 @@ export default function EventDetailsScreen({ navigation, route }) {
         hostTwo: finalHostTwo,
         location: locationData,
         ...(selectedImage?.uri ? { hostOneImage: selectedImage.uri } : {}),
+        ...(selectedInvitation?.uri ? { invitation: selectedInvitation.uri } : {}),
       };
 
       if (eventId) {
@@ -398,6 +441,7 @@ export default function EventDetailsScreen({ navigation, route }) {
       setEventData(updatedData);
       setIsEditing(false);
       setSelectedImage(null);
+      setSelectedInvitation(null);
       showSuccess("Event updated successfully!");
     } catch (error) {
       console.log("Update event error:", error);
@@ -738,6 +782,91 @@ export default function EventDetailsScreen({ navigation, route }) {
                 textAlignVertical="top"
               />
 
+              {/* INVITATION UPLOAD */}
+              <TouchableOpacity
+                style={styles.pdfButton}
+                onPress={pickInvitation}
+              >
+                <View style={styles.pdfIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={25}
+                    color="#ff7f86"
+                  />
+                </View>
+
+                <View style={styles.pdfInfo}>
+                  <Text
+                    style={styles.pdfTitle}
+                    numberOfLines={1}
+                  >
+                    {selectedInvitation
+                      ? selectedInvitation.name
+                      : eventData.invitation
+                      ? "Change Invitation"
+                      : "Upload Invitation"}
+                  </Text>
+
+                  <Text style={styles.pdfSubtitle}>
+                    {selectedInvitation
+                      ? "File selected"
+                      : eventData.invitation
+                      ? "Tap to change PDF or image"
+                      : "Tap to select PDF or image"}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color="#999"
+                />
+              </TouchableOpacity>
+
+              {/* INVITATION PREVIEW */}
+              {selectedInvitation && (
+                <View style={styles.invitationPreviewContainer}>
+                  <View style={styles.invitationPreviewHeader}>
+                    <Text style={styles.invitationPreviewLabel}>
+                      Invitation Preview
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSelectedInvitation(null)}
+                      style={styles.removeInvitationButton}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={20}
+                        color="#ff7f86"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {selectedInvitation.mimeType?.startsWith("image/") ||
+                  selectedInvitation.name?.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                    <Image
+                      source={{ uri: selectedInvitation.uri }}
+                      style={styles.invitationImagePreview}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.invitationPdfPreview}>
+                      <Ionicons
+                        name="document-text-outline"
+                        size={48}
+                        color="#ff7f86"
+                      />
+                      <Text style={styles.invitationPdfText}>
+                        {selectedInvitation.name}
+                      </Text>
+                      <Text style={styles.invitationPdfSubtext}>
+                        PDF Document
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {/* ACTION BUTTONS */}
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity
@@ -964,6 +1093,36 @@ export default function EventDetailsScreen({ navigation, route }) {
                     {eventData.message || "No message added."}
                   </Text>
                 </View>
+
+                {/* INVITATION */}
+                {eventData.invitation && (
+                  <View style={styles.invitationContainer}>
+                    <Text style={styles.detailLabel}>
+                      Invitation
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.invitationDisplay}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="document-text-outline"
+                        size={24}
+                        color="#ff7f86"
+                      />
+                      <Text style={styles.invitationFileName}>
+                        {typeof eventData.invitation === "string"
+                          ? eventData.invitation.split("/").pop()
+                          : "Invitation file"}
+                      </Text>
+                      <Ionicons
+                        name="open-outline"
+                        size={20}
+                        color="#263957"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* EDIT BUTTON */}
@@ -1267,6 +1426,137 @@ const styles = StyleSheet.create({
     color: "#555555",
     lineHeight: 21,
     marginTop: 5,
+  },
+
+  // --------------------------------------------------
+  // INVITATION UPLOAD (EDIT MODE)
+  // --------------------------------------------------
+
+  pdfButton: {
+    height: 70,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    marginTop: 18,
+    backgroundColor: "#ffffff",
+  },
+
+  pdfIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 10,
+    backgroundColor: "#fff1f2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  pdfInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  pdfTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#444444",
+  },
+
+  pdfSubtitle: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 4,
+  },
+
+  // --------------------------------------------------
+  // INVITATION PREVIEW
+  // --------------------------------------------------
+
+  invitationPreviewContainer: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#eeeeee",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  },
+
+  invitationPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff1f2",
+  },
+
+  invitationPreviewLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#263957",
+  },
+
+  removeInvitationButton: {
+    padding: 4,
+  },
+
+  invitationImagePreview: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#f9f9f9",
+  },
+
+  invitationPdfPreview: {
+    height: 120,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f9f9f9",
+    padding: 20,
+  },
+
+  invitationPdfText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#263957",
+    marginTop: 8,
+    textAlign: "center",
+  },
+
+  invitationPdfSubtext: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 4,
+  },
+
+  // --------------------------------------------------
+  // INVITATION DISPLAY (VIEW MODE)
+  // --------------------------------------------------
+
+  invitationContainer: {
+    marginTop: 4,
+    paddingTop: 17,
+    borderTopWidth: 1,
+    borderTopColor: "#eeeeee",
+  },
+
+  invitationDisplay: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff1f2",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 5,
+  },
+
+  invitationFileName: {
+    flex: 1,
+    fontSize: 13,
+    color: "#263957",
+    fontWeight: "600",
+    marginLeft: 12,
   },
 
   // --------------------------------------------------
