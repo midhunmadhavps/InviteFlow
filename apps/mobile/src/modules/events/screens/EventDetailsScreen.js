@@ -541,21 +541,7 @@ export default function EventDetailsScreen({ navigation, route }) {
               {isEditing ? "Edit Event" : "Event Details"}
             </Text>
 
-            <View style={styles.headerRight}>
-              {!isEditing && (
-                <TouchableOpacity
-                  style={styles.headerEditBtn}
-                  onPress={handleStartEdit}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color="#ff7f86"
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
+            <View style={styles.headerRight} />
           </View>
 
           {/* ============================================== */}
@@ -1288,15 +1274,6 @@ const styles = StyleSheet.create({
     width: 40,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  headerEditBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
-    justifyContent: "center",
-    alignItems: "center",
   },
 
   // --------------------------------------------------
