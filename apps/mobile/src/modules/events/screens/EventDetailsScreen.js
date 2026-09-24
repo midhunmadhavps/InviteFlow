@@ -308,7 +308,7 @@ export default function EventDetailsScreen({ navigation, route }) {
     }
 
     errorMessage = validateLocation(
-      editLocation.latitude,
+      editLocation,
       "Event Location"
     );
 
@@ -327,14 +327,16 @@ export default function EventDetailsScreen({ navigation, route }) {
       return false;
     }
 
-    errorMessage = validateImage(
-      selectedImage,
-      "image"
-    );
+    if (selectedImage) {
+      errorMessage = validateImage(
+        selectedImage,
+        "image"
+      );
 
-    if (errorMessage) {
-      showError(errorMessage);
-      return false;
+      if (errorMessage) {
+        showError(errorMessage);
+        return false;
+      }
     }
 
     errorMessage = validateImageOrPdf(
@@ -824,28 +826,32 @@ export default function EventDetailsScreen({ navigation, route }) {
               </TouchableOpacity>
 
               {/* INVITATION PREVIEW */}
-              {selectedInvitation && (
+              {(selectedInvitation || eventData.invitation) && (
                 <View style={styles.invitationPreviewContainer}>
                   <View style={styles.invitationPreviewHeader}>
                     <Text style={styles.invitationPreviewLabel}>
                       Invitation Preview
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => setSelectedInvitation(null)}
-                      style={styles.removeInvitationButton}
-                    >
-                      <Ionicons
-                        name="close-circle"
-                        size={20}
-                        color="#ff7f86"
-                      />
-                    </TouchableOpacity>
+                    {selectedInvitation && (
+                      <TouchableOpacity
+                        onPress={() => setSelectedInvitation(null)}
+                        style={styles.removeInvitationButton}
+                      >
+                        <Ionicons
+                          name="close-circle"
+                          size={20}
+                          color="#ff7f86"
+                        />
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {selectedInvitation.mimeType?.startsWith("image/") ||
-                  selectedInvitation.name?.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                  {(selectedInvitation?.mimeType?.startsWith("image/") ||
+                  selectedInvitation?.name?.match(/\.(jpg|jpeg|png|webp)$/i) ||
+                  (typeof eventData.invitation === "string" &&
+                   eventData.invitation.match(/\.(jpg|jpeg|png|webp)$/i))) ? (
                     <Image
-                      source={{ uri: selectedInvitation.uri }}
+                      source={{ uri: selectedInvitation?.uri || eventData.invitation }}
                       style={styles.invitationImagePreview}
                       resizeMode="contain"
                     />
@@ -857,7 +863,10 @@ export default function EventDetailsScreen({ navigation, route }) {
                         color="#ff7f86"
                       />
                       <Text style={styles.invitationPdfText}>
-                        {selectedInvitation.name}
+                        {selectedInvitation?.name ||
+                         (typeof eventData.invitation === "string"
+                           ? eventData.invitation.split("/").pop()
+                           : "Invitation file")}
                       </Text>
                       <Text style={styles.invitationPdfSubtext}>
                         PDF Document
@@ -1100,6 +1109,34 @@ export default function EventDetailsScreen({ navigation, route }) {
                     <Text style={styles.detailLabel}>
                       Invitation
                     </Text>
+
+                    {/* Invitation Preview */}
+                    <View style={styles.invitationPreviewContainer}>
+                      {typeof eventData.invitation === "string" &&
+                       eventData.invitation.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                        <Image
+                          source={{ uri: eventData.invitation }}
+                          style={styles.invitationImagePreview}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <View style={styles.invitationPdfPreview}>
+                          <Ionicons
+                            name="document-text-outline"
+                            size={48}
+                            color="#ff7f86"
+                          />
+                          <Text style={styles.invitationPdfText}>
+                            {typeof eventData.invitation === "string"
+                              ? eventData.invitation.split("/").pop()
+                              : "Invitation file"}
+                          </Text>
+                          <Text style={styles.invitationPdfSubtext}>
+                            PDF Document
+                          </Text>
+                        </View>
+                      )}
+                    </View>
 
                     <TouchableOpacity
                       style={styles.invitationDisplay}
