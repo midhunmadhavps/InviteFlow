@@ -13,14 +13,21 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Contacts from "expo-contacts";
+import { bulkCreateContacts, getContactsByUserId } from "../api/contact.api";
+import { getUser } from "../../../utils/auth";
+import { useToast } from "../../../context/ToastContext";
 
 export default function ContactsScreen({ navigation }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     requestContactsPermission();
+    loadSavedContacts();
   }, []);
 
   const requestContactsPermission = async () => {
@@ -82,49 +89,120 @@ export default function ContactsScreen({ navigation }) {
     }
   };
 
-  const renderContact = ({ item }) => (
-    <TouchableOpacity style={styles.contactCard}>
-      <View style={styles.contactAvatar}>
-        <Ionicons
-          name="person"
-          size={24}
-          color="#ff7f86"
-        />
-      </View>
+  const loadSavedContacts = async () => {
+    try {
+      const user = await getUser();
+      if (user?.id) {
+        const savedContacts = await getContactsByUserId(user.id);
+        // Merge with phone contacts if needed
+        console.log("Saved contacts:", savedContacts);
+      }
+    } catch (error) {
+      console.log("Load saved contacts error:", error);
+    }
+  };
 
-      <View style={styles.contactInfo}>
-        <Text style={styles.contactName}>
-          {item.name}
-        </Text>
+  const saveSelectedContacts = async () => {
+    if (selectedContacts.length === 0) {
+      showError("Please select at least one contact.");
+      return;
+    }
 
-        {item.phoneNumbers && item.phoneNumbers.length > 0 && (
-          <Text style={styles.contactPhone}>
-            {item.phoneNumbers[0].number}
-          </Text>
-        )}
+    setSaving(true);
+    try {
+      const user = await getUser();
+      if (!user?.id) {
+        showError("User information not found.");
+        return;
+      }
 
-        {item.emails && item.emails.length > 0 && (
-          <Text style={styles.contactEmail}>
-            {item.emails[0].email}
-          </Text>
-        )}
-      </View>
+      const contactsData = selectedContacts.map((contact) => ({
+        contactDetails: contact,
+        name: contact.name,
+        phoneNumber: contact.phoneNumbers?.[0]?.number || "",
+        email: contact.emails?.[0]?.email || null,
+      }));
 
+      await bulkCreateContacts({
+        userId: user.id,
+        contacts: contactsData,
+      });
+
+      showSuccess(`${selectedContacts.length} contacts saved successfully!`);
+      setSelectedContacts([]);
+    } catch (error) {
+      console.log("Save contacts error:", error);
+      showError(error.response?.data?.message || "Failed to save contacts.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderContact = ({ item }) => {
+    const isSelected = selectedContacts.some(
+      (selected) => selected.id === item.id
+    );
+
+    return (
       <TouchableOpacity
-        style={styles.addContactButton}
+        style={[
+          styles.contactCard,
+          isSelected && styles.contactCardSelected,
+        ]}
         onPress={() => {
-          // Handle adding contact
-          Alert.alert("Contact Selected", `Selected: ${item.name}`);
+          if (isSelected) {
+            setSelectedContacts(
+              selectedContacts.filter((selected) => selected.id !== item.id)
+            );
+          } else {
+            setSelectedContacts([...selectedContacts, item]);
+          }
         }}
       >
-        <Ionicons
-          name="add-circle-outline"
-          size={24}
-          color="#ff7f86"
-        />
+        <View style={styles.contactAvatar}>
+          <Ionicons
+            name="person"
+            size={24}
+            color="#ff7f86"
+          />
+        </View>
+
+        <View style={styles.contactInfo}>
+          <Text style={styles.contactName}>
+            {item.name}
+          </Text>
+
+          {item.phoneNumbers && item.phoneNumbers.length > 0 && (
+            <Text style={styles.contactPhone}>
+              {item.phoneNumbers[0].number}
+            </Text>
+          )}
+
+          {item.emails && item.emails.length > 0 && (
+            <Text style={styles.contactEmail}>
+              {item.emails[0].email}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.contactSelection}>
+          {isSelected ? (
+            <Ionicons
+              name="checkmark-circle"
+              size={24}
+              color="#4CAF50"
+            />
+          ) : (
+            <Ionicons
+              name="add-circle-outline"
+              size={24}
+              color="#ff7f86"
+            />
+          )}
+        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -176,7 +254,19 @@ export default function ContactsScreen({ navigation }) {
             Add Contacts
           </Text>
 
-          <View style={styles.headerRight} />
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={saveSelectedContacts}
+            disabled={saving || selectedContacts.length === 0}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.saveButtonText}>
+                Save ({selectedContacts.length})
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -240,8 +330,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  headerRight: {
-    width: 40,
+  saveButton: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+
+  saveButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
   },
 
   content: {
@@ -277,6 +376,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
+  contactCardSelected: {
+    borderColor: "#ff7f86",
+    backgroundColor: "#fff1f2",
+  },
+
   contactAvatar: {
     width: 45,
     height: 45,
@@ -309,7 +413,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  addContactButton: {
+  contactSelection: {
     padding: 8,
   },
 

@@ -92,6 +92,12 @@ const eventSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Array of contact IDs from contacts table
+    contacts: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Contact",
+    }],
+
     message: {
       type: String,
       default: "",

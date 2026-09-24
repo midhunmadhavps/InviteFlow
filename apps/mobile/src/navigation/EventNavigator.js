@@ -11,7 +11,7 @@ import EngagementScreen from "../modules/events/screens/events/EngagementEventSc
 import AnniversaryScreen from "../modules/events/screens/events/AnniversaryEventScreen";
 import BirthdayScreen from "../modules/events/screens/events/BirthdayEventScreen";
 import EventDetailsScreen from "../modules/events/screens/EventDetailsScreen";
-import ContactsScreen from "../modules/events/screens/ContactsScreen";
+import ContactsScreen from "../modules/contacts/screens/ContactsScreen";
 
 
 const EventStack = createNativeStackNavigator();
