@@ -11,6 +11,7 @@ import EngagementScreen from "../modules/events/screens/events/EngagementEventSc
 import AnniversaryScreen from "../modules/events/screens/events/AnniversaryEventScreen";
 import BirthdayScreen from "../modules/events/screens/events/BirthdayEventScreen";
 import EventDetailsScreen from "../modules/events/screens/EventDetailsScreen";
+import ContactsScreen from "../modules/events/screens/ContactsScreen";
 
 
 const EventStack = createNativeStackNavigator();
@@ -27,6 +28,7 @@ export default function EventNavigator() {
             <EventStack.Screen name="AnniversaryEvent" component={AnniversaryScreen}/>
             <EventStack.Screen name="BirthdayEvent" component={BirthdayScreen}/>
             <EventStack.Screen name="EventDeScreen" component={EventDetailsScreen}/>
+            <EventStack.Screen name="Contacts" component={ContactsScreen}/>
 
         </EventStack.Navigator>
   );

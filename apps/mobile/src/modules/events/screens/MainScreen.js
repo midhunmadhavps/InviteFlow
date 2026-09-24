@@ -139,6 +139,27 @@ export default function MainScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() =>
+            navigation.navigate("Events", {
+              screen: "Contacts",
+            })
+          }
+        >
+          <View style={styles.actionIcon}>
+            <Ionicons
+              name="people-outline"
+              size={23}
+              color="#ff7f86"
+            />
+          </View>
+
+          <Text style={styles.actionText}>
+            Add Contacts
+          </Text>
+        </TouchableOpacity>
+
       </View>
 
       {/* Event List */}
@@ -321,7 +342,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingTop: 20,
-    gap: 12,
+    gap: 10,
   },
 
   actionButton: {
