@@ -372,17 +372,68 @@ export default function EventDetailsScreen({ navigation, route }) {
 
       const finalHostTwo = allowsSecondHost() ? editForm.hostTwo || "" : "";
 
-      if (selectedImage || selectedInvitation) {
-        payload = new FormData();
-        payload.append("title", editForm.title);
-        payload.append("hostOne", editForm.hostOne);
-        payload.append("hostTwo", finalHostTwo);
-        payload.append("eventDate", editForm.eventDate);
-        payload.append("eventTime", editForm.eventTime || "");
-        payload.append("address", editForm.address || "");
-        payload.append("location", JSON.stringify(locationData));
-        payload.append("message", editForm.message || "");
+      // Build payload with only changed fields
+      const changedFields = {};
 
+      // Check if title changed
+      if (editForm.title !== eventData.title) {
+        changedFields.title = editForm.title;
+      }
+
+      // Check if hostOne changed
+      if (editForm.hostOne !== eventData.hostOne) {
+        changedFields.hostOne = editForm.hostOne;
+      }
+
+      // Check if hostTwo changed (for events that support it)
+      if (allowsSecondHost() && editForm.hostTwo !== eventData.hostTwo) {
+        changedFields.hostTwo = finalHostTwo;
+      }
+
+      // Check if eventDate changed
+      if (editForm.eventDate !== (eventData.eventDate ? eventData.eventDate.split("T")[0] : "")) {
+        changedFields.eventDate = editForm.eventDate;
+      }
+
+      // Check if eventTime changed
+      if (editForm.eventTime !== eventData.eventTime) {
+        changedFields.eventTime = editForm.eventTime || "";
+      }
+
+      // Check if address changed
+      if (editForm.address !== eventData.address) {
+        changedFields.address = editForm.address || "";
+      }
+
+      // Check if location changed
+      const currentLocation = eventData.location || {};
+      if (editLocation.address !== currentLocation.address ||
+          editLocation.latitude !== currentLocation.latitude ||
+          editLocation.longitude !== currentLocation.longitude ||
+          editLocation.googleMapsUrl !== currentLocation.googleMapsUrl) {
+        changedFields.location = locationData;
+      }
+
+      // Check if message changed
+      if (editForm.message !== eventData.message) {
+        changedFields.message = editForm.message || "";
+      }
+
+      // If there are file uploads or changed fields, use FormData
+      if (selectedImage || selectedInvitation || Object.keys(changedFields).length > 0) {
+        payload = new FormData();
+
+        // Add only changed text fields
+        if (changedFields.title) payload.append("title", changedFields.title);
+        if (changedFields.hostOne) payload.append("hostOne", changedFields.hostOne);
+        if (changedFields.hostTwo) payload.append("hostTwo", changedFields.hostTwo);
+        if (changedFields.eventDate) payload.append("eventDate", changedFields.eventDate);
+        if (changedFields.eventTime !== undefined) payload.append("eventTime", changedFields.eventTime);
+        if (changedFields.address !== undefined) payload.append("address", changedFields.address);
+        if (changedFields.location) payload.append("location", JSON.stringify(changedFields.location));
+        if (changedFields.message !== undefined) payload.append("message", changedFields.message);
+
+        // Add image if selected
         if (selectedImage) {
           if (Platform.OS === "web") {
             const file = await uriToFile(
@@ -400,6 +451,7 @@ export default function EventDetailsScreen({ navigation, route }) {
           }
         }
 
+        // Add invitation if selected
         if (selectedInvitation) {
           if (Platform.OS === "web") {
             const file = await uriToFile(
@@ -417,16 +469,15 @@ export default function EventDetailsScreen({ navigation, route }) {
           }
         }
       } else {
-        payload = {
-          ...editForm,
-          hostTwo: finalHostTwo,
-          location: locationData,
-        };
+        // No changes - show message and return
+        showError("No changes made to update.");
+        setSaving(false);
+        return;
       }
 
       let updatedData = {
         ...eventData,
-        ...editForm,
+        ...changedFields,
         hostTwo: finalHostTwo,
         location: locationData,
         ...(selectedImage?.uri ? { hostOneImage: selectedImage.uri } : {}),
