@@ -142,9 +142,7 @@ export default function MainScreen({ navigation }) {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() =>
-            navigation.navigate("Events", {
-              screen: "Contacts",
-            })
+            navigation.navigate("Contacts")
           }
         >
           <View style={styles.actionIcon}>

@@ -54,6 +54,16 @@ const bulkCreateContacts = async (contactsData) => {
   }
 };
 
+const addContactsToEvent = async (eventId, contactIds) => {
+  const Event = require("../../models/event.model");
+  const updated = await Event.findByIdAndUpdate(
+    eventId,
+    { $push: { contacts: { $each: contactIds } } },
+    { new: true }
+  );
+  return updated;
+};
+
 module.exports = {
   createContact,
   getContactsByUserId,
@@ -61,4 +71,5 @@ module.exports = {
   updateContact,
   deleteContact,
   bulkCreateContacts,
+  addContactsToEvent,
 };

@@ -17,7 +17,8 @@ import { bulkCreateContacts, getContactsByUserId } from "../api/contact.api";
 import { getUser } from "../../../utils/auth";
 import { useToast } from "../../../context/ToastContext";
 
-export default function ContactsScreen({ navigation }) {
+export default function ContactsScreen({ navigation, route }) {
+  const { eventId } = route.params || {};
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -28,7 +29,7 @@ export default function ContactsScreen({ navigation }) {
   useEffect(() => {
     requestContactsPermission();
     loadSavedContacts();
-  }, []);
+  }, [eventId]);
 
   const requestContactsPermission = async () => {
     try {
@@ -123,13 +124,19 @@ export default function ContactsScreen({ navigation }) {
         email: contact.emails?.[0]?.email || null,
       }));
 
-      await bulkCreateContacts({
+      const response = await bulkCreateContacts({
         userId: user.id,
         contacts: contactsData,
+        eventId: eventId || null,
       });
 
       showSuccess(`${selectedContacts.length} contacts saved successfully!`);
       setSelectedContacts([]);
+
+      // If called from event, go back to event details
+      if (eventId) {
+        navigation.goBack();
+      }
     } catch (error) {
       console.log("Save contacts error:", error);
       showError(error.response?.data?.message || "Failed to save contacts.");

@@ -327,6 +327,44 @@ export default function MyEventsScreen({ navigation }) {
           </Text>
         </View>
 
+        {/* ACTION BUTTONS */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              navigation.navigate("Contacts", { eventId: item._id });
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="people-outline"
+              size={16}
+              color="#ff7f86"
+            />
+            <Text style={styles.actionButtonText}>
+              Add Contacts
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              // Handle schedule reminder
+              console.log("Schedule reminder for event:", item._id);
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="alarm-outline"
+              size={16}
+              color="#ff7f86"
+            />
+            <Text style={styles.actionButtonText}>
+              Schedule Reminder
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ADDRESS REMOVED */}
       </TouchableOpacity>
     );
@@ -646,6 +684,35 @@ const styles = StyleSheet.create({
     color: "#263957",
     fontWeight: "600",
     marginLeft: 8,
+  },
+
+  // --------------------------------------------------
+  // ACTION BUTTONS
+  // --------------------------------------------------
+
+  actionButtonsContainer: {
+    flexDirection: "row",
+    marginTop: 12,
+    gap: 10,
+  },
+
+  actionButton: {
+    flex: 1,
+    height: 40,
+    backgroundColor: "#fff1f2",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#ffd1d5",
+  },
+
+  actionButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#ff7f86",
+    marginLeft: 6,
   },
 
   // --------------------------------------------------

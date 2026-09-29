@@ -32,7 +32,8 @@ const eventTypes = async () => {
 const eventLists = async (userId) => {
   const eventLists = await Event.find({ userId })
     .sort({ createdAt: -1 })
-    .populate("eventTypeId", "name");
+    .populate("eventTypeId", "name")
+    .populate("contacts", "name phoneNumber email");
 
   return eventLists;
 };

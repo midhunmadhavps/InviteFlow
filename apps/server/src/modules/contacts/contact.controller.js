@@ -38,7 +38,7 @@ const createContact = async (req, res) => {
 
 const bulkCreateContacts = async (req, res) => {
   try {
-    const { userId, contacts } = req.body;
+    const { userId, contacts, eventId } = req.body;
 
     if (!userId || !contacts || !Array.isArray(contacts)) {
       return res.status(400).json({
@@ -56,6 +56,17 @@ const bulkCreateContacts = async (req, res) => {
     }));
 
     const result = await contactService.bulkCreateContacts(contactsData);
+
+    // If eventId is provided, update the event with contact IDs
+    if (eventId && result.length > 0) {
+      const Event = require("../../models/event.model");
+      const contactIds = result.map(contact => contact._id);
+
+      await Event.findByIdAndUpdate(
+        eventId,
+        { $push: { contacts: { $each: contactIds } } }
+      );
+    }
 
     return res.status(201).json({
       success: true,

@@ -14,6 +14,7 @@ import ForgotPasswordScreen from "../modules/auth/screens/ForgotPasswordScreen";
 import MainScreen from "../modules/events/screens/MainScreen";
 
 import EventNavigator from "./EventNavigator";
+import ContactsNavigator from "./ContactsNavigator";
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +38,9 @@ export default function AuthNavigator() {
 
         {/* Events */}
         <Stack.Screen name="Events" component={EventNavigator}/>
+
+        {/* Contacts */}
+        <Stack.Screen name="Contacts" component={ContactsNavigator}/>
 
       </Stack.Navigator>
     </NavigationContainer>
