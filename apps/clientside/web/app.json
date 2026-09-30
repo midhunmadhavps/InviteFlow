@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "InviteFlow Admin",
+    "slug": "inviteflow-admin-web",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "userInterfaceStyle": "light",
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+import apiClient from "./client";
+
+export const requestAdminOtpApi = async (email) => {
+  const response = await apiClient.post("/admin/auth/request-otp", { email });
+  return response.data;
+};
+
+export const verifyAdminOtpApi = async (email, otp) => {
+  const response = await apiClient.post("/admin/auth/verify-otp", { email, otp });
+  return response.data;
+};
+
+export const getAdminProfileApi = async () => {
+  const response = await apiClient.get("/admin/auth/me");
+  return response.data;
+};
+
+export const getDashboardStatsApi = async () => {
+  const response = await apiClient.get("/admin/dashboard");
+  return response.data;
+};
+
+export const getUsersApi = async (params = {}) => {
+  const response = await apiClient.get("/admin/users", { params });
+  return response.data;
+};
+
+export const approveAccountApi = async (id) => {
+  const response = await apiClient.post(`/admin/users/${id}/approve`);
+  return response.data;
+};
+
+export const rejectAccountApi = async (id, reason = "") => {
+  const response = await apiClient.post(`/admin/users/${id}/reject`, { reason });
+  return response.data;
+};
+
+export const updateUserStatusApi = async (id, status) => {
+  const response = await apiClient.patch(`/admin/users/${id}/status`, { status });
+  return response.data;
+};
+
+export const updateUserRoleApi = async (id, role) => {
+  const response = await apiClient.patch(`/admin/users/${id}/role`, { role });
+  return response.data;
+};
+
+export const getWhatsAppDetailsApi = async () => {
+  const response = await apiClient.get("/admin/whatsapp");
+  return response.data;
+};
+
+export const getFirebaseDetailsApi = async () => {
+  const response = await apiClient.get("/admin/firebase");
+  return response.data;
+};
+
+export const getEventsApi = async (params = {}) => {
+  const response = await apiClient.get("/admin/events", { params });
+  return response.data;
+};
+
+export const getContactsApi = async (params = {}) => {
+  const response = await apiClient.get("/admin/contacts", { params });
+  return response.data;
+};
+
+export const getSettingsApi = async () => {
+  const response = await apiClient.get("/admin/settings");
+  return response.data;
+};

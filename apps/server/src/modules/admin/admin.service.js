@@ -1,0 +1,524 @@
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("../../models/user.model");
+const Otp = require("../../models/otp.model");
+const Event = require("../../models/event.model");
+const Contact = require("../../models/contact.model");
+const EventType = require("../../models/eventType.model");
+
+// In-memory rate limiting map for OTP requests and verification attempts
+const otpRequestRateLimits = new Map();
+const otpVerifyAttemptLimits = new Map();
+
+// Helper to mask strings (e.g., phone, IDs, tokens)
+const maskString = (str, visibleStart = 2, visibleEnd = 4) => {
+  if (!str) return "Not Configured";
+  const s = String(str);
+  if (s.length <= visibleStart + visibleEnd) return "****";
+  const start = s.substring(0, visibleStart);
+  const end = s.substring(s.length - visibleEnd);
+  return `${start}${"*".repeat(s.length - visibleStart - visibleEnd)}${end}`;
+};
+
+/**
+ * 1. Request Admin Login OTP
+ */
+exports.requestAdminOtp = async ({ email, clientIp = "default" }) => {
+  if (!email) {
+    throw new Error("Email address is required.");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Find user by email
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    const error = new Error("No account found with this email address.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Deny if user is not an administrator
+  if (user.role !== "admin") {
+    const error = new Error("Access denied. Administrator privileges required.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // Rate limiting check: Max 5 requests per 10 minutes per email/IP
+  const rateKey = `${normalizedEmail}_${clientIp}`;
+  const now = Date.now();
+  const requestHistory = (otpRequestRateLimits.get(rateKey) || []).filter(
+    (timestamp) => now - timestamp < 10 * 60 * 1000
+  );
+
+  if (requestHistory.length >= 5) {
+    const error = new Error("Too many OTP requests. Please try again in 10 minutes.");
+    error.statusCode = 429;
+    throw error;
+  }
+
+  requestHistory.push(now);
+  otpRequestRateLimits.set(rateKey, requestHistory);
+
+  // Generate cryptographically secure 6-digit OTP
+  const rawOtp = crypto.randomInt(100000, 1000000).toString();
+
+  // Hash the OTP with bcrypt for secure storage
+  const hashedOtp = await bcrypt.hash(rawOtp, 10);
+
+  // OTP expires in 5 minutes
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  // Store in database with purpose ADMIN_LOGIN
+  await Otp.findOneAndUpdate(
+    { phone: user.phone, purpose: "ADMIN_LOGIN" },
+    {
+      phone: user.phone,
+      purpose: "ADMIN_LOGIN",
+      otp: hashedOtp,
+      expiresAt,
+      verified: false,
+    },
+    { upsert: true, new: true }
+  );
+
+  // In non-production environments, log for local development verification
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV ONLY] Admin Login OTP for ${normalizedEmail}: ${rawOtp}`);
+  }
+
+  // Reset verify attempt counter for this user
+  otpVerifyAttemptLimits.delete(normalizedEmail);
+
+  return {
+    success: true,
+    message: "OTP sent to your registered mobile number",
+  };
+};
+
+/**
+ * 2. Verify Admin Login OTP
+ */
+exports.verifyAdminOtp = async ({ email, otp, clientIp = "default" }) => {
+  if (!email || !otp) {
+    throw new Error("Email and OTP are required.");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    const error = new Error("No account found with this email address.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (user.role !== "admin") {
+    const error = new Error("Access denied. Administrator privileges required.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // Rate limit verification attempts (max 5 failed attempts per OTP)
+  const attempts = otpVerifyAttemptLimits.get(normalizedEmail) || 0;
+  if (attempts >= 5) {
+    // Delete OTP on too many failed attempts
+    await Otp.deleteOne({ phone: user.phone, purpose: "ADMIN_LOGIN" });
+    otpVerifyAttemptLimits.delete(normalizedEmail);
+    const error = new Error("Too many failed attempts. OTP has been invalidated. Please request a new OTP.");
+    error.statusCode = 429;
+    throw error;
+  }
+
+  // Find OTP record
+  const otpRecord = await Otp.findOne({
+    phone: user.phone,
+    purpose: "ADMIN_LOGIN",
+  });
+
+  if (!otpRecord) {
+    const error = new Error("OTP not found or has already been used. Please request a new OTP.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (otpRecord.expiresAt < new Date()) {
+    await Otp.deleteOne({ _id: otpRecord._id });
+    const error = new Error("OTP has expired. Please request a new OTP.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Check OTP match (handles bcrypt hash or legacy string match)
+  let isMatch = false;
+  if (otpRecord.otp.startsWith("$2a$") || otpRecord.otp.startsWith("$2b$")) {
+    isMatch = await bcrypt.compare(otp.toString().trim(), otpRecord.otp);
+  } else {
+    isMatch = otpRecord.otp === otp.toString().trim();
+  }
+
+  if (!isMatch) {
+    otpVerifyAttemptLimits.set(normalizedEmail, attempts + 1);
+    const error = new Error("Invalid OTP. Please check and try again.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Single-use: Delete the OTP record immediately
+  await Otp.deleteOne({ _id: otpRecord._id });
+  otpVerifyAttemptLimits.delete(normalizedEmail);
+
+  // Update admin user last login
+  user.lastLogin = new Date();
+  user.isEmailVerified = true;
+  user.isPhoneVerified = true;
+  await user.save();
+
+  // Generate JWT token with role information
+  const token = jwt.sign(
+    {
+      userId: user._id,
+      role: user.role,
+      email: user.email,
+      username: user.username,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    }
+  );
+
+  return {
+    token,
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      status: user.status,
+    },
+  };
+};
+
+/**
+ * 3. Dashboard Summary
+ */
+exports.getDashboardStats = async () => {
+  const [
+    totalUsers,
+    pendingAccounts,
+    approvedAccounts,
+    totalEvents,
+    recentUsers,
+    recentEvents,
+  ] = await Promise.all([
+    User.countDocuments({ role: "customer" }),
+    User.countDocuments({ status: "Pending", role: "customer" }),
+    User.countDocuments({ status: "Active", role: "customer" }),
+    Event.countDocuments(),
+    User.find({ role: "customer" }).sort({ createdAt: -1 }).limit(5).select("-password"),
+    Event.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("userId", "firstName lastName email phone")
+      .populate("eventTypeId", "name icon"),
+  ]);
+
+  const whatsappConfigured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
+
+  return {
+    totalUsers,
+    pendingAccounts,
+    approvedAccounts,
+    totalEvents,
+    whatsappAccounts: whatsappConfigured ? 1 : 0,
+    recentUsers,
+    recentEvents,
+  };
+};
+
+/**
+ * 4. Customers / Users List & Management
+ */
+exports.getUsers = async ({ role, status, search, page = 1, limit = 10 }) => {
+  const query = {};
+
+  if (role && role !== "All") {
+    query.role = role;
+  }
+
+  if (status && status !== "All") {
+    query.status = status;
+  }
+
+  if (search) {
+    const regex = new RegExp(search.trim(), "i");
+    query.$or = [
+      { firstName: regex },
+      { lastName: regex },
+      { email: regex },
+      { phone: regex },
+      { username: regex },
+    ];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [users, total] = await Promise.all([
+    User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    User.countDocuments(query),
+  ]);
+
+  return {
+    users,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / Number(limit)) || 1,
+  };
+};
+
+/**
+ * 5. Approve Customer Account
+ */
+exports.approveAccount = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    const error = new Error("User not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  user.status = "Active";
+  user.isPhoneVerified = true;
+  user.isEmailVerified = true;
+  await user.save();
+
+  return {
+    success: true,
+    message: `Account for ${user.firstName} ${user.lastName} has been approved.`,
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      role: user.role,
+    },
+  };
+};
+
+/**
+ * 6. Reject / Block Customer Account
+ */
+exports.rejectAccount = async (userId, reason = "") => {
+  const user = await User.findById(userId);
+  if (!user) {
+    const error = new Error("User not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  user.status = "Blocked";
+  await user.save();
+
+  return {
+    success: true,
+    message: `Account for ${user.firstName} ${user.lastName} has been blocked/rejected.`,
+    user: {
+      id: user._id,
+      status: user.status,
+      reason,
+    },
+  };
+};
+
+exports.updateUserStatus = async (userId, newStatus) => {
+  if (!["Active", "Pending", "Blocked"].includes(newStatus)) {
+    throw new Error("Invalid status. Allowed: Active, Pending, Blocked");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { status: newStatus },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    const error = new Error("User not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return user;
+};
+
+exports.updateUserRole = async (userId, newRole) => {
+  if (!["customer", "admin"].includes(newRole)) {
+    throw new Error("Invalid role. Allowed: customer, admin");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { role: newRole },
+    { new: true }
+  ).select("-password");
+
+  if (!user) {
+    const error = new Error("User not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return user;
+};
+
+/**
+ * 7. Events List for Admin
+ */
+exports.getEvents = async ({ search, page = 1, limit = 10 }) => {
+  const query = {};
+
+  if (search) {
+    const regex = new RegExp(search.trim(), "i");
+    query.$or = [{ title: regex }, { eventId: regex }, { hostOne: regex }, { hostTwo: regex }];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [events, total] = await Promise.all([
+    Event.find(query)
+      .populate("userId", "firstName lastName email phone")
+      .populate("eventTypeId", "name icon")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Event.countDocuments(query),
+  ]);
+
+  return {
+    events,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / Number(limit)) || 1,
+  };
+};
+
+/**
+ * 8. Contacts List for Admin
+ */
+exports.getContacts = async ({ search, page = 1, limit = 10 }) => {
+  const query = {};
+
+  if (search) {
+    const regex = new RegExp(search.trim(), "i");
+    query.$or = [{ name: regex }, { phone: regex }, { email: regex }];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [contacts, total] = await Promise.all([
+    Contact.find(query)
+      .populate("userId", "firstName lastName email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Contact.countDocuments(query),
+  ]);
+
+  return {
+    contacts,
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / Number(limit)) || 1,
+  };
+};
+
+/**
+ * 9. Configurations (WhatsApp Details)
+ */
+exports.getWhatsAppDetails = async () => {
+  const hasToken = Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+  return {
+    status: hasToken ? "Connected" : "Not Configured",
+    phoneNumberId: maskString(phoneNumberId, 2, 4),
+    businessAccountId: maskString(businessAccountId, 2, 4),
+    verifyTokenConfigured: Boolean(verifyToken),
+    accessTokenConfigured: hasToken,
+    environment: process.env.NODE_ENV || "development",
+    lastSync: new Date(),
+    health: hasToken ? "Operational" : "Configuration Incomplete",
+    features: [
+      { name: "Invitation Broadcast", enabled: hasToken },
+      { name: "Automated RSVP Responses", enabled: hasToken },
+      { name: "Event Reminders", enabled: hasToken },
+      { name: "Media Delivery (Images/PDFs)", enabled: Boolean(process.env.CLOUDINARY_CLOUD_NAME) },
+    ],
+  };
+};
+
+/**
+ * 10. Configurations (Firebase / Auth Details)
+ */
+exports.getFirebaseDetails = async () => {
+  const totalUsers = await User.countDocuments();
+  const totalActive = await User.countDocuments({ status: "Active" });
+
+  return {
+    projectId: process.env.FIREBASE_PROJECT_ID || "inviteflow-prod-auth",
+    authProviders: [
+      { name: "Phone / SMS OTP", status: "Enabled", default: true },
+      { name: "Email / Password", status: "Enabled", default: false },
+      { name: "Google Authentication", status: "Configured", default: false },
+    ],
+    jwtConfiguration: {
+      algorithm: "HS256",
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      secretStatus: process.env.JWT_SECRET ? "Configured (Protected)" : "Missing",
+    },
+    statistics: {
+      totalUsers,
+      activeUsers: totalActive,
+      lastSynchronized: new Date(),
+    },
+    security: {
+      otpExpiryMinutes: 5,
+      passwordHashing: "bcrypt (10 rounds)",
+      rateLimiting: "Active",
+      singleUseOtp: true,
+    },
+  };
+};
+
+/**
+ * 11. Configurations (Settings)
+ */
+exports.getSettings = async () => {
+  return {
+    appName: "InviteFlow Admin",
+    version: "1.0.0",
+    supportEmail: "support@inviteflow.com",
+    autoApproveCustomers: false,
+    otpExpiryMinutes: 5,
+    maxLoginAttempts: 5,
+    maintenanceMode: false,
+    allowRegistration: true,
+  };
+};

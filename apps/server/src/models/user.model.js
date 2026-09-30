@@ -62,6 +62,12 @@ const userSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    role: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
+
     lastLogin: {
       type: Date,
       default: null,
