@@ -113,11 +113,16 @@ const eventSchema = new mongoose.Schema(
       default: false,
     },
 
+    isEnabled: {
+      type: Boolean,
+      default: true,
+    },
+
     status: {
       type: String,
       enum: [
         "Draft",
-        "Published",
+        "Active",
         "Completed",
         "Cancelled",
       ],

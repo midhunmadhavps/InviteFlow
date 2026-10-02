@@ -20,6 +20,7 @@ router.get("/dashboard", adminController.getDashboard);
 // Customers / Users Management & Account Approvals
 router.get("/users", adminController.getUsers);
 router.post("/users", adminController.createCustomer);
+router.patch("/users/:id", adminController.updateCustomer);
 router.post("/users/:id/approve", adminController.approveAccount);
 router.post("/users/:id/reject", adminController.rejectAccount);
 router.patch("/users/:id/status", adminController.updateUserStatus);
@@ -28,6 +29,9 @@ router.patch("/users/:id/role", adminController.updateUserRole);
 
 // Events & Contacts
 router.get("/events", adminController.getEvents);
+router.patch("/events/:id/access", adminController.updateEventEnabled);
+router.patch("/events/:id", adminController.updateEvent);
+router.delete("/events/:id", adminController.deleteEvent);
 router.get("/contacts", adminController.getContacts);
 
 // Configurations

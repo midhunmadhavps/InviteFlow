@@ -109,6 +109,15 @@ exports.createCustomer = async (req, res) => {
   }
 };
 
+exports.updateCustomer = async (req, res) => {
+  try {
+    const result = await adminService.updateCustomer(req.params.id, req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to update customer.");
+  }
+};
+
 /**
  * Approve Account
  */
@@ -197,6 +206,36 @@ exports.getEvents = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "Failed to fetch events.");
+  }
+};
+
+exports.updateEventEnabled = async (req, res) => {
+  try {
+    const result = await adminService.updateEventEnabled(
+      req.params.id,
+      req.body.isEnabled
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to update event access.");
+  }
+};
+
+exports.updateEvent = async (req, res) => {
+  try {
+    const result = await adminService.updateEvent(req.params.id, req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to update event.");
+  }
+};
+
+exports.deleteEvent = async (req, res) => {
+  try {
+    const result = await adminService.deleteEvent(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to delete event.");
   }
 };
 

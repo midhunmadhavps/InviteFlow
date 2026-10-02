@@ -30,6 +30,11 @@ export const createCustomerApi = async (customer) => {
   return response.data;
 };
 
+export const updateCustomerApi = async (id, customer) => {
+  const response = await apiClient.patch(`/admin/users/${id}`, customer);
+  return response.data;
+};
+
 export const approveAccountApi = async (id) => {
   const response = await apiClient.post(`/admin/users/${id}/approve`);
   return response.data;
@@ -67,6 +72,21 @@ export const getFirebaseDetailsApi = async () => {
 
 export const getEventsApi = async (params = {}) => {
   const response = await apiClient.get("/admin/events", { params });
+  return response.data;
+};
+
+export const updateEventEnabledApi = async (id, isEnabled) => {
+  const response = await apiClient.patch(`/admin/events/${id}/access`, { isEnabled });
+  return response.data;
+};
+
+export const updateEventApi = async (id, eventData) => {
+  const response = await apiClient.patch(`/admin/events/${id}`, eventData);
+  return response.data;
+};
+
+export const deleteEventApi = async (id) => {
+  const response = await apiClient.delete(`/admin/events/${id}`);
   return response.data;
 };
 

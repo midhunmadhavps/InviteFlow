@@ -19,6 +19,7 @@ import {
   approveAccountApi,
   rejectAccountApi,
   updateUserStatusApi,
+  updateCustomerApi,
   deleteCustomerApi,
 } from "../api/admin.api";
 
@@ -41,6 +42,11 @@ const CustomerScreen = () => {
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [actionMenuUser, setActionMenuUser] = useState(null);
+  const [statusPickerUser, setStatusPickerUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState("");
   const [confirmModal, setConfirmModal] = useState({
     visible: false,
     action: null,
@@ -162,6 +168,70 @@ const CustomerScreen = () => {
     setConfirmModal({ visible: true, action, user });
   };
 
+  const openUserEditor = (user) => {
+    setEditError("");
+    setEditForm({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      password: "",
+      confirmPassword: "",
+    });
+    setEditingUser(user);
+  };
+
+  const handleSaveCustomer = async () => {
+    if (!editingUser || !editForm) return;
+
+    const customer = {
+      ...editForm,
+      firstName: editForm.firstName.trim(),
+      lastName: editForm.lastName.trim(),
+      email: editForm.email.trim(),
+      phone: editForm.phone.trim(),
+    };
+    if (!customer.firstName || !customer.lastName || !customer.email || !customer.phone) {
+      setEditError("First name, last name, email, and phone are required.");
+      return;
+    }
+    if (customer.password !== customer.confirmPassword) {
+      setEditError("Passwords do not match.");
+      return;
+    }
+
+    setActionLoading(true);
+    setEditError("");
+    setSuccessMessage("");
+    try {
+      const response = await updateCustomerApi(editingUser._id, customer);
+      setEditingUser(null);
+      setEditForm(null);
+      setSuccessMessage(response.message || "Customer updated successfully.");
+      await fetchUsers(page, statusFilter, search);
+    } catch (err) {
+      setEditError(err.response?.data?.message || err.message || "Failed to update customer.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSelectUserAction = (action) => {
+    const user = actionMenuUser;
+    setActionMenuUser(null);
+    if (!user) return;
+
+    if (action === "view") {
+      setSelectedUser(user);
+      setDetailsModalVisible(true);
+    } else if (action === "edit") {
+      setError("");
+      openUserEditor(user);
+    } else {
+      openConfirmModal("delete", user);
+    }
+  };
+
   const columns = [
     {
       title: "Customer Name",
@@ -187,68 +257,48 @@ const CustomerScreen = () => {
     },
     {
       title: "Status",
-      width: 120,
-      renderCell: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      title: "Registration Date",
-      width: 150,
+      width: 190,
       renderCell: (row) => (
-        <Text style={styles.cellText}>
-          {row.createdAt ? new Date(row.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "-"}
-        </Text>
-      ),
-    },
-    {
-      title: "Actions",
-      width: 260,
-      renderCell: (row) => (
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity
-            style={styles.detailBtn}
-            onPress={() => {
-              setSelectedUser(row);
-              setDetailsModalVisible(true);
-            }}
-          >
-            <MaterialCommunityIcons name="eye-outline" size={16} color="#4F46E5" />
-            <Text style={styles.detailBtnText}>View</Text>
-          </TouchableOpacity>
-
-          {row.status === "Pending" ? (
-            <>
+        <View style={styles.statusCell}>
+          {row.status === "Active" || row.status === "Blocked" ? (
+            <TouchableOpacity
+              style={styles.statusPickerButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                setStatusPickerUser(row);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Change customer status, currently ${row.status}`}
+            >
+              <StatusBadge status={row.status} />
+            </TouchableOpacity>
+          ) : (
+            <StatusBadge status={row.status} />
+          )}
+          {row.status === "Pending" && (
+            <View style={styles.statusActions}>
               <TouchableOpacity
                 style={styles.approveBtn}
-                onPress={() => openConfirmModal("approve", row)}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  openConfirmModal("approve", row);
+                }}
               >
                 <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
                 <Text style={styles.approveBtnText}>Approve</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.rejectBtn}
-                onPress={() => openConfirmModal("reject", row)}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  openConfirmModal("reject", row);
+                }}
               >
                 <MaterialCommunityIcons name="close" size={16} color="#DC2626" />
-                <Text style={styles.rejectBtnText}>Reject</Text>
+                <Text style={styles.rejectBtnText}>Block</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.statusToggleBtn, row.status === "Active" ? styles.blockBtn : styles.unblockBtn]}
-              onPress={() => openConfirmModal(row.status === "Active" ? "block" : "activate", row)}
-            >
-              <Text style={[styles.statusToggleText, row.status === "Active" ? styles.blockBtnText : styles.unblockBtnText]}>
-                {row.status === "Active" ? "Block" : "Activate"}
-              </Text>
-            </TouchableOpacity>
+            </View>
           )}
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={() => openConfirmModal("delete", row)}
-            accessibilityLabel={`Delete ${row.firstName} ${row.lastName}`}
-          >
-            <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
-          </TouchableOpacity>
         </View>
       ),
     },
@@ -419,6 +469,11 @@ const CustomerScreen = () => {
       <DataTable
         columns={columns}
         data={users}
+        onRowPress={(user) => {
+          setError("");
+          setSuccessMessage("");
+          setActionMenuUser(user);
+        }}
         loading={loading}
         searchValue={search}
         onSearchChange={(text) => {
@@ -479,12 +534,117 @@ const CustomerScreen = () => {
               <Text style={styles.detailLabel}>Email Verified</Text>
               <Text style={styles.detailValue}>{selectedUser.isEmailVerified ? "✅ Yes" : "❌ No"}</Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Registration Date</Text>
-              <Text style={styles.detailValue}>
-                {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : "-"}
-              </Text>
-            </View>
+          </View>
+        ) : null}
+      </Modal>
+
+      <Modal
+        visible={Boolean(statusPickerUser)}
+        onClose={() => setStatusPickerUser(null)}
+        title="Change Customer Status"
+        hideActions
+      >
+        <Text style={styles.actionMenuDescription}>
+          Choose whether {statusPickerUser?.firstName} {statusPickerUser?.lastName} should be active or blocked.
+        </Text>
+        {[
+          { label: "Active", value: "Active", icon: "check-circle-outline", color: "#16A34A" },
+          { label: "Blocked", value: "Blocked", icon: "cancel", color: "#DC2626" },
+        ].map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={styles.actionMenuOption}
+            onPress={() => {
+              const user = statusPickerUser;
+              setStatusPickerUser(null);
+              if (user.status !== option.value) {
+                openConfirmModal(option.value === "Blocked" ? "block" : "activate", user);
+              }
+            }}
+          >
+            <MaterialCommunityIcons name={option.icon} size={20} color={option.color} />
+            <Text style={styles.actionMenuOptionText}>{option.label}</Text>
+            {statusPickerUser?.status === option.value ? (
+              <MaterialCommunityIcons name="check" size={18} color={option.color} />
+            ) : null}
+          </TouchableOpacity>
+        ))}
+      </Modal>
+
+      <Modal
+        visible={Boolean(actionMenuUser)}
+        onClose={() => setActionMenuUser(null)}
+        title="Customer Actions"
+        hideActions
+      >
+        <Text style={styles.actionMenuDescription}>
+          Choose an action for {actionMenuUser?.firstName} {actionMenuUser?.lastName}.
+        </Text>
+        {[
+          { label: "View", value: "view", icon: "eye-outline", color: "#4F46E5" },
+          { label: "Edit", value: "edit", icon: "pencil-outline", color: "#0369A1" },
+          { label: "Delete", value: "delete", icon: "trash-can-outline", color: "#DC2626" },
+        ].map((action) => (
+          <TouchableOpacity
+            key={action.value}
+            style={styles.actionMenuOption}
+            onPress={() => handleSelectUserAction(action.value)}
+          >
+            <MaterialCommunityIcons name={action.icon} size={20} color={action.color} />
+            <Text style={[
+              styles.actionMenuOptionText,
+              action.value === "delete" && styles.deleteActionText,
+            ]}>
+              {action.label}
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        ))}
+      </Modal>
+
+      <Modal
+        visible={Boolean(editingUser)}
+        onClose={() => {
+          if (!actionLoading) {
+            setEditingUser(null);
+            setEditForm(null);
+            setEditError("");
+          }
+        }}
+        title="Edit Customer"
+        confirmText="Save Changes"
+        confirmColor="#4F46E5"
+        isConfirming={actionLoading}
+        onConfirm={handleSaveCustomer}
+      >
+        {editForm ? (
+          <View style={styles.customerEditForm}>
+            {editError ? <Text style={styles.customerEditError}>{editError}</Text> : null}
+            {[
+              { key: "firstName", label: "First name", placeholder: "Enter first name" },
+              { key: "lastName", label: "Last name", placeholder: "Enter last name" },
+              { key: "email", label: "Email", placeholder: "name@example.com", keyboardType: "email-address" },
+              { key: "phone", label: "Phone", placeholder: "10-digit phone number", keyboardType: "phone-pad" },
+              { key: "password", label: "New password (optional)", placeholder: "Leave blank to keep current password", secureTextEntry: true },
+              { key: "confirmPassword", label: "Confirm new password", placeholder: "Re-enter new password", secureTextEntry: true },
+            ].map((field) => (
+              <View key={field.key} style={styles.customerEditField}>
+                <Text style={styles.customerEditLabel}>{field.label}</Text>
+                <TextInput
+                  style={styles.customerEditInput}
+                  value={editForm[field.key]}
+                  onChangeText={(value) => setEditForm((current) => ({
+                    ...current,
+                    [field.key]: value,
+                  }))}
+                  placeholder={field.placeholder}
+                  placeholderTextColor="#94A3B8"
+                  keyboardType={field.keyboardType || "default"}
+                  autoCapitalize={field.key === "email" ? "none" : "words"}
+                  secureTextEntry={field.secureTextEntry || false}
+                />
+              </View>
+            ))}
           </View>
         ) : null}
       </Modal>
@@ -760,6 +920,76 @@ const styles = StyleSheet.create({
   cellText: {
     fontSize: 13,
     color: "#334155",
+  },
+  statusCell: {
+    alignItems: "flex-start",
+    gap: 7,
+  },
+  statusPickerButton: {
+    padding: 2,
+    borderRadius: 18,
+  },
+  statusActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  actionMenuDescription: {
+    marginBottom: 12,
+    color: "#64748B",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  actionMenuOption: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  actionMenuOptionText: {
+    flex: 1,
+    color: "#1E293B",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteActionText: {
+    color: "#DC2626",
+  },
+  customerEditForm: {
+    gap: 14,
+  },
+  customerEditField: {
+    gap: 6,
+  },
+  customerEditLabel: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  customerEditInput: {
+    minHeight: 42,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    color: "#0F172A",
+    fontSize: 14,
+    outlineStyle: "none",
+  },
+  customerEditError: {
+    color: "#DC2626",
+    fontSize: 13,
+    lineHeight: 19,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 7,
+    backgroundColor: "#FEF2F2",
   },
   actionButtonsRow: {
     flexDirection: "row",

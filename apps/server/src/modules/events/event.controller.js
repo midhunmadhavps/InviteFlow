@@ -134,6 +134,7 @@ const updateEvent = async (req, res) => {
 
     delete updateData.eventId;
     delete updateData.userId;
+    delete updateData.isEnabled;
 
     if (updateData.location && typeof updateData.location === "string") {
       try {

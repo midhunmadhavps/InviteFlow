@@ -6,6 +6,7 @@ const Otp = require("../../models/otp.model");
 const Event = require("../../models/event.model");
 const Contact = require("../../models/contact.model");
 const EventType = require("../../models/eventType.model");
+const { createUsername } = require("../users/user.utils");
 
 // In-memory rate limiting map for OTP requests and verification attempts
 const otpRequestRateLimits = new Map();
@@ -335,7 +336,9 @@ exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
   }
 
   const password = await bcrypt.hash("Admin@123", 10);
+  const username = await createUsername(normalizedFirstName, normalizedLastName);
   const user = await User.create({
+    username,
     firstName: normalizedFirstName,
     lastName: normalizedLastName,
     email: normalizedEmail,
@@ -361,6 +364,101 @@ exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
       status: user.status,
       role: user.role,
       createdAt: user.createdAt,
+    },
+  };
+};
+
+exports.updateCustomer = async (userId, data) => {
+  const { firstName, lastName, email, phone, password, confirmPassword } = data;
+  const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
+  const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+
+  if (!/^[A-Za-z\s]+$/.test(normalizedFirstName) || normalizedFirstName.length > 50) {
+    const error = new Error("Please enter a valid first name.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!/^[A-Za-z\s]+$/.test(normalizedLastName) || normalizedLastName.length > 50) {
+    const error = new Error("Please enter a valid last name.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    const error = new Error("Please enter a valid email address.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+    const error = new Error("Please enter a valid 10-digit phone number.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (password || confirmPassword) {
+    if (password !== confirmPassword) {
+      const error = new Error("Passwords do not match.");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/\d/.test(password) ||
+      !/[@$!%*?&]/.test(password)
+    ) {
+      const error = new Error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const user = await User.findOne({ _id: userId, role: "customer" });
+  if (!user) {
+    const error = new Error("Customer not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const conflictingUser = await User.findOne({
+    _id: { $ne: user._id },
+    $or: [{ phone: normalizedPhone }, { email: normalizedEmail }],
+  });
+  if (conflictingUser) {
+    const error = new Error(
+      conflictingUser.phone === normalizedPhone
+        ? "Phone number already registered."
+        : "Email already registered."
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  user.firstName = normalizedFirstName;
+  user.lastName = normalizedLastName;
+  user.email = normalizedEmail;
+  user.phone = normalizedPhone;
+  user.username = await createUsername(normalizedFirstName, normalizedLastName, user._id);
+  if (password) {
+    user.password = await bcrypt.hash(password, 10);
+  }
+  await user.save();
+
+  return {
+    success: true,
+    message: "Customer updated successfully.",
+    data: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      isPhoneVerified: user.isPhoneVerified,
+      isEmailVerified: user.isEmailVerified,
+      status: user.status,
+      role: user.role,
     },
   };
 };
@@ -512,6 +610,81 @@ exports.getEvents = async ({ search, page = 1, limit = 10 }) => {
     page: Number(page),
     limit: Number(limit),
     totalPages: Math.ceil(total / Number(limit)) || 1,
+  };
+};
+
+exports.updateEventEnabled = async (eventId, isEnabled) => {
+  if (typeof isEnabled !== "boolean") {
+    const error = new Error("Event enabled status must be true or false.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const event = await Event.findByIdAndUpdate(
+    eventId,
+    { isEnabled },
+    { new: true, runValidators: true }
+  );
+
+  if (!event) {
+    const error = new Error("Event not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    success: true,
+    message: `Event ${isEnabled ? "activated" : "disabled"} successfully.`,
+    data: event,
+  };
+};
+
+exports.updateEvent = async (eventId, eventData) => {
+  const allowedFields = ["title", "hostOne", "hostTwo", "eventDate", "eventTime", "address"];
+  const updateData = {};
+
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(eventData, field)) {
+      updateData[field] = eventData[field];
+    }
+  });
+
+  if (!Object.keys(updateData).length) {
+    const error = new Error("No event fields provided to update.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const event = await Event.findByIdAndUpdate(
+    eventId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  if (!event) {
+    const error = new Error("Event not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    success: true,
+    message: "Event updated successfully.",
+    data: event,
+  };
+};
+
+exports.deleteEvent = async (eventId) => {
+  const event = await Event.findByIdAndDelete(eventId);
+  if (!event) {
+    const error = new Error("Event not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    success: true,
+    message: `Event "${event.title}" deleted successfully.`,
   };
 };
 

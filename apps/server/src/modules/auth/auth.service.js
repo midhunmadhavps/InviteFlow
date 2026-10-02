@@ -3,6 +3,7 @@ const Otp = require("../../models/otp.model");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { createUsername } = require("../users/user.utils");
 
 exports.register = async (data) => {
 
@@ -13,28 +14,36 @@ exports.register = async (data) => {
     email,
   } = data;
 
+  const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
+  const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+
   const existingUser = await User.findOne({
     $or: [
-      { phone },
-      { email }
+      { phone: normalizedPhone },
+      { email: normalizedEmail }
     ]
   });
 
   if (existingUser) {
-    if (existingUser.phone === phone) {
+    if (existingUser.phone === normalizedPhone) {
       throw new Error("Phone number already registered.");
     }
 
-    if (existingUser.email === email) {
+    if (existingUser.email === normalizedEmail) {
       throw new Error("Email already registered.");
     }
   }
 
+  const username = await createUsername(normalizedFirstName, normalizedLastName);
+
   const user = await User.create({
-    firstName,
-    lastName,
-    phone,
-    email,
+    firstName: normalizedFirstName,
+    lastName: normalizedLastName,
+    phone: normalizedPhone,
+    email: normalizedEmail,
+    username,
     status: "Pending",
     isPhoneVerified: false,
   });
@@ -43,9 +52,9 @@ exports.register = async (data) => {
   const otp = 123456;
 
   await Otp.findOneAndUpdate(
-    { phone },
+    { phone: normalizedPhone },
     {
-      phone,
+      phone: normalizedPhone,
       purpose: "REGISTER",
       otp,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
@@ -63,7 +72,8 @@ exports.register = async (data) => {
 
   return {
     userId: user._id,
-    phone: user.phone
+    phone: user.phone,
+    username: user.username,
   };
 };
 

@@ -4,12 +4,18 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DataTable from "../components/DataTable";
 import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
-import { getEventsApi } from "../api/admin.api";
+import {
+  deleteEventApi,
+  getEventsApi,
+  updateEventApi,
+  updateEventEnabledApi,
+} from "../api/admin.api";
 
 const EventsScreen = () => {
   const [events, setEvents] = useState([]);
@@ -19,8 +25,15 @@ const EventsScreen = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [statusPickerEvent, setStatusPickerEvent] = useState(null);
+  const [actionMenuEvent, setActionMenuEvent] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchEvents = async (currentPage = 1, currentSearch = search) => {
     setLoading(true);
@@ -38,9 +51,94 @@ const EventsScreen = () => {
         setTotalPages(res.data.totalPages || 1);
       }
     } catch (err) {
-      setError(err.message || "Failed to load events.");
+      setError(err.response?.data?.message || err.message || "Failed to load events.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+
+    setActionLoading(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = confirmAction.type === "delete"
+        ? await deleteEventApi(confirmAction.event._id)
+        : await updateEventEnabledApi(
+            confirmAction.event._id,
+            confirmAction.isEnabled
+          );
+
+      setConfirmAction(null);
+      setSuccessMessage(response.message || "Event updated successfully.");
+      const refreshPage = confirmAction.type === "delete" && events.length === 1 && page > 1
+        ? page - 1
+        : page;
+      await fetchEvents(refreshPage, search);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to update event.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openEventEditor = (event) => {
+    setEditForm({
+      title: event.title || "",
+      hostOne: event.hostOne || "",
+      hostTwo: event.hostTwo || "",
+      eventDate: event.eventDate ? new Date(event.eventDate).toISOString().slice(0, 10) : "",
+      eventTime: event.eventTime || "",
+      address: event.address || "",
+    });
+    setEditingEvent(event);
+  };
+
+  const handleSaveEvent = async () => {
+    if (!editingEvent || !editForm) return;
+    if (!editForm.title.trim() || !editForm.hostOne.trim() || !editForm.eventDate) {
+      setError("Event title, primary host, and event date are required.");
+      return;
+    }
+
+    setActionLoading(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = await updateEventApi(editingEvent._id, {
+        ...editForm,
+        title: editForm.title.trim(),
+        hostOne: editForm.hostOne.trim(),
+        hostTwo: editForm.hostTwo.trim(),
+        address: editForm.address.trim(),
+      });
+      setEditingEvent(null);
+      setEditForm(null);
+      setSuccessMessage(response.message || "Event updated successfully.");
+      await fetchEvents(page, search);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to update event.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSelectEventAction = (action) => {
+    const event = actionMenuEvent;
+    setActionMenuEvent(null);
+    if (!event) return;
+
+    if (action === "view") {
+      setSelectedEvent(event);
+      setDetailsModalVisible(true);
+    } else if (action === "edit") {
+      setError("");
+      openEventEditor(event);
+    } else {
+      setError("");
+      setConfirmAction({ type: "delete", event });
     }
   };
 
@@ -66,17 +164,6 @@ const EventsScreen = () => {
         <View style={styles.typeCell}>
           <Text style={styles.typeIcon}>{row.eventTypeId?.icon || "✨"}</Text>
           <Text style={styles.cellText}>{row.eventTypeId?.name || "Other"}</Text>
-        </View>
-      ),
-    },
-    {
-      title: "Hosts",
-      width: 180,
-      renderCell: (row) => (
-        <View>
-          <Text style={styles.cellText}>
-            {row.hostOne} {row.hostTwo ? `& ${row.hostTwo}` : ""}
-          </Text>
         </View>
       ),
     },
@@ -107,18 +194,21 @@ const EventsScreen = () => {
       renderCell: (row) => <StatusBadge status={row.status} />,
     },
     {
-      title: "Actions",
-      width: 100,
+      title: "Access",
+      width: 140,
       renderCell: (row) => (
         <TouchableOpacity
-          style={styles.detailBtn}
-          onPress={() => {
-            setSelectedEvent(row);
-            setDetailsModalVisible(true);
+          style={[styles.accessSelect, !row.isEnabled && styles.accessSelectDisabled]}
+          onPress={(event) => {
+            event.stopPropagation();
+            setStatusPickerEvent(row);
           }}
+          accessibilityRole="button"
+          accessibilityLabel={`Change event access, currently ${row.isEnabled === false ? "disabled" : "active"}`}
         >
-          <MaterialCommunityIcons name="eye-outline" size={16} color="#4F46E5" />
-          <Text style={styles.detailBtnText}>View</Text>
+          <Text style={[styles.accessSelectText, !row.isEnabled && styles.accessSelectTextDisabled]}>
+            {row.isEnabled === false ? "Disabled" : "Active"}
+          </Text>
         </TouchableOpacity>
       ),
     },
@@ -142,9 +232,17 @@ const EventsScreen = () => {
         </View>
       ) : null}
 
+      {successMessage ? (
+        <View style={styles.successBanner}>
+          <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      ) : null}
+
       <DataTable
         columns={columns}
         data={events}
+        onRowPress={(row) => setActionMenuEvent(row)}
         loading={loading}
         searchValue={search}
         onSearchChange={(text) => {
@@ -212,8 +310,136 @@ const EventsScreen = () => {
               <Text style={styles.detailLabel}>Status</Text>
               <StatusBadge status={selectedEvent.status} />
             </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Access</Text>
+              <Text style={styles.detailValue}>
+                {selectedEvent.isEnabled === false ? "Disabled" : "Active"}
+              </Text>
+            </View>
           </View>
         ) : null}
+      </Modal>
+
+      <Modal
+        visible={Boolean(statusPickerEvent)}
+        onClose={() => setStatusPickerEvent(null)}
+        title="Change Event Access"
+        hideActions
+      >
+        <Text style={styles.pickerDescription}>
+          Choose whether this event should be active or disabled. You will be asked to confirm the change.
+        </Text>
+        {[
+          { label: "Active", value: true, icon: "check-circle-outline", color: "#16A34A" },
+          { label: "Disabled", value: false, icon: "cancel", color: "#DC2626" },
+        ].map((option) => (
+          <TouchableOpacity
+            key={option.label}
+            style={styles.pickerOption}
+            onPress={() => {
+              const event = statusPickerEvent;
+              setStatusPickerEvent(null);
+              if (event.isEnabled !== option.value) {
+                setConfirmAction({
+                  type: "access",
+                  event,
+                  isEnabled: option.value,
+                });
+              }
+            }}
+          >
+            <MaterialCommunityIcons name={option.icon} size={20} color={option.color} />
+            <Text style={styles.pickerOptionText}>{option.label}</Text>
+            {statusPickerEvent?.isEnabled === option.value ? (
+              <MaterialCommunityIcons name="check" size={18} color={option.color} />
+            ) : null}
+          </TouchableOpacity>
+        ))}
+      </Modal>
+
+      <Modal
+        visible={Boolean(actionMenuEvent)}
+        onClose={() => setActionMenuEvent(null)}
+        title="Event Actions"
+        hideActions
+      >
+        <Text style={styles.pickerDescription}>
+          Choose an action for {actionMenuEvent?.title}.
+        </Text>
+        {[
+          { label: "View", value: "view", icon: "eye-outline", color: "#4F46E5" },
+          { label: "Edit", value: "edit", icon: "pencil-outline", color: "#0369A1" },
+          { label: "Delete", value: "delete", icon: "trash-can-outline", color: "#DC2626" },
+        ].map((action) => (
+          <TouchableOpacity
+            key={action.value}
+            style={styles.pickerOption}
+            onPress={() => handleSelectEventAction(action.value)}
+          >
+            <MaterialCommunityIcons name={action.icon} size={20} color={action.color} />
+            <Text style={[styles.pickerOptionText, action.value === "delete" && styles.deleteActionText]}>
+              {action.label}
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        ))}
+      </Modal>
+
+      <Modal
+        visible={Boolean(editingEvent)}
+        onClose={() => {
+          if (!actionLoading) {
+            setEditingEvent(null);
+            setEditForm(null);
+          }
+        }}
+        title="Edit Event"
+        confirmText="Save Changes"
+        confirmColor="#4F46E5"
+        isConfirming={actionLoading}
+        onConfirm={handleSaveEvent}
+      >
+        {editForm ? (
+          <View style={styles.editForm}>
+            {[
+              { key: "title", label: "Event title", placeholder: "Enter event title" },
+              { key: "hostOne", label: "Primary host", placeholder: "Enter primary host" },
+              { key: "hostTwo", label: "Secondary host", placeholder: "Enter secondary host" },
+              { key: "eventDate", label: "Event date (YYYY-MM-DD)", placeholder: "YYYY-MM-DD" },
+              { key: "eventTime", label: "Event time", placeholder: "e.g. 6:30 PM" },
+              { key: "address", label: "Venue / address", placeholder: "Enter venue or address" },
+            ].map((field) => (
+              <View key={field.key} style={styles.editField}>
+                <Text style={styles.editLabel}>{field.label}</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editForm[field.key]}
+                  onChangeText={(value) => setEditForm((current) => ({ ...current, [field.key]: value }))}
+                  placeholder={field.placeholder}
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="sentences"
+                />
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Modal>
+
+      <Modal
+        visible={Boolean(confirmAction)}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.type === "delete" ? "Delete Event" : "Confirm Access Change"}
+        confirmText={confirmAction?.type === "delete" ? "Yes, Delete" : "Confirm Change"}
+        confirmColor={confirmAction?.type === "delete" || !confirmAction?.isEnabled ? "#DC2626" : "#16A34A"}
+        isConfirming={actionLoading}
+        onConfirm={handleConfirmAction}
+      >
+        <Text style={styles.confirmText}>
+          {confirmAction?.type === "delete"
+            ? "This will permanently delete this event. This action cannot be undone."
+            : `Are you sure you want to set this event to ${confirmAction?.isEnabled ? "Active" : "Disabled"}?`}
+        </Text>
+        <Text style={styles.confirmEventTitle}>{confirmAction?.event?.title}</Text>
       </Modal>
     </View>
   );
@@ -256,6 +482,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    padding: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  successText: {
+    color: "#16A34A",
+    fontSize: 13,
+    fontWeight: "500",
+  },
   primaryText: {
     fontSize: 14,
     fontWeight: "600",
@@ -292,6 +533,86 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#4F46E5",
     fontWeight: "600",
+  },
+  accessSelect: {
+    minWidth: 104,
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 9,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    backgroundColor: "#F0FDF4",
+  },
+  accessSelectDisabled: {
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+  },
+  accessSelectText: {
+    color: "#15803D",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  accessSelectTextDisabled: {
+    color: "#DC2626",
+  },
+  pickerDescription: {
+    marginBottom: 12,
+    color: "#64748B",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  pickerOption: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  pickerOptionText: {
+    flex: 1,
+    color: "#1E293B",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteActionText: {
+    color: "#DC2626",
+  },
+  editForm: {
+    gap: 14,
+  },
+  editField: {
+    gap: 6,
+  },
+  editLabel: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  editInput: {
+    minHeight: 42,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    color: "#0F172A",
+    fontSize: 14,
+    outlineStyle: "none",
+  },
+  confirmText: {
+    color: "#475569",
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 8,
+  },
+  confirmEventTitle: {
+    color: "#0F172A",
+    fontSize: 15,
+    fontWeight: "700",
   },
   detailsContent: {
     gap: 12,
