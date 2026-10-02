@@ -212,6 +212,28 @@ exports.updateUserRole = async (req, res) => {
 /**
  * Events
  */
+exports.getEventTypes = async (req, res) => {
+  try {
+    const eventTypes = await adminService.getEventTypes();
+    return res.status(200).json({ success: true, data: eventTypes });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch event types.");
+  }
+};
+
+exports.createEvent = async (req, res) => {
+  try {
+    const result = await adminService.createEvent(req.user._id, {
+      ...req.body,
+      hostOneImage: req.files?.hostOneImage?.[0]?.filename || null,
+      invitation: req.files?.invitation?.[0]?.filename || null,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to create event.");
+  }
+};
+
 exports.getEvents = async (req, res) => {
   try {
     const { search, page, limit } = req.query;

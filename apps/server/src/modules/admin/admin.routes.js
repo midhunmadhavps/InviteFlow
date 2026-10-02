@@ -30,7 +30,16 @@ router.delete("/users/:id", adminController.deleteCustomer);
 router.patch("/users/:id/role", adminController.updateUserRole);
 
 // Events & Contacts
+router.get("/events/types", adminController.getEventTypes);
 router.get("/events", adminController.getEvents);
+router.post(
+  "/events",
+  upload.fields([
+    { name: "hostOneImage", maxCount: 1 },
+    { name: "invitation", maxCount: 1 },
+  ]),
+  adminController.createEvent
+);
 router.patch("/events/:id/access", adminController.updateEventEnabled);
 router.patch("/events/:id/status", adminController.updateEventStatus);
 router.patch(

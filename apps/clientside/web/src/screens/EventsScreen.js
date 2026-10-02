@@ -16,6 +16,7 @@ import {
   updateEventApi,
   updateEventEnabledApi,
   updateEventStatusApi,
+  getAdminEventTypesApi,
 } from "../api/admin.api";
 
 const EVENT_STATUSES = ["Draft", "Active", "Completed", "Cancelled"];
@@ -27,15 +28,19 @@ const getEventMediaUrl = (media) => {
   return `http://localhost:3000/uploads/${encodeURIComponent(media)}`;
 };
 
-const EventsScreen = () => {
+const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
   const [events, setEvents] = useState([]);
+  const [registrationTypePickerVisible, setRegistrationTypePickerVisible] = useState(false);
+  const [registrationTypes, setRegistrationTypes] = useState([]);
+  const [registrationTypesLoading, setRegistrationTypesLoading] = useState(false);
+  const [registrationTypesError, setRegistrationTypesError] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState(initialSuccessMessage);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [statusPickerEvent, setStatusPickerEvent] = useState(null);
@@ -52,6 +57,28 @@ const EventsScreen = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const hostImageInput = useRef(null);
   const invitationInput = useRef(null);
+
+  const openRegistrationTypePicker = async () => {
+    setRegistrationTypePickerVisible(true);
+    setRegistrationTypesLoading(true);
+    setRegistrationTypesError("");
+    setError("");
+    try {
+      const response = await getAdminEventTypesApi();
+      const supportedTypes = ["wedding", "anniversary", "engagement", "birthday"];
+      setRegistrationTypes(
+        (response.data || []).filter((type) =>
+          supportedTypes.includes(type.name?.trim().toLowerCase())
+        )
+      );
+    } catch (requestError) {
+      setRegistrationTypesError(
+        requestError.response?.data?.message || requestError.message || "Failed to load event types."
+      );
+    } finally {
+      setRegistrationTypesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!selectedHostImage) {
@@ -137,9 +164,8 @@ const EventsScreen = () => {
       eventDate: event.eventDate ? new Date(event.eventDate).toISOString().slice(0, 10) : "",
       eventTime: event.eventTime || "",
       address: event.address || "",
-      locationAddress: event.location?.address || (typeof event.location === "string" ? event.location : ""),
-      latitude: event.location?.latitude == null ? "" : String(event.location.latitude),
-      longitude: event.location?.longitude == null ? "" : String(event.location.longitude),
+      locationAddress:
+        event.location?.address || (typeof event.location === "string" ? event.location : ""),
       googleMapsUrl: event.location?.googleMapsUrl || "",
       message: event.message || "",
     });
@@ -156,10 +182,22 @@ const EventsScreen = () => {
       !editForm.eventDate ||
       !editForm.eventTime ||
       !editForm.locationAddress.trim() ||
+      (allowsSecondHost && !editForm.googleMapsUrl.trim()) ||
       !editForm.address.trim()
     ) {
       setEditError("Title, primary host, date, time, event location, and event address are required.");
       return;
+    }
+    if (allowsSecondHost) {
+      try {
+        const mapUrl = new URL(editForm.googleMapsUrl.trim());
+        if (mapUrl.protocol !== "http:" && mapUrl.protocol !== "https:") {
+          throw new Error("Invalid URL protocol.");
+        }
+      } catch {
+        setEditError("Enter a valid Google Maps URL starting with http:// or https://.");
+        return;
+      }
     }
     if (selectedHostImage && !/^image\/(jpeg|png|webp)$/.test(selectedHostImage.type)) {
       setEditError("Host photo must be a JPG, PNG, or WEBP image.");
@@ -182,16 +220,6 @@ const EventsScreen = () => {
       }
     }
 
-    const latitude = editForm.latitude.trim() ? Number(editForm.latitude) : null;
-    const longitude = editForm.longitude.trim() ? Number(editForm.longitude) : null;
-    if (
-      (latitude !== null && !Number.isFinite(latitude)) ||
-      (longitude !== null && !Number.isFinite(longitude))
-    ) {
-      setEditError("Latitude and longitude must be valid numbers.");
-      return;
-    }
-
     setActionLoading(true);
     setEditError("");
     setSuccessMessage("");
@@ -206,8 +234,8 @@ const EventsScreen = () => {
       payload.append("address", editForm.address.trim());
       payload.append("location", JSON.stringify({
         address: editForm.locationAddress.trim(),
-        latitude,
-        longitude,
+        latitude: editingEvent.location?.latitude ?? null,
+        longitude: editingEvent.location?.longitude ?? null,
         googleMapsUrl: editForm.googleMapsUrl.trim(),
       }));
       payload.append("message", editForm.message);
@@ -359,6 +387,14 @@ const EventsScreen = () => {
             Overview of all wedding, anniversary, birthday, and ceremony invitations
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.registerEventButton}
+          onPress={openRegistrationTypePicker}
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
+          <Text style={styles.registerEventButtonText}>Register Event</Text>
+        </TouchableOpacity>
       </View>
 
       {error ? (
@@ -392,6 +428,39 @@ const EventsScreen = () => {
         onPageChange={(p) => fetchEvents(p, search)}
         emptyMessage="No events found on the platform."
       />
+
+      <Modal
+        visible={registrationTypePickerVisible}
+        onClose={() => setRegistrationTypePickerVisible(false)}
+        title="Choose Event Type"
+        hideActions
+      >
+        <Text style={styles.pickerDescription}>Select which kind of event you want to register.</Text>
+        {registrationTypesLoading ? (
+          <View style={styles.eventTypeLoading}>
+            <Text style={styles.pickerDescription}>Loading event types...</Text>
+          </View>
+        ) : registrationTypes.length ? (
+          registrationTypes.map((eventType) => (
+            <TouchableOpacity
+              key={eventType._id}
+              style={styles.pickerOption}
+              onPress={() => {
+                setRegistrationTypePickerVisible(false);
+                onRegisterEvent?.(eventType);
+              }}
+            >
+              <Text style={styles.eventTypeIcon}>{eventType.icon || "✨"}</Text>
+              <Text style={styles.pickerOptionText}>{eventType.name}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.noEventTypes}>
+            {registrationTypesError || "No supported active event types are available."}
+          </Text>
+        )}
+      </Modal>
 
       {/* Event Details Modal */}
       <Modal
@@ -444,6 +513,20 @@ const EventsScreen = () => {
                 {selectedEvent.eventDate ? new Date(selectedEvent.eventDate).toLocaleDateString() : ""} {selectedEvent.eventTime || ""}
               </Text>
             </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Event Location (Google map Link)</Text>
+              <Text style={styles.detailValue}>
+                {selectedEvent.location?.address ||
+                  (typeof selectedEvent.location === "string" ? selectedEvent.location : "") ||
+                  "Not specified"}
+              </Text>
+            </View>
+            {selectedEvent.location?.googleMapsUrl ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Google Maps Link</Text>
+                <Text style={styles.detailValue}>{selectedEvent.location.googleMapsUrl}</Text>
+              </View>
+            ) : null}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Venue / Address</Text>
               <Text style={styles.detailValue}>{selectedEvent.address || "Not specified"}</Text>
@@ -687,51 +770,29 @@ const EventsScreen = () => {
               />
             </View>
             <View style={styles.editField}>
-              <Text style={styles.editLabel}>Event location</Text>
+              <Text style={styles.editLabel}>Event Location (Google map Link)</Text>
               <TextInput
                 style={styles.editInput}
                 value={editForm.locationAddress}
                 onChangeText={(value) => updateEditField("locationAddress", value)}
-                placeholder="Enter event location"
+                placeholder="Google map link"
                 placeholderTextColor="#94A3B8"
               />
             </View>
-            <View style={styles.editLocationGrid}>
-              <View style={[styles.editField, styles.editLocationField]}>
-                <Text style={styles.editLabel}>Latitude</Text>
+            {allowsSecondHost ? (
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Venue Location (Google Maps URL)</Text>
                 <TextInput
                   style={styles.editInput}
-                  value={editForm.latitude}
-                  onChangeText={(value) => updateEditField("latitude", value)}
-                  placeholder="Optional"
+                  value={editForm.googleMapsUrl}
+                  onChangeText={(value) => updateEditField("googleMapsUrl", value)}
+                  placeholder="Paste Google Maps URL"
                   placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  keyboardType="url"
                 />
               </View>
-              <View style={[styles.editField, styles.editLocationField]}>
-                <Text style={styles.editLabel}>Longitude</Text>
-                <TextInput
-                  style={styles.editInput}
-                  value={editForm.longitude}
-                  onChangeText={(value) => updateEditField("longitude", value)}
-                  placeholder="Optional"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-            <View style={styles.editField}>
-              <Text style={styles.editLabel}>Google Maps URL</Text>
-              <TextInput
-                style={styles.editInput}
-                value={editForm.googleMapsUrl}
-                onChangeText={(value) => updateEditField("googleMapsUrl", value)}
-                placeholder="Optional map link"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="none"
-                keyboardType="url"
-              />
-            </View>
+            ) : null}
             <View style={styles.editField}>
               <Text style={styles.editLabel}>Event address / venue</Text>
               <TextInput
@@ -840,6 +901,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
     marginTop: 2,
+  },
+  registerEventButton: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: "#4F46E5",
+  },
+  registerEventButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  eventTypeLoading: {
+    minHeight: 60,
+    justifyContent: "center",
+  },
+  eventTypeIcon: {
+    width: 28,
+    fontSize: 20,
+    textAlign: "center",
+  },
+  noEventTypes: {
+    paddingVertical: 14,
+    color: "#64748B",
+    fontSize: 14,
   },
   errorBanner: {
     flexDirection: "row",

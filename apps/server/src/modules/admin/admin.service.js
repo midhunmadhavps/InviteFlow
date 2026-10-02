@@ -6,6 +6,7 @@ const Otp = require("../../models/otp.model");
 const Event = require("../../models/event.model");
 const Contact = require("../../models/contact.model");
 const EventType = require("../../models/eventType.model");
+const eventService = require("../events/event.service");
 const { createUsername } = require("../users/user.utils");
 
 // In-memory rate limiting map for OTP requests and verification attempts
@@ -606,6 +607,91 @@ exports.updateUserRole = async (userId, newRole) => {
 /**
  * 7. Events List for Admin
  */
+exports.getEventTypes = async () => EventType.find({ isActive: true }).sort({ name: 1 });
+
+exports.createEvent = async (adminId, eventData) => {
+  const eventType = await EventType.findOne({
+    _id: eventData.eventTypeId,
+    isActive: true,
+  });
+  if (!eventType) {
+    const error = new Error("Select a valid, active event type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    !eventData.title?.trim() ||
+    !eventData.hostOne?.trim() ||
+    !eventData.eventDate ||
+    !eventData.eventTime ||
+    !eventData.address?.trim() ||
+    !eventData.hostOneImage
+  ) {
+    const error = new Error("Title, host, date, time, event address, and host photo are required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let location = {};
+  try {
+    location = typeof eventData.location === "string"
+      ? JSON.parse(eventData.location)
+      : eventData.location || {};
+  } catch (parseError) {
+    const error = new Error("Event location must be valid JSON.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (eventType.name !== "Birthday") {
+    let mapUrl;
+    try {
+      mapUrl = new URL(location.googleMapsUrl);
+    } catch (parseError) {
+      const error = new Error("A valid Google Maps URL is required for the event location.");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (mapUrl.protocol !== "http:" && mapUrl.protocol !== "https:") {
+      const error = new Error("Event location must be an HTTP or HTTPS Google Maps URL.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+  if (
+    ["Wedding", "Anniversary", "Engagement"].includes(eventType.name) &&
+    !eventData.hostTwo?.trim()
+  ) {
+    const error = new Error("A second host is required for this event type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const event = await eventService.createEvent({
+    userId: adminId,
+    eventTypeId: eventType._id,
+    title: eventData.title.trim(),
+    hostOne: eventData.hostOne.trim(),
+    hostTwo: eventData.hostTwo?.trim() || "",
+    eventDate: eventData.eventDate,
+    eventTime: eventData.eventTime,
+    address: eventData.address.trim(),
+    location,
+    message: eventData.message || "",
+    hostOneImage: eventData.hostOneImage,
+    invitation: eventData.invitation,
+    isPublished: false,
+    status: "Draft",
+  });
+
+  return {
+    success: true,
+    message: "Event created successfully.",
+    data: event,
+  };
+};
+
 exports.getEvents = async ({ search, page = 1, limit = 10 }) => {
   const query = {};
 

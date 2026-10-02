@@ -18,6 +18,17 @@ import CustomerScreen from "../screens/CustomerScreen";
 import EventsScreen from "../screens/EventsScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import ConfigurationsScreen from "../screens/ConfigurationsScreen";
+import WeddingRegistrationScreen from "../screens/events/WeddingRegistrationScreen";
+import AnniversaryRegistrationScreen from "../screens/events/AnniversaryRegistrationScreen";
+import EngagementRegistrationScreen from "../screens/events/EngagementRegistrationScreen";
+import BirthdayRegistrationScreen from "../screens/events/BirthdayRegistrationScreen";
+
+const EVENT_REGISTRATION_SCREENS = {
+  wedding: WeddingRegistrationScreen,
+  anniversary: AnniversaryRegistrationScreen,
+  engagement: EngagementRegistrationScreen,
+  birthday: BirthdayRegistrationScreen,
+};
 
 const AdminNavigator = () => {
   const { isAuthenticated, loading } = useAdminAuth();
@@ -30,6 +41,8 @@ const AdminNavigator = () => {
 
   // Authenticated tab
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [eventRegistration, setEventRegistration] = useState(null);
+  const [eventRegistrationSuccess, setEventRegistrationSuccess] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (loading) {
@@ -66,7 +79,9 @@ const AdminNavigator = () => {
   const screenTitles = {
     dashboard: "Admin Dashboard",
     customer: "Customer Management",
-    events: "Platform Events",
+    events: eventRegistration
+      ? `Register ${eventRegistration.name}`
+      : "Platform Events",
     payment: "Payment Management",
     configurations: "System Configurations",
   };
@@ -78,7 +93,32 @@ const AdminNavigator = () => {
       case "customer":
         return <CustomerScreen />;
       case "events":
-        return <EventsScreen />;
+        if (eventRegistration) {
+          const RegistrationScreen = EVENT_REGISTRATION_SCREENS[
+            eventRegistration.name?.trim().toLowerCase()
+          ];
+          if (RegistrationScreen) {
+            return (
+              <RegistrationScreen
+                eventType={eventRegistration}
+                onCancel={() => setEventRegistration(null)}
+                onCreated={async (message) => {
+                  setEventRegistration(null);
+                  setEventRegistrationSuccess(message);
+                }}
+              />
+            );
+          }
+        }
+        return (
+          <EventsScreen
+            onRegisterEvent={(eventType) => {
+              setEventRegistrationSuccess("");
+              setEventRegistration(eventType);
+            }}
+            initialSuccessMessage={eventRegistrationSuccess}
+          />
+        );
       case "payment":
         return <PaymentScreen />;
       case "configurations":
@@ -95,6 +135,7 @@ const AdminNavigator = () => {
         <AdminSidebar
           activeTab={activeTab}
           onSelectTab={(tab) => {
+            setEventRegistration(null);
             setActiveTab(tab);
             setMobileMenuOpen(false);
           }}
