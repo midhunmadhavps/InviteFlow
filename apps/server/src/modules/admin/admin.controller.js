@@ -98,6 +98,18 @@ exports.getUsers = async (req, res) => {
 };
 
 /**
+ * Create a customer account
+ */
+exports.createCustomer = async (req, res) => {
+  try {
+    const result = await adminService.createCustomer(req.body);
+    return res.status(201).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to register customer.");
+  }
+};
+
+/**
  * Approve Account
  */
 exports.approveAccount = async (req, res) => {

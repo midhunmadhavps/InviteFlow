@@ -65,6 +65,8 @@ exports.requestAdminOtp = async ({ email, clientIp = "default" }) => {
 
   // Generate cryptographically secure 6-digit OTP
   const rawOtp = crypto.randomInt(100000, 1000000).toString();
+  console.log(`Generated OTP for ${normalizedEmail}: ${rawOtp}`);
+  // const rawOtp = crypto.randomInt(100000, 1000000).toString();
 
   // Hash the OTP with bcrypt for secure storage
   const hashedOtp = await bcrypt.hash(rawOtp, 10);
@@ -285,6 +287,81 @@ exports.getUsers = async ({ role, status, search, page = 1, limit = 10 }) => {
     page: Number(page),
     limit: Number(limit),
     totalPages: Math.ceil(total / Number(limit)) || 1,
+  };
+};
+
+exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
+  const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
+  const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+
+  if (!/^[A-Za-z\s]+$/.test(normalizedFirstName) || normalizedFirstName.length > 50) {
+    const error = new Error("Please enter a valid first name.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[A-Za-z\s]+$/.test(normalizedLastName) || normalizedLastName.length > 50) {
+    const error = new Error("Please enter a valid last name.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    const error = new Error("Please enter a valid email address.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+    const error = new Error("Please enter a valid 10-digit phone number.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingUser = await User.findOne({
+    $or: [{ phone: normalizedPhone }, { email: normalizedEmail }],
+  });
+
+  if (existingUser) {
+    const error = new Error(
+      existingUser.phone === normalizedPhone
+        ? "Phone number already registered."
+        : "Email already registered."
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const password = await bcrypt.hash("Admin@123", 10);
+  const user = await User.create({
+    firstName: normalizedFirstName,
+    lastName: normalizedLastName,
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    password,
+    isPhoneVerified: true,
+    isEmailVerified: true,
+    status: "Active",
+    role: "customer",
+  });
+
+  return {
+    success: true,
+    message: "Customer registered successfully.",
+    data: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      isPhoneVerified: user.isPhoneVerified,
+      isEmailVerified: user.isEmailVerified,
+      status: user.status,
+      role: user.role,
+      createdAt: user.createdAt,
+    },
   };
 };
 

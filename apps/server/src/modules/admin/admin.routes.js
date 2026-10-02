@@ -19,6 +19,7 @@ router.get("/dashboard", adminController.getDashboard);
 
 // Customers / Users Management & Account Approvals
 router.get("/users", adminController.getUsers);
+router.post("/users", adminController.createCustomer);
 router.post("/users/:id/approve", adminController.approveAccount);
 router.post("/users/:id/reject", adminController.rejectAccount);
 router.patch("/users/:id/status", adminController.updateUserStatus);

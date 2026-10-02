@@ -4,6 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
+  Image,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DataTable from "../components/DataTable";
@@ -11,12 +15,19 @@ import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import {
   getUsersApi,
+  createCustomerApi,
   approveAccountApi,
   rejectAccountApi,
   updateUserStatusApi,
 } from "../api/admin.api";
 
 const CustomerScreen = () => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [registrationLoading, setRegistrationLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -35,6 +46,54 @@ const CustomerScreen = () => {
     user: null,
   });
   const [actionLoading, setActionLoading] = useState(false);
+
+  const handleRegisterCustomer = async () => {
+    setError("");
+    setSuccessMessage("");
+
+    const normalizedFirstName = firstName.trim();
+    const normalizedLastName = lastName.trim();
+    const normalizedEmail = email.trim();
+    const normalizedPhone = phone.trim();
+
+    if (!/^[A-Za-z\s]+$/.test(normalizedFirstName)) {
+      setError("Please enter a valid first name.");
+      return;
+    }
+    if (!/^[A-Za-z\s]+$/.test(normalizedLastName)) {
+      setError("Please enter a valid last name.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setRegistrationLoading(true);
+    try {
+      const response = await createCustomerApi({
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      });
+      await fetchUsers(1, statusFilter, search);
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      setIsRegistering(false);
+      setSuccessMessage(response.message || "Customer registered successfully.");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to register customer.");
+    } finally {
+      setRegistrationLoading(false);
+    }
+  };
 
   const fetchUsers = async (currentPage = 1, currentStatus = statusFilter, currentSearch = search) => {
     setLoading(true);
@@ -192,11 +251,31 @@ const CustomerScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Customer Management</Text>
+          <Text style={styles.headerTitle}>{isRegistering ? "Register Customer" : "Customer Management"}</Text>
           <Text style={styles.headerSubtitle}>
-            Manage registered customers, approve pending accounts, and review profiles
+            {isRegistering
+              ? "Create an active customer account with verified contact details"
+              : "Manage registered customers, approve pending accounts, and review profiles"}
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.registerButton}
+          onPress={() => {
+            setError("");
+            setSuccessMessage("");
+            setIsRegistering(!isRegistering);
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons
+            name={isRegistering ? "arrow-left" : "account-plus-outline"}
+            size={18}
+            color="#FFFFFF"
+          />
+          <Text style={styles.registerButtonText}>
+            {isRegistering ? "Back to Customers" : "Register Customer"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {error ? (
@@ -213,6 +292,123 @@ const CustomerScreen = () => {
         </View>
       ) : null}
 
+      {isRegistering ? (
+        <ScrollView
+          style={styles.registrationScroll}
+          contentContainerStyle={styles.registrationScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.registrationCard}>
+            <Image
+              source={require("../../assets/Vector1.png")}
+              style={styles.registrationBackground}
+              resizeMode="stretch"
+            />
+            <View style={styles.registrationHeading}>
+              <View style={styles.registrationIcon}>
+                <MaterialCommunityIcons name="account-plus-outline" size={24} color="#FF7F86" />
+              </View>
+              <View>
+                <Text style={styles.registrationTitle}>Customer details</Text>
+                <Text style={styles.registrationSubtitle}>Enter the information to create an account</Text>
+              </View>
+            </View>
+
+            <View style={styles.formGrid}>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>First name</Text>
+                <View style={styles.formInputWrapper}>
+                  <MaterialCommunityIcons name="account-outline" size={18} color="#B8A2A3" />
+                  <TextInput
+                    style={styles.formInput}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholder="Enter first name"
+                    placeholderTextColor="#A8A8A8"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    maxLength={50}
+                  />
+                </View>
+              </View>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Last name</Text>
+                <View style={styles.formInputWrapper}>
+                  <MaterialCommunityIcons name="account-outline" size={18} color="#B8A2A3" />
+                  <TextInput
+                    style={styles.formInput}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholder="Enter last name"
+                    placeholderTextColor="#A8A8A8"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    maxLength={50}
+                  />
+                </View>
+              </View>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Email address</Text>
+                <View style={styles.formInputWrapper}>
+                  <MaterialCommunityIcons name="email-outline" size={18} color="#B8A2A3" />
+                  <TextInput
+                    style={styles.formInput}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="name@example.com"
+                    placeholderTextColor="#A8A8A8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Phone number</Text>
+                <View style={styles.formInputWrapper}>
+                  <MaterialCommunityIcons name="phone-outline" size={18} color="#B8A2A3" />
+                  <TextInput
+                    style={styles.formInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="10-digit phone number"
+                    placeholderTextColor="#A8A8A8"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.accountDefaults}>
+              <MaterialCommunityIcons name="shield-check-outline" size={19} color="#15803D" />
+              <View style={styles.accountDefaultsText}>
+                <Text style={styles.accountDefaultsTitle}>Account will be ready to use</Text>
+                <Text style={styles.accountDefaultsSubtitle}>
+                  Password: Admin@123  ·  Email and phone verified  ·  Status: Active
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, registrationLoading && styles.submitButtonDisabled]}
+              onPress={handleRegisterCustomer}
+              disabled={registrationLoading}
+              activeOpacity={0.85}
+            >
+              {registrationLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <MaterialCommunityIcons name="account-check-outline" size={19} color="#FFFFFF" />
+              )}
+              <Text style={styles.submitButtonText}>
+                {registrationLoading ? "Registering..." : "Create Customer Account"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      ) : (
       <DataTable
         columns={columns}
         data={users}
@@ -237,6 +433,7 @@ const CustomerScreen = () => {
         onPageChange={(p) => fetchUsers(p, statusFilter, search)}
         emptyMessage="No customer records found."
       />
+      )}
 
       {/* Details Modal */}
       <Modal
@@ -270,6 +467,10 @@ const CustomerScreen = () => {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Phone Verified</Text>
               <Text style={styles.detailValue}>{selectedUser.isPhoneVerified ? "✅ Yes" : "❌ No"}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Email Verified</Text>
+              <Text style={styles.detailValue}>{selectedUser.isEmailVerified ? "✅ Yes" : "❌ No"}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Registration Date</Text>
@@ -308,11 +509,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     padding: 24,
     gap: 20,
+    minHeight: 0,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
   },
   headerTitle: {
     fontSize: 22,
@@ -323,6 +527,163 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
     marginTop: 2,
+  },
+  registerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 9,
+    backgroundColor: "#FF7F86",
+    shadowColor: "#FF7F86",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  registerButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  registrationScroll: {
+    flex: 1,
+  },
+  registrationScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+  },
+  registrationCard: {
+    width: "100%",
+    maxWidth: 760,
+    overflow: "hidden",
+    position: "relative",
+    paddingHorizontal: 30,
+    paddingTop: 28,
+    paddingBottom: 30,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F5D9DA",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#5B1C21",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  registrationBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
+    height: 150,
+  },
+  registrationHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 26,
+  },
+  registrationIcon: {
+    width: 46,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    backgroundColor: "#FFF0F1",
+  },
+  registrationTitle: {
+    color: "#3D3D3D",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  registrationSubtitle: {
+    color: "#777777",
+    fontSize: 13,
+    marginTop: 3,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 18,
+  },
+  formField: {
+    flexGrow: 1,
+    flexBasis: 280,
+    gap: 7,
+  },
+  formLabel: {
+    color: "#4B4B4B",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  formInputWrapper: {
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#F1C4C7",
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  formInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 44,
+    padding: 0,
+    color: "#424242",
+    fontSize: 14,
+    outlineStyle: "none",
+  },
+  accountDefaults: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginTop: 22,
+    padding: 13,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    backgroundColor: "#F0FDF4",
+  },
+  accountDefaultsText: {
+    flex: 1,
+    gap: 3,
+  },
+  accountDefaultsTitle: {
+    color: "#166534",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  accountDefaultsSubtitle: {
+    color: "#3F6B4A",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  submitButton: {
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    marginTop: 22,
+    borderRadius: 8,
+    backgroundColor: "#FF7F86",
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   errorBanner: {
     flexDirection: "row",

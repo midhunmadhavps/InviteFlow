@@ -25,6 +25,11 @@ export const getUsersApi = async (params = {}) => {
   return response.data;
 };
 
+export const createCustomerApi = async (customer) => {
+  const response = await apiClient.post("/admin/users", customer);
+  return response.data;
+};
+
 export const approveAccountApi = async (id) => {
   const response = await apiClient.post(`/admin/users/${id}/approve`);
   return response.data;
