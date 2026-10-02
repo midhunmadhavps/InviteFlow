@@ -221,9 +221,36 @@ exports.updateEventEnabled = async (req, res) => {
   }
 };
 
+exports.updateEventStatus = async (req, res) => {
+  try {
+    const result = await adminService.updateEventStatus(
+      req.params.id,
+      req.body.status
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to update event status.");
+  }
+};
+
 exports.updateEvent = async (req, res) => {
   try {
-    const result = await adminService.updateEvent(req.params.id, req.body);
+    const updateData = { ...req.body };
+    delete updateData.hostOneImage;
+    delete updateData.invitation;
+
+    if (updateData.location && typeof updateData.location === "string") {
+      updateData.location = JSON.parse(updateData.location);
+    }
+
+    if (req.files?.hostOneImage?.[0]?.filename) {
+      updateData.hostOneImage = req.files.hostOneImage[0].filename;
+    }
+    if (req.files?.invitation?.[0]?.filename) {
+      updateData.invitation = req.files.invitation[0].filename;
+    }
+
+    const result = await adminService.updateEvent(req.params.id, updateData);
     return res.status(200).json(result);
   } catch (error) {
     return handleError(res, error, "Failed to update event.");

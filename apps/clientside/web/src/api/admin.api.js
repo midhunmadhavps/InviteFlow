@@ -80,8 +80,15 @@ export const updateEventEnabledApi = async (id, isEnabled) => {
   return response.data;
 };
 
+export const updateEventStatusApi = async (id, status) => {
+  const response = await apiClient.patch(`/admin/events/${id}/status`, { status });
+  return response.data;
+};
+
 export const updateEventApi = async (id, eventData) => {
-  const response = await apiClient.patch(`/admin/events/${id}`, eventData);
+  const response = await apiClient.patch(`/admin/events/${id}`, eventData, {
+    headers: { "Content-Type": undefined },
+  });
   return response.data;
 };
 

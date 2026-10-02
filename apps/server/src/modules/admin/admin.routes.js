@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require("./admin.controller");
 const authMiddleware = require("../../middleware/auth.middleware");
 const adminMiddleware = require("../../middleware/admin.middleware");
+const upload = require("../../middleware/upload");
 
 // Public Admin Auth Routes
 router.post("/auth/request-otp", adminController.requestOtp);
@@ -30,7 +31,15 @@ router.patch("/users/:id/role", adminController.updateUserRole);
 // Events & Contacts
 router.get("/events", adminController.getEvents);
 router.patch("/events/:id/access", adminController.updateEventEnabled);
-router.patch("/events/:id", adminController.updateEvent);
+router.patch("/events/:id/status", adminController.updateEventStatus);
+router.patch(
+  "/events/:id",
+  upload.fields([
+    { name: "hostOneImage", maxCount: 1 },
+    { name: "invitation", maxCount: 1 },
+  ]),
+  adminController.updateEvent
+);
 router.delete("/events/:id", adminController.deleteEvent);
 router.get("/contacts", adminController.getContacts);
 

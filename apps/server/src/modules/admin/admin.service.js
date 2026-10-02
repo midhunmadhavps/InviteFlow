@@ -639,8 +639,47 @@ exports.updateEventEnabled = async (eventId, isEnabled) => {
   };
 };
 
+exports.updateEventStatus = async (eventId, status) => {
+  const allowedStatuses = ["Draft", "Active", "Completed", "Cancelled"];
+  if (!allowedStatuses.includes(status)) {
+    const error = new Error("Invalid event status.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const event = await Event.findByIdAndUpdate(
+    eventId,
+    { status },
+    { new: true, runValidators: true }
+  );
+
+  if (!event) {
+    const error = new Error("Event not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    success: true,
+    message: "Event status updated successfully.",
+    data: event,
+  };
+};
+
 exports.updateEvent = async (eventId, eventData) => {
-  const allowedFields = ["title", "hostOne", "hostTwo", "eventDate", "eventTime", "address"];
+  const allowedFields = [
+    "title",
+    "status",
+    "hostOne",
+    "hostTwo",
+    "eventDate",
+    "eventTime",
+    "address",
+    "location",
+    "message",
+    "hostOneImage",
+    "invitation",
+  ];
   const updateData = {};
 
   allowedFields.forEach((field) => {
@@ -659,7 +698,9 @@ exports.updateEvent = async (eventId, eventData) => {
     eventId,
     { $set: updateData },
     { new: true, runValidators: true }
-  );
+  )
+    .populate("userId", "firstName lastName email phone")
+    .populate("eventTypeId", "name icon");
 
   if (!event) {
     const error = new Error("Event not found.");

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,17 @@ import {
   getEventsApi,
   updateEventApi,
   updateEventEnabledApi,
+  updateEventStatusApi,
 } from "../api/admin.api";
+
+const EVENT_STATUSES = ["Draft", "Active", "Completed", "Cancelled"];
+
+const getEventMediaUrl = (media) => {
+  if (!media) return "";
+  if (/^https?:\/\//i.test(media)) return media;
+  if (media.startsWith("/uploads/")) return `http://localhost:3000${media}`;
+  return `http://localhost:3000/uploads/${encodeURIComponent(media)}`;
+};
 
 const EventsScreen = () => {
   const [events, setEvents] = useState([]);
@@ -29,11 +39,39 @@ const EventsScreen = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [statusPickerEvent, setStatusPickerEvent] = useState(null);
+  const [eventStatusPicker, setEventStatusPicker] = useState(null);
   const [actionMenuEvent, setActionMenuEvent] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [editError, setEditError] = useState("");
+  const [selectedHostImage, setSelectedHostImage] = useState(null);
+  const [selectedInvitation, setSelectedInvitation] = useState(null);
+  const [hostImagePreviewUrl, setHostImagePreviewUrl] = useState("");
+  const [invitationPreviewUrl, setInvitationPreviewUrl] = useState("");
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const hostImageInput = useRef(null);
+  const invitationInput = useRef(null);
+
+  useEffect(() => {
+    if (!selectedHostImage) {
+      setHostImagePreviewUrl("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(selectedHostImage);
+    setHostImagePreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedHostImage]);
+
+  useEffect(() => {
+    if (!selectedInvitation) {
+      setInvitationPreviewUrl("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(selectedInvitation);
+    setInvitationPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedInvitation]);
 
   const fetchEvents = async (currentPage = 1, currentSearch = search) => {
     setLoading(true);
@@ -66,7 +104,12 @@ const EventsScreen = () => {
     try {
       const response = confirmAction.type === "delete"
         ? await deleteEventApi(confirmAction.event._id)
-        : await updateEventEnabledApi(
+        : confirmAction.type === "status"
+          ? await updateEventStatusApi(
+              confirmAction.event._id,
+              confirmAction.status
+            )
+          : await updateEventEnabledApi(
             confirmAction.event._id,
             confirmAction.isEnabled
           );
@@ -85,45 +128,126 @@ const EventsScreen = () => {
   };
 
   const openEventEditor = (event) => {
+    setEditError("");
     setEditForm({
       title: event.title || "",
+      status: event.status || "Draft",
       hostOne: event.hostOne || "",
       hostTwo: event.hostTwo || "",
       eventDate: event.eventDate ? new Date(event.eventDate).toISOString().slice(0, 10) : "",
       eventTime: event.eventTime || "",
       address: event.address || "",
+      locationAddress: event.location?.address || (typeof event.location === "string" ? event.location : ""),
+      latitude: event.location?.latitude == null ? "" : String(event.location.latitude),
+      longitude: event.location?.longitude == null ? "" : String(event.location.longitude),
+      googleMapsUrl: event.location?.googleMapsUrl || "",
+      message: event.message || "",
     });
+    setSelectedHostImage(null);
+    setSelectedInvitation(null);
     setEditingEvent(event);
   };
 
   const handleSaveEvent = async () => {
     if (!editingEvent || !editForm) return;
-    if (!editForm.title.trim() || !editForm.hostOne.trim() || !editForm.eventDate) {
-      setError("Event title, primary host, and event date are required.");
+    if (
+      !editForm.title.trim() ||
+      !editForm.hostOne.trim() ||
+      !editForm.eventDate ||
+      !editForm.eventTime ||
+      !editForm.locationAddress.trim() ||
+      !editForm.address.trim()
+    ) {
+      setEditError("Title, primary host, date, time, event location, and event address are required.");
+      return;
+    }
+    if (selectedHostImage && !/^image\/(jpeg|png|webp)$/.test(selectedHostImage.type)) {
+      setEditError("Host photo must be a JPG, PNG, or WEBP image.");
+      return;
+    }
+    if (selectedHostImage && selectedHostImage.size > 5 * 1024 * 1024) {
+      setEditError("Host photo must be 5 MB or smaller.");
+      return;
+    }
+    if (selectedInvitation) {
+      const invitationIsImage = /^image\/(jpeg|png|webp)$/.test(selectedInvitation.type);
+      const invitationIsPdf = selectedInvitation.type === "application/pdf";
+      if (!invitationIsImage && !invitationIsPdf) {
+        setEditError("Invitation must be a JPG, PNG, WEBP, or PDF file.");
+        return;
+      }
+      if (selectedInvitation.size > (invitationIsPdf ? 10 : 5) * 1024 * 1024) {
+        setEditError(`Invitation ${invitationIsPdf ? "PDF" : "image"} exceeds the allowed file size.`);
+        return;
+      }
+    }
+
+    const latitude = editForm.latitude.trim() ? Number(editForm.latitude) : null;
+    const longitude = editForm.longitude.trim() ? Number(editForm.longitude) : null;
+    if (
+      (latitude !== null && !Number.isFinite(latitude)) ||
+      (longitude !== null && !Number.isFinite(longitude))
+    ) {
+      setEditError("Latitude and longitude must be valid numbers.");
       return;
     }
 
     setActionLoading(true);
-    setError("");
+    setEditError("");
     setSuccessMessage("");
     try {
-      const response = await updateEventApi(editingEvent._id, {
-        ...editForm,
-        title: editForm.title.trim(),
-        hostOne: editForm.hostOne.trim(),
-        hostTwo: editForm.hostTwo.trim(),
-        address: editForm.address.trim(),
-      });
+      const payload = new FormData();
+      payload.append("title", editForm.title.trim());
+      payload.append("status", editForm.status);
+      payload.append("hostOne", editForm.hostOne.trim());
+      payload.append("hostTwo", editForm.hostTwo.trim());
+      payload.append("eventDate", editForm.eventDate);
+      payload.append("eventTime", editForm.eventTime);
+      payload.append("address", editForm.address.trim());
+      payload.append("location", JSON.stringify({
+        address: editForm.locationAddress.trim(),
+        latitude,
+        longitude,
+        googleMapsUrl: editForm.googleMapsUrl.trim(),
+      }));
+      payload.append("message", editForm.message);
+      if (selectedHostImage) payload.append("hostOneImage", selectedHostImage);
+      if (selectedInvitation) payload.append("invitation", selectedInvitation);
+
+      const response = await updateEventApi(editingEvent._id, payload);
       setEditingEvent(null);
       setEditForm(null);
+      setEditError("");
+      setSelectedHostImage(null);
+      setSelectedInvitation(null);
       setSuccessMessage(response.message || "Event updated successfully.");
       await fetchEvents(page, search);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to update event.");
+      setEditError(err.response?.data?.message || err.message || "Failed to update event.");
     } finally {
       setActionLoading(false);
     }
   };
+
+  const updateEditField = (field, value) => {
+    setEditForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleEditClose = () => {
+    if (!actionLoading) {
+      setEditingEvent(null);
+      setEditForm(null);
+      setEditError("");
+      setSelectedHostImage(null);
+      setSelectedInvitation(null);
+    }
+  };
+
+  const eventTypeName = (
+    editingEvent?.eventTypeId?.name ||
+    (typeof editingEvent?.eventTypeId === "string" ? editingEvent.eventTypeId : "")
+  ).trim().toLowerCase();
+  const allowsSecondHost = ["wedding", "anniversary", "engagement"].includes(eventTypeName);
 
   const handleSelectEventAction = (action) => {
     const event = actionMenuEvent;
@@ -191,7 +315,19 @@ const EventsScreen = () => {
     {
       title: "Status",
       width: 120,
-      renderCell: (row) => <StatusBadge status={row.status} />,
+      renderCell: (row) => (
+        <TouchableOpacity
+          style={styles.rowStatusButton}
+          onPress={(event) => {
+            event.stopPropagation();
+            setEventStatusPicker(row);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Change event status, currently ${row.status || "Draft"}`}
+        >
+          <StatusBadge status={row.status} />
+        </TouchableOpacity>
+      ),
     },
     {
       title: "Access",
@@ -316,8 +452,53 @@ const EventsScreen = () => {
                 {selectedEvent.isEnabled === false ? "Disabled" : "Active"}
               </Text>
             </View>
+            {(invitationPreviewUrl || editingEvent.invitation) ? (
+              selectedInvitation?.type === "application/pdf" ||
+              (!selectedInvitation && /\.pdf(?:$|[?#])/i.test(editingEvent.invitation || "")) ? (
+                <iframe
+                  title={selectedInvitation?.name || "Current invitation PDF"}
+                  src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
+                  style={styles.invitationPdfPreview}
+                />
+              ) : (
+                <img
+                  src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
+                  alt={selectedInvitation?.name || "Current invitation image"}
+                  style={styles.invitationImagePreview}
+                />
+              )
+            ) : null}
           </View>
         ) : null}
+      </Modal>
+
+      <Modal
+        visible={Boolean(eventStatusPicker)}
+        onClose={() => setEventStatusPicker(null)}
+        title="Change Event Status"
+        hideActions
+      >
+        <Text style={styles.pickerDescription}>
+          Select a status for {eventStatusPicker?.title}. You will be asked to confirm the change.
+        </Text>
+        {EVENT_STATUSES.map((status) => (
+          <TouchableOpacity
+            key={status}
+            style={styles.pickerOption}
+            onPress={() => {
+              const event = eventStatusPicker;
+              setEventStatusPicker(null);
+              if (event?.status !== status) {
+                setConfirmAction({ type: "status", event, status });
+              }
+            }}
+          >
+            <StatusBadge status={status} />
+            {eventStatusPicker?.status === status ? (
+              <MaterialCommunityIcons name="check" size={18} color="#4F46E5" />
+            ) : null}
+          </TouchableOpacity>
+        ))}
       </Modal>
 
       <Modal
@@ -388,10 +569,7 @@ const EventsScreen = () => {
       <Modal
         visible={Boolean(editingEvent)}
         onClose={() => {
-          if (!actionLoading) {
-            setEditingEvent(null);
-            setEditForm(null);
-          }
+          handleEditClose();
         }}
         title="Edit Event"
         confirmText="Save Changes"
@@ -401,26 +579,204 @@ const EventsScreen = () => {
       >
         {editForm ? (
           <View style={styles.editForm}>
-            {[
-              { key: "title", label: "Event title", placeholder: "Enter event title" },
-              { key: "hostOne", label: "Primary host", placeholder: "Enter primary host" },
-              { key: "hostTwo", label: "Secondary host", placeholder: "Enter secondary host" },
-              { key: "eventDate", label: "Event date (YYYY-MM-DD)", placeholder: "YYYY-MM-DD" },
-              { key: "eventTime", label: "Event time", placeholder: "e.g. 6:30 PM" },
-              { key: "address", label: "Venue / address", placeholder: "Enter venue or address" },
-            ].map((field) => (
-              <View key={field.key} style={styles.editField}>
-                <Text style={styles.editLabel}>{field.label}</Text>
+            {editError ? <Text style={styles.editError}>{editError}</Text> : null}
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Host photo</Text>
+              <input
+                ref={hostImageInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={styles.hiddenFileInput}
+                onChange={(event) => setSelectedHostImage(event.target.files?.[0] || null)}
+              />
+              <View style={styles.filePickerRow}>
+                <TouchableOpacity style={styles.filePickerButton} onPress={() => hostImageInput.current?.click()}>
+                  <MaterialCommunityIcons name="image-outline" size={18} color="#4F46E5" />
+                  <Text style={styles.filePickerButtonText}>Choose host photo</Text>
+                </TouchableOpacity>
+                <Text style={styles.fileName} numberOfLines={1}>
+                  {selectedHostImage?.name || (editingEvent.hostOneImage ? "Current photo kept" : "No photo selected")}
+                </Text>
+              </View>
+              {(hostImagePreviewUrl || editingEvent.hostOneImage) ? (
+                <img
+                  src={hostImagePreviewUrl || getEventMediaUrl(editingEvent.hostOneImage)}
+                  alt={selectedHostImage?.name || "Current host photo"}
+                  style={styles.hostImagePreview}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Status</Text>
+              <select
+                value={editForm.status}
+                onChange={(event) => updateEditField("status", event.target.value)}
+                style={styles.webSelectInput}
+              >
+                {EVENT_STATUSES.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Event title</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editForm.title}
+                onChangeText={(value) => updateEditField("title", value)}
+                placeholder="Enter event title"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>{allowsSecondHost ? "First host name" : "Host name"}</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editForm.hostOne}
+                onChangeText={(value) => updateEditField("hostOne", value)}
+                placeholder="Enter host name"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            {allowsSecondHost ? (
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Second host name</Text>
                 <TextInput
                   style={styles.editInput}
-                  value={editForm[field.key]}
-                  onChangeText={(value) => setEditForm((current) => ({ ...current, [field.key]: value }))}
-                  placeholder={field.placeholder}
+                  value={editForm.hostTwo}
+                  onChangeText={(value) => updateEditField("hostTwo", value)}
+                  placeholder="Enter second host / partner name"
                   placeholderTextColor="#94A3B8"
-                  autoCapitalize="sentences"
                 />
               </View>
-            ))}
+            ) : null}
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Event date</Text>
+              <input
+                type="date"
+                value={editForm.eventDate}
+                onChange={(event) => updateEditField("eventDate", event.target.value)}
+                style={styles.webDateTimeInput}
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Event time</Text>
+              <input
+                type="time"
+                value={editForm.eventTime}
+                onChange={(event) => updateEditField("eventTime", event.target.value)}
+                style={styles.webDateTimeInput}
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Event location</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editForm.locationAddress}
+                onChangeText={(value) => updateEditField("locationAddress", value)}
+                placeholder="Enter event location"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+            <View style={styles.editLocationGrid}>
+              <View style={[styles.editField, styles.editLocationField]}>
+                <Text style={styles.editLabel}>Latitude</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editForm.latitude}
+                  onChangeText={(value) => updateEditField("latitude", value)}
+                  placeholder="Optional"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={[styles.editField, styles.editLocationField]}>
+                <Text style={styles.editLabel}>Longitude</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editForm.longitude}
+                  onChangeText={(value) => updateEditField("longitude", value)}
+                  placeholder="Optional"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Google Maps URL</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editForm.googleMapsUrl}
+                onChangeText={(value) => updateEditField("googleMapsUrl", value)}
+                placeholder="Optional map link"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Event address / venue</Text>
+              <TextInput
+                style={[styles.editInput, styles.editMultilineInput]}
+                value={editForm.address}
+                onChangeText={(value) => updateEditField("address", value)}
+                placeholder="Enter event address / venue"
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Invitation message</Text>
+              <TextInput
+                style={[styles.editInput, styles.editMultilineInput]}
+                value={editForm.message}
+                onChangeText={(value) => updateEditField("message", value)}
+                placeholder="Enter invitation message"
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Invitation file (PDF or image)</Text>
+              <input
+                ref={invitationInput}
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp"
+                style={styles.hiddenFileInput}
+                onChange={(event) => setSelectedInvitation(event.target.files?.[0] || null)}
+              />
+              <View style={styles.filePickerRow}>
+                <TouchableOpacity style={styles.filePickerButton} onPress={() => invitationInput.current?.click()}>
+                  <MaterialCommunityIcons name="file-image-outline" size={18} color="#4F46E5" />
+                  <Text style={styles.filePickerButtonText}>Choose invitation</Text>
+                </TouchableOpacity>
+                <Text style={styles.fileName} numberOfLines={1}>
+                  {selectedInvitation?.name || (editingEvent.invitation ? "Current invitation kept" : "No file selected")}
+                </Text>
+              </View>
+              {(invitationPreviewUrl || editingEvent.invitation) ? (
+                selectedInvitation?.type === "application/pdf" ||
+                (!selectedInvitation && /\.pdf(?:$|[?#])/i.test(editingEvent.invitation || "")) ? (
+                  <iframe
+                    title={selectedInvitation?.name || "Current invitation PDF"}
+                    src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
+                    style={styles.invitationPdfPreview}
+                  />
+                ) : (
+                  <img
+                    src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
+                    alt={selectedInvitation?.name || "Current invitation image"}
+                    style={styles.invitationImagePreview}
+                  />
+                )
+              ) : null}
+            </View>
           </View>
         ) : null}
       </Modal>
@@ -437,7 +793,9 @@ const EventsScreen = () => {
         <Text style={styles.confirmText}>
           {confirmAction?.type === "delete"
             ? "This will permanently delete this event. This action cannot be undone."
-            : `Are you sure you want to set this event to ${confirmAction?.isEnabled ? "Active" : "Disabled"}?`}
+            : confirmAction?.type === "status"
+              ? `Are you sure you want to change this event status to ${confirmAction.status}?`
+              : `Are you sure you want to set this event to ${confirmAction?.isEnabled ? "Active" : "Disabled"}?`}
         </Text>
         <Text style={styles.confirmEventTitle}>{confirmAction?.event?.title}</Text>
       </Modal>
@@ -529,6 +887,19 @@ const styles = StyleSheet.create({
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
   },
+  webSelectInput: {
+    width: "100%",
+    minHeight: 42,
+    boxSizing: "border-box",
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    color: "#0F172A",
+    fontSize: 14,
+    backgroundColor: "#FFFFFF",
+  },
   detailBtnText: {
     fontSize: 12,
     color: "#4F46E5",
@@ -585,8 +956,31 @@ const styles = StyleSheet.create({
   editForm: {
     gap: 14,
   },
+  rowStatusButton: {
+    alignSelf: "flex-start",
+    padding: 2,
+  },
+  editError: {
+    color: "#DC2626",
+    fontSize: 13,
+    lineHeight: 19,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 7,
+    backgroundColor: "#FEF2F2",
+  },
   editField: {
     gap: 6,
+  },
+  editLocationGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  editLocationField: {
+    flex: 1,
+    minWidth: 160,
   },
   editLabel: {
     color: "#334155",
@@ -602,6 +996,78 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     fontSize: 14,
     outlineStyle: "none",
+  },
+  editMultilineInput: {
+    minHeight: 82,
+    paddingTop: 10,
+  },
+  webDateTimeInput: {
+    width: "100%",
+    minHeight: 42,
+    boxSizing: "border-box",
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    color: "#0F172A",
+    fontSize: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  hiddenFileInput: {
+    display: "none",
+  },
+  hostImagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    objectFit: "cover",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  invitationImagePreview: {
+    width: "100%",
+    maxHeight: 260,
+    objectFit: "contain",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  invitationPdfPreview: {
+    width: "100%",
+    height: 300,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+  },
+  filePickerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+  },
+  filePickerButton: {
+    minHeight: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    borderRadius: 7,
+    backgroundColor: "#EEF2FF",
+  },
+  filePickerButtonText: {
+    color: "#4338CA",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  fileName: {
+    flexShrink: 1,
+    color: "#64748B",
+    fontSize: 12,
   },
   confirmText: {
     color: "#475569",
