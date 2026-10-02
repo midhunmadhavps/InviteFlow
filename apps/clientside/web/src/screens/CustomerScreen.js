@@ -19,6 +19,7 @@ import {
   approveAccountApi,
   rejectAccountApi,
   updateUserStatusApi,
+  deleteCustomerApi,
 } from "../api/admin.api";
 
 const CustomerScreen = () => {
@@ -42,7 +43,7 @@ const CustomerScreen = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [confirmModal, setConfirmModal] = useState({
     visible: false,
-    action: null, // "approve" | "reject"
+    action: null,
     user: null,
   });
   const [actionLoading, setActionLoading] = useState(false);
@@ -138,28 +139,27 @@ const CustomerScreen = () => {
       } else if (action === "reject") {
         const res = await rejectAccountApi(user._id);
         setSuccessMessage(res.message || `Customer account for ${user.firstName} blocked.`);
+      } else if (action === "block" || action === "activate") {
+        const status = action === "block" ? "Blocked" : "Active";
+        const res = await updateUserStatusApi(user._id, status);
+        setSuccessMessage(res.message || `Customer status updated to ${status}.`);
+      } else if (action === "delete") {
+        const res = await deleteCustomerApi(user._id);
+        setSuccessMessage(res.message || `Customer account for ${user.firstName} deleted.`);
       }
       setConfirmModal({ visible: false, action: null, user: null });
-      fetchUsers(page, statusFilter, search);
+      await fetchUsers(page, statusFilter, search);
     } catch (err) {
-      setError(err.message || `Failed to ${action} customer account.`);
+      setError(err.response?.data?.message || err.message || `Failed to ${action} customer account.`);
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleToggleStatus = async (user) => {
-    const newStatus = user.status === "Active" ? "Blocked" : "Active";
-    setActionLoading(true);
-    try {
-      await updateUserStatusApi(user._id, newStatus);
-      setSuccessMessage(`Customer status updated to ${newStatus}.`);
-      fetchUsers(page, statusFilter, search);
-    } catch (err) {
-      setError(err.message || "Failed to update status.");
-    } finally {
-      setActionLoading(false);
-    }
+  const openConfirmModal = (action, user) => {
+    setError("");
+    setSuccessMessage("");
+    setConfirmModal({ visible: true, action, user });
   };
 
   const columns = [
@@ -201,7 +201,7 @@ const CustomerScreen = () => {
     },
     {
       title: "Actions",
-      width: 220,
+      width: 260,
       renderCell: (row) => (
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity
@@ -219,14 +219,14 @@ const CustomerScreen = () => {
             <>
               <TouchableOpacity
                 style={styles.approveBtn}
-                onPress={() => setConfirmModal({ visible: true, action: "approve", user: row })}
+                onPress={() => openConfirmModal("approve", row)}
               >
                 <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
                 <Text style={styles.approveBtnText}>Approve</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.rejectBtn}
-                onPress={() => setConfirmModal({ visible: true, action: "reject", user: row })}
+                onPress={() => openConfirmModal("reject", row)}
               >
                 <MaterialCommunityIcons name="close" size={16} color="#DC2626" />
                 <Text style={styles.rejectBtnText}>Reject</Text>
@@ -235,13 +235,20 @@ const CustomerScreen = () => {
           ) : (
             <TouchableOpacity
               style={[styles.statusToggleBtn, row.status === "Active" ? styles.blockBtn : styles.unblockBtn]}
-              onPress={() => handleToggleStatus(row)}
+              onPress={() => openConfirmModal(row.status === "Active" ? "block" : "activate", row)}
             >
               <Text style={[styles.statusToggleText, row.status === "Active" ? styles.blockBtnText : styles.unblockBtnText]}>
                 {row.status === "Active" ? "Block" : "Activate"}
               </Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => openConfirmModal("delete", row)}
+            accessibilityLabel={`Delete ${row.firstName} ${row.lastName}`}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
+          </TouchableOpacity>
         </View>
       ),
     },
@@ -486,18 +493,44 @@ const CustomerScreen = () => {
       <Modal
         visible={confirmModal.visible}
         onClose={() => setConfirmModal({ visible: false, action: null, user: null })}
-        title={confirmModal.action === "approve" ? "Approve Customer Account" : "Reject / Block Account"}
-        confirmText={confirmModal.action === "approve" ? "Yes, Approve" : "Yes, Block"}
-        confirmColor={confirmModal.action === "approve" ? "#16A34A" : "#DC2626"}
+        title={{
+          approve: "Approve Customer Account",
+          reject: "Block Customer Account",
+          block: "Block Customer Account",
+          activate: "Activate Customer Account",
+          delete: "Delete Customer Account",
+        }[confirmModal.action] || "Confirm Customer Action"}
+        confirmText={{
+          approve: "Yes, Approve",
+          reject: "Yes, Block",
+          block: "Yes, Block",
+          activate: "Yes, Activate",
+          delete: "Yes, Delete",
+        }[confirmModal.action] || "Confirm"}
+        confirmColor={confirmModal.action === "approve" || confirmModal.action === "activate" ? "#16A34A" : "#DC2626"}
         isConfirming={actionLoading}
         onConfirm={handleExecuteAction}
       >
         <Text style={styles.confirmModalText}>
-          Are you sure you want to {confirmModal.action} the customer account for:
+          {confirmModal.action === "delete"
+            ? "This permanently deletes the customer account and its associated events, contacts, and verification codes. This action cannot be undone."
+            : `Are you sure you want to ${
+                confirmModal.action === "activate"
+                  ? "activate"
+                  : confirmModal.action === "approve"
+                    ? "approve"
+                    : "block"
+              } the customer account for:`}
         </Text>
-        <Text style={styles.confirmTargetName}>
-          {confirmModal.user?.firstName} {confirmModal.user?.lastName} ({confirmModal.user?.email || confirmModal.user?.phone})
-        </Text>
+        {confirmModal.action !== "delete" ? (
+          <Text style={styles.confirmTargetName}>
+            {confirmModal.user?.firstName} {confirmModal.user?.lastName} ({confirmModal.user?.email || confirmModal.user?.phone})
+          </Text>
+        ) : (
+          <Text style={styles.confirmTargetName}>
+            {confirmModal.user?.firstName} {confirmModal.user?.lastName}
+          </Text>
+        )}
       </Modal>
     </View>
   );
@@ -748,6 +781,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#4F46E5",
     fontWeight: "600",
+  },
+  deleteBtn: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
   },
   approveBtn: {
     flexDirection: "row",

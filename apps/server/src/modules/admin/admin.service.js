@@ -441,6 +441,28 @@ exports.updateUserStatus = async (userId, newStatus) => {
   return user;
 };
 
+exports.deleteCustomer = async (userId) => {
+  const user = await User.findOne({ _id: userId, role: "customer" });
+  if (!user) {
+    const error = new Error("Customer not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  await Promise.all([
+    Event.deleteMany({ userId: user._id }),
+    Contact.deleteMany({ userId: user._id }),
+    Otp.deleteMany({ phone: user.phone }),
+  ]);
+
+  await user.deleteOne();
+
+  return {
+    success: true,
+    message: `Customer account for ${user.firstName} ${user.lastName} has been deleted.`,
+  };
+};
+
 exports.updateUserRole = async (userId, newRole) => {
   if (!["customer", "admin"].includes(newRole)) {
     throw new Error("Invalid role. Allowed: customer, admin");

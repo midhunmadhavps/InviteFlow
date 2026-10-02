@@ -155,6 +155,18 @@ exports.updateUserStatus = async (req, res) => {
 };
 
 /**
+ * Delete a customer account and its associated data
+ */
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const result = await adminService.deleteCustomer(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error, "Failed to delete customer.");
+  }
+};
+
+/**
  * Update User Role
  */
 exports.updateUserRole = async (req, res) => {

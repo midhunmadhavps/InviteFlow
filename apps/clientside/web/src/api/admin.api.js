@@ -45,6 +45,11 @@ export const updateUserStatusApi = async (id, status) => {
   return response.data;
 };
 
+export const deleteCustomerApi = async (id) => {
+  const response = await apiClient.delete(`/admin/users/${id}`);
+  return response.data;
+};
+
 export const updateUserRoleApi = async (id, role) => {
   const response = await apiClient.patch(`/admin/users/${id}/role`, { role });
   return response.data;
