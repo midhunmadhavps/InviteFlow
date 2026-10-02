@@ -402,6 +402,16 @@ const EventsScreen = () => {
       >
         {selectedEvent ? (
           <View style={styles.detailsContent}>
+            {selectedEvent.hostOneImage ? (
+              <View style={styles.mediaPreviewSection}>
+                <Text style={styles.detailLabel}>Host photo</Text>
+                <img
+                  src={getEventMediaUrl(selectedEvent.hostOneImage)}
+                  alt="Event host"
+                  style={styles.invitationImagePreview}
+                />
+              </View>
+            ) : null}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Title</Text>
               <Text style={styles.detailValue}>{selectedEvent.title}</Text>
@@ -452,21 +462,23 @@ const EventsScreen = () => {
                 {selectedEvent.isEnabled === false ? "Disabled" : "Active"}
               </Text>
             </View>
-            {(invitationPreviewUrl || editingEvent.invitation) ? (
-              selectedInvitation?.type === "application/pdf" ||
-              (!selectedInvitation && /\.pdf(?:$|[?#])/i.test(editingEvent.invitation || "")) ? (
-                <iframe
-                  title={selectedInvitation?.name || "Current invitation PDF"}
-                  src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
-                  style={styles.invitationPdfPreview}
-                />
-              ) : (
-                <img
-                  src={invitationPreviewUrl || getEventMediaUrl(editingEvent.invitation)}
-                  alt={selectedInvitation?.name || "Current invitation image"}
-                  style={styles.invitationImagePreview}
-                />
-              )
+            {selectedEvent.invitation ? (
+              <View style={styles.mediaPreviewSection}>
+                <Text style={styles.detailLabel}>Invitation</Text>
+                {/\.pdf(?:$|[?#])/i.test(selectedEvent.invitation) ? (
+                  <iframe
+                    title="Event invitation PDF"
+                    src={getEventMediaUrl(selectedEvent.invitation)}
+                    style={styles.invitationPdfPreview}
+                  />
+                ) : (
+                  <img
+                    src={getEventMediaUrl(selectedEvent.invitation)}
+                    alt="Event invitation"
+                    style={styles.invitationImagePreview}
+                  />
+                )}
+              </View>
             ) : null}
           </View>
         ) : null}
@@ -602,7 +614,7 @@ const EventsScreen = () => {
                 <img
                   src={hostImagePreviewUrl || getEventMediaUrl(editingEvent.hostOneImage)}
                   alt={selectedHostImage?.name || "Current host photo"}
-                  style={styles.hostImagePreview}
+                  style={styles.invitationImagePreview}
                 />
               ) : null}
             </View>
@@ -1017,15 +1029,6 @@ const styles = StyleSheet.create({
   hiddenFileInput: {
     display: "none",
   },
-  hostImagePreview: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    objectFit: "cover",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
-  },
   invitationImagePreview: {
     width: "100%",
     maxHeight: 260,
@@ -1082,6 +1085,10 @@ const styles = StyleSheet.create({
   },
   detailsContent: {
     gap: 12,
+  },
+  mediaPreviewSection: {
+    gap: 8,
+    paddingTop: 8,
   },
   detailRow: {
     flexDirection: "row",
