@@ -539,6 +539,28 @@ exports.updateUserStatus = async (userId, newStatus) => {
   return user;
 };
 
+exports.updateUserAccess = async (userId, isEnabled) => {
+  if (typeof isEnabled !== "boolean") {
+    const error = new Error("Customer access must be enabled or disabled.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const user = await User.findOneAndUpdate(
+    { _id: userId, role: "customer" },
+    { isEnabled },
+    { new: true, runValidators: true }
+  ).select("-password");
+
+  if (!user) {
+    const error = new Error("Customer not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return user;
+};
+
 exports.deleteCustomer = async (userId) => {
   const user = await User.findOne({ _id: userId, role: "customer" });
   if (!user) {
@@ -615,7 +637,7 @@ exports.getEvents = async ({ search, page = 1, limit = 10 }) => {
 
 exports.updateEventEnabled = async (eventId, isEnabled) => {
   if (typeof isEnabled !== "boolean") {
-    const error = new Error("Event enabled status must be true or false.");
+    const error = new Error("Event access must be enabled or disabled.");
     error.statusCode = 400;
     throw error;
   }
@@ -634,7 +656,7 @@ exports.updateEventEnabled = async (eventId, isEnabled) => {
 
   return {
     success: true,
-    message: `Event ${isEnabled ? "activated" : "disabled"} successfully.`,
+    message: `Event ${isEnabled ? "enabled" : "disabled"} successfully.`,
     data: event,
   };
 };

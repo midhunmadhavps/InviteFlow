@@ -19,6 +19,7 @@ import {
   approveAccountApi,
   rejectAccountApi,
   updateUserStatusApi,
+  updateUserAccessApi,
   updateCustomerApi,
   deleteCustomerApi,
 } from "../api/admin.api";
@@ -44,6 +45,7 @@ const CustomerScreen = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [actionMenuUser, setActionMenuUser] = useState(null);
   const [statusPickerUser, setStatusPickerUser] = useState(null);
+  const [accessPickerUser, setAccessPickerUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editError, setEditError] = useState("");
@@ -149,6 +151,10 @@ const CustomerScreen = () => {
         const status = action === "block" ? "Blocked" : "Active";
         const res = await updateUserStatusApi(user._id, status);
         setSuccessMessage(res.message || `Customer status updated to ${status}.`);
+      } else if (action === "enableAccess" || action === "disableAccess") {
+        const isEnabled = action === "enableAccess";
+        const res = await updateUserAccessApi(user._id, isEnabled);
+        setSuccessMessage(res.message || `Customer access ${isEnabled ? "enabled" : "disabled"}.`);
       } else if (action === "delete") {
         const res = await deleteCustomerApi(user._id);
         setSuccessMessage(res.message || `Customer account for ${user.firstName} deleted.`);
@@ -300,6 +306,33 @@ const CustomerScreen = () => {
             </View>
           )}
         </View>
+      ),
+    },
+    {
+      title: "Access",
+      width: 130,
+      renderCell: (row) => (
+        <TouchableOpacity
+          style={[
+            styles.customerAccessButton,
+            row.isEnabled === false && styles.customerAccessButtonDisabled,
+          ]}
+          onPress={(event) => {
+            event.stopPropagation();
+            setAccessPickerUser(row);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Change customer access, currently ${row.isEnabled === false ? "Disable" : "Enable"}`}
+        >
+          <Text
+            style={[
+              styles.customerAccessText,
+              row.isEnabled === false && styles.customerAccessTextDisabled,
+            ]}
+          >
+            {row.isEnabled === false ? "Disable" : "Enable"}
+          </Text>
+        </TouchableOpacity>
       ),
     },
   ];
@@ -527,6 +560,12 @@ const CustomerScreen = () => {
               <StatusBadge status={selectedUser.status} />
             </View>
             <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Access</Text>
+              <Text style={styles.detailValue}>
+                {selectedUser.isEnabled === false ? "Disable" : "Enable"}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Phone Verified</Text>
               <Text style={styles.detailValue}>{selectedUser.isPhoneVerified ? "✅ Yes" : "❌ No"}</Text>
             </View>
@@ -536,6 +575,39 @@ const CustomerScreen = () => {
             </View>
           </View>
         ) : null}
+      </Modal>
+
+      <Modal
+        visible={Boolean(accessPickerUser)}
+        onClose={() => setAccessPickerUser(null)}
+        title="Change Customer Access"
+        hideActions
+      >
+        <Text style={styles.actionMenuDescription}>
+          Choose whether {accessPickerUser?.firstName} {accessPickerUser?.lastName} can access the customer app.
+        </Text>
+        {[
+          { label: "Enable", value: true, icon: "check-circle-outline", color: "#16A34A" },
+          { label: "Disable", value: false, icon: "cancel", color: "#DC2626" },
+        ].map((option) => (
+          <TouchableOpacity
+            key={option.label}
+            style={styles.actionMenuOption}
+            onPress={() => {
+              const user = accessPickerUser;
+              setAccessPickerUser(null);
+              if ((user.isEnabled !== false) !== option.value) {
+                openConfirmModal(option.value ? "enableAccess" : "disableAccess", user);
+              }
+            }}
+          >
+            <MaterialCommunityIcons name={option.icon} size={20} color={option.color} />
+            <Text style={styles.actionMenuOptionText}>{option.label}</Text>
+            {(accessPickerUser?.isEnabled !== false) === option.value ? (
+              <MaterialCommunityIcons name="check" size={18} color={option.color} />
+            ) : null}
+          </TouchableOpacity>
+        ))}
       </Modal>
 
       <Modal
@@ -658,6 +730,8 @@ const CustomerScreen = () => {
           reject: "Block Customer Account",
           block: "Block Customer Account",
           activate: "Activate Customer Account",
+          enableAccess: "Enable Customer Access",
+          disableAccess: "Disable Customer Access",
           delete: "Delete Customer Account",
         }[confirmModal.action] || "Confirm Customer Action"}
         confirmText={{
@@ -665,15 +739,19 @@ const CustomerScreen = () => {
           reject: "Yes, Block",
           block: "Yes, Block",
           activate: "Yes, Activate",
+          enableAccess: "Yes, Enable",
+          disableAccess: "Yes, Disable",
           delete: "Yes, Delete",
         }[confirmModal.action] || "Confirm"}
-        confirmColor={confirmModal.action === "approve" || confirmModal.action === "activate" ? "#16A34A" : "#DC2626"}
+        confirmColor={["approve", "activate", "enableAccess"].includes(confirmModal.action) ? "#16A34A" : "#DC2626"}
         isConfirming={actionLoading}
         onConfirm={handleExecuteAction}
       >
         <Text style={styles.confirmModalText}>
           {confirmModal.action === "delete"
             ? "This permanently deletes the customer account and its associated events, contacts, and verification codes. This action cannot be undone."
+            : ["enableAccess", "disableAccess"].includes(confirmModal.action)
+              ? `Are you sure you want to ${confirmModal.action === "enableAccess" ? "enable" : "disable"} app access for:`
             : `Are you sure you want to ${
                 confirmModal.action === "activate"
                   ? "activate"
@@ -928,6 +1006,28 @@ const styles = StyleSheet.create({
   statusPickerButton: {
     padding: 2,
     borderRadius: 18,
+  },
+  customerAccessButton: {
+    minWidth: 86,
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    backgroundColor: "#F0FDF4",
+  },
+  customerAccessButtonDisabled: {
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+  },
+  customerAccessText: {
+    color: "#15803D",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  customerAccessTextDisabled: {
+    color: "#DC2626",
   },
   statusActions: {
     flexDirection: "row",

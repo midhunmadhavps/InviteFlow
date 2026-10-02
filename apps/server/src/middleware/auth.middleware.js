@@ -39,6 +39,13 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    if (user.role === "customer" && user.isEnabled === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account access has been disabled.",
+      });
+    }
+
     req.user = user;
 
     next();

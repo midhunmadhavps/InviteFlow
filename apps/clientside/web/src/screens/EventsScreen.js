@@ -340,10 +340,10 @@ const EventsScreen = () => {
             setStatusPickerEvent(row);
           }}
           accessibilityRole="button"
-          accessibilityLabel={`Change event access, currently ${row.isEnabled === false ? "disabled" : "active"}`}
+          accessibilityLabel={`Change event access, currently ${row.isEnabled === false ? "Disable" : "Enable"}`}
         >
           <Text style={[styles.accessSelectText, !row.isEnabled && styles.accessSelectTextDisabled]}>
-            {row.isEnabled === false ? "Disabled" : "Active"}
+            {row.isEnabled === false ? "Disable" : "Enable"}
           </Text>
         </TouchableOpacity>
       ),
@@ -459,7 +459,7 @@ const EventsScreen = () => {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Access</Text>
               <Text style={styles.detailValue}>
-                {selectedEvent.isEnabled === false ? "Disabled" : "Active"}
+                {selectedEvent.isEnabled === false ? "Disable" : "Enable"}
               </Text>
             </View>
             {selectedEvent.invitation ? (
@@ -524,11 +524,11 @@ const EventsScreen = () => {
         hideActions
       >
         <Text style={styles.pickerDescription}>
-          Choose whether this event should be active or disabled. You will be asked to confirm the change.
+          Choose whether this event should be enabled or disabled. You will be asked to confirm the change.
         </Text>
         {[
-          { label: "Active", value: true, icon: "check-circle-outline", color: "#16A34A" },
-          { label: "Disabled", value: false, icon: "cancel", color: "#DC2626" },
+          { label: "Enable", value: true, icon: "check-circle-outline", color: "#16A34A" },
+          { label: "Disable", value: false, icon: "cancel", color: "#DC2626" },
         ].map((option) => (
           <TouchableOpacity
             key={option.label}
@@ -811,7 +811,7 @@ const EventsScreen = () => {
             ? "This will permanently delete this event. This action cannot be undone."
             : confirmAction?.type === "status"
               ? `Are you sure you want to change this event status to ${confirmAction.status}?`
-              : `Are you sure you want to set this event to ${confirmAction?.isEnabled ? "Active" : "Disabled"}?`}
+              : `Are you sure you want to ${confirmAction?.isEnabled ? "enable" : "disable"} this event?`}
         </Text>
         <Text style={styles.confirmEventTitle}>{confirmAction?.event?.title}</Text>
       </Modal>

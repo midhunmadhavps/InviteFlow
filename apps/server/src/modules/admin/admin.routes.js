@@ -25,6 +25,7 @@ router.patch("/users/:id", adminController.updateCustomer);
 router.post("/users/:id/approve", adminController.approveAccount);
 router.post("/users/:id/reject", adminController.rejectAccount);
 router.patch("/users/:id/status", adminController.updateUserStatus);
+router.patch("/users/:id/access", adminController.updateUserAccess);
 router.delete("/users/:id", adminController.deleteCustomer);
 router.patch("/users/:id/role", adminController.updateUserRole);
 

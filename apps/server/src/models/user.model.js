@@ -62,6 +62,11 @@ const userSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    isEnabled: {
+      type: Boolean,
+      default: true,
+    },
+
     role: {
       type: String,
       enum: ["customer", "admin"],

@@ -163,6 +163,22 @@ exports.updateUserStatus = async (req, res) => {
   }
 };
 
+exports.updateUserAccess = async (req, res) => {
+  try {
+    const user = await adminService.updateUserAccess(
+      req.params.id,
+      req.body.isEnabled
+    );
+    return res.status(200).json({
+      success: true,
+      message: `Customer access ${req.body.isEnabled ? "enabled" : "disabled"} successfully.`,
+      data: user,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to update customer access.");
+  }
+};
+
 /**
  * Delete a customer account and its associated data
  */

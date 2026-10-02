@@ -113,6 +113,7 @@ const eventSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Admin-controlled access is separate from the event lifecycle status.
     isEnabled: {
       type: Boolean,
       default: true,

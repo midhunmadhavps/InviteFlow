@@ -194,6 +194,10 @@ exports.login = async (data) => {
     throw new Error("Account is not active.");
   }
 
+  if (user.isEnabled === false) {
+    throw new Error("Account access has been disabled.");
+  }
+
   const isPasswordCorrect = await bcrypt.compare(
     password,
     user.password

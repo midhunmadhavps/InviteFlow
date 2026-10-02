@@ -50,6 +50,11 @@ export const updateUserStatusApi = async (id, status) => {
   return response.data;
 };
 
+export const updateUserAccessApi = async (id, isEnabled) => {
+  const response = await apiClient.patch(`/admin/users/${id}/access`, { isEnabled });
+  return response.data;
+};
+
 export const deleteCustomerApi = async (id) => {
   const response = await apiClient.delete(`/admin/users/${id}`);
   return response.data;
