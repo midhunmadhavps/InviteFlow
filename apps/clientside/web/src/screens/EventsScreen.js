@@ -496,7 +496,7 @@ const EventsScreen = () => {
         {EVENT_STATUSES.map((status) => (
           <TouchableOpacity
             key={status}
-            style={styles.pickerOption}
+            style={styles.eventStatusOption}
             onPress={() => {
               const event = eventStatusPicker;
               setEventStatusPicker(null);
@@ -505,9 +505,13 @@ const EventsScreen = () => {
               }
             }}
           >
-            <StatusBadge status={status} />
+            <View style={styles.eventStatusOptionContent}>
+              <StatusBadge status={status} />
+            </View>
             {eventStatusPicker?.status === status ? (
-              <MaterialCommunityIcons name="check" size={18} color="#4F46E5" />
+              <View style={styles.eventStatusCheck}>
+                <MaterialCommunityIcons name="check" size={20} color="#4F46E5" />
+              </View>
             ) : null}
           </TouchableOpacity>
         ))}
@@ -955,6 +959,29 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     borderRadius: 8,
     marginTop: 8,
+  },
+  eventStatusOption: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    marginTop: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  eventStatusOptionContent: {
+    flex: 1,
+    minHeight: 34,
+    justifyContent: "center",
+  },
+  eventStatusCheck: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pickerOptionText: {
     flex: 1,
