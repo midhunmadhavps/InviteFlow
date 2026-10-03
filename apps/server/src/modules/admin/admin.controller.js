@@ -364,3 +364,47 @@ exports.getSettings = async (req, res) => {
     return handleError(res, error, "Failed to fetch settings.");
   }
 };
+
+exports.getEmailConfig = async (req, res) => {
+  try {
+    const data = await adminService.getEmailConfig();
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch email configuration.");
+  }
+};
+
+exports.saveEmailConfig = async (req, res) => {
+  try {
+    const data = await adminService.saveEmailConfig(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Email configuration saved successfully.",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save email configuration.");
+  }
+};
+
+exports.getSmsConfig = async (req, res) => {
+  try {
+    const data = await adminService.getSmsConfig();
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch SMS configuration.");
+  }
+};
+
+exports.saveSmsConfig = async (req, res) => {
+  try {
+    const data = await adminService.saveSmsConfig(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "SMS configuration saved successfully.",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save SMS configuration.");
+  }
+};

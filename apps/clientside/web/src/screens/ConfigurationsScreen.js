@@ -18,6 +18,8 @@ const ConfigurationsScreen = () => {
   const tabs = [
     { key: "whatsapp", label: "WhatsApp Gateway", icon: "whatsapp" },
     { key: "firebase", label: "Firebase & Auth", icon: "firebase" },
+    { key: "email", label: "Email", icon: "email-outline" },
+    { key: "sms", label: "SMS", icon: "message-text-outline" },
     { key: "settings", label: "System Settings", icon: "cog-outline" },
   ];
 
@@ -53,6 +55,8 @@ const ConfigurationsScreen = () => {
       <View style={styles.contentArea}>
         {activeConfigTab === "whatsapp" && <WhatsAppLoginsScreen />}
         {activeConfigTab === "firebase" && <FirebaseDetailsScreen />}
+        {activeConfigTab === "email" && <SettingsScreen configSection="email" />}
+        {activeConfigTab === "sms" && <SettingsScreen configSection="sms" />}
         {activeConfigTab === "settings" && <SettingsScreen />}
       </View>
     </View>

@@ -7,6 +7,8 @@ const Event = require("../../models/event.model");
 const Contact = require("../../models/contact.model");
 const EventType = require("../../models/eventType.model");
 const eventService = require("../events/event.service");
+const EmailConfig = require("../../models/emailConfig.model");
+const SmsConfig = require("../../models/smsConfig.model");
 const { createUsername } = require("../users/user.utils");
 
 // In-memory rate limiting map for OTP requests and verification attempts
@@ -943,3 +945,88 @@ exports.getSettings = async () => {
     allowRegistration: true,
   };
 };
+
+const adminConfigFields = {
+  email: {
+    model: EmailConfig,
+    secrets: ["password", "api_key"],
+    allowed: ["provider", "host", "port", "username", "password", "api_key", "from_email", "from_name", "encryption", "is_active"],
+  },
+  sms: {
+    model: SmsConfig,
+    secrets: ["password", "api_key", "api_secret"],
+    allowed: ["provider", "api_url", "api_key", "api_secret", "sender_id", "host", "port", "username", "password", "is_active"],
+  },
+};
+
+const getAdminConfig = async (type) => {
+  const { model: Model, secrets } = adminConfigFields[type];
+  const config = await Model.findById("default").lean();
+  const configuredSecrets = Object.fromEntries(secrets.map((field) => [
+    field,
+    Boolean(config?.[field]),
+  ]));
+
+  if (config) {
+    secrets.forEach((field) => delete config[field]);
+  }
+
+  return { config, configuredSecrets };
+};
+
+const saveAdminConfig = async (type, input) => {
+  const { model: Model, secrets, allowed } = adminConfigFields[type];
+  const update = {};
+  allowed.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) {
+      update[field] = input[field];
+    }
+  });
+
+  if (Object.prototype.hasOwnProperty.call(update, "port")) {
+    if (update.port === "" || update.port === null) {
+      update.port = null;
+    } else {
+      const port = Number(update.port);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        const error = new Error("Port must be a whole number between 1 and 65535.");
+        error.statusCode = 400;
+        throw error;
+      }
+      update.port = port;
+    }
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(update, "is_active") &&
+    typeof update.is_active !== "boolean"
+  ) {
+    const error = new Error("is_active must be true or false.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  secrets.forEach((field) => {
+    if (typeof update[field] === "string" && !update[field].trim()) {
+      delete update[field];
+    }
+  });
+
+  if (!Object.keys(update).length) {
+    const error = new Error("Provide at least one configuration value to save.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await Model.findByIdAndUpdate(
+    "default",
+    { $set: update },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  );
+  return getAdminConfig(type);
+};
+
+exports.getEmailConfig = () => getAdminConfig("email");
+exports.saveEmailConfig = (input) => saveAdminConfig("email", input);
+exports.getSmsConfig = () => getAdminConfig("sms");
+exports.saveSmsConfig = (input) => saveAdminConfig("sms", input);

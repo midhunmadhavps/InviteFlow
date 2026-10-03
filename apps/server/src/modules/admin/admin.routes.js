@@ -57,5 +57,9 @@ router.get("/contacts", adminController.getContacts);
 router.get("/whatsapp", adminController.getWhatsApp);
 router.get("/firebase", adminController.getFirebase);
 router.get("/settings", adminController.getSettings);
+router.get("/config/email", adminController.getEmailConfig);
+router.put("/config/email", adminController.saveEmailConfig);
+router.get("/config/sms", adminController.getSmsConfig);
+router.put("/config/sms", adminController.saveSmsConfig);
 
 module.exports = router;
