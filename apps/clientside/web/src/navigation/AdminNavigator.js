@@ -22,6 +22,7 @@ import WeddingRegistrationScreen from "../screens/events/WeddingRegistrationScre
 import AnniversaryRegistrationScreen from "../screens/events/AnniversaryRegistrationScreen";
 import EngagementRegistrationScreen from "../screens/events/EngagementRegistrationScreen";
 import BirthdayRegistrationScreen from "../screens/events/BirthdayRegistrationScreen";
+import { useAppTheme } from "../shared/theme/ThemeContext";
 
 const EVENT_REGISTRATION_SCREENS = {
   wedding: WeddingRegistrationScreen,
@@ -32,6 +33,7 @@ const EVENT_REGISTRATION_SCREENS = {
 
 const AdminNavigator = () => {
   const { isAuthenticated, loading } = useAdminAuth();
+  const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
 
@@ -47,9 +49,9 @@ const AdminNavigator = () => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Initializing InviteFlow Admin...</Text>
+        <Text style={[styles.loadingText, { color: colors.textMuted }]}>Initializing InviteFlow Admin...</Text>
       </View>
     );
   }
@@ -129,7 +131,7 @@ const AdminNavigator = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Sidebar Navigation */}
       {(!isMobile || mobileMenuOpen) && (
         <AdminSidebar

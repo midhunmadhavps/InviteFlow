@@ -15,8 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { getMyEvents } from "../api/event.api";
 import { getUser } from "../../../utils/auth";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function MyEventsScreen({ navigation }) {
+  const { colors, isDark } = useAppTheme();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -376,9 +378,10 @@ export default function MyEventsScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ThemeTree>
         <ImageBackground
-          source={require("../../../../assets/Vector1.png")}
+          source={isDark ? undefined : require("../../../../assets/Vector1.png")}
           style={styles.backgroundFixed}
           resizeMode="cover"
         />
@@ -395,6 +398,7 @@ export default function MyEventsScreen({ navigation }) {
             Loading your events...
           </Text>
         </View>
+        </ThemeTree>
       </View>
     );
   }
@@ -404,9 +408,10 @@ export default function MyEventsScreen({ navigation }) {
   // --------------------------------------------------
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
       <ImageBackground
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundFixed}
         resizeMode="cover"
       />
@@ -480,6 +485,7 @@ export default function MyEventsScreen({ navigation }) {
           </View>
         }
       />
+      </ThemeTree>
     </View>
   );
 }

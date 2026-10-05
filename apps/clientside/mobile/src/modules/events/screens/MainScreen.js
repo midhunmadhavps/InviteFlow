@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { removeToken, removeUser } from "../../../utils/auth";
+import AppearanceToggle from "../../../../../web/src/shared/components/AppearanceToggle";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 const UpComingevents = [
   {
@@ -35,9 +37,10 @@ const UpComingevents = [
 
 export default function MainScreen({ navigation }) {
   const [profileVisible, setProfileVisible] = useState(false);
+  const { mode, setMode, colors } = useAppTheme();
 
   const renderEvent = ({ item }) => (
-    <TouchableOpacity style={styles.eventCard}>
+    <TouchableOpacity style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.eventIconContainer}>
         <Ionicons
           name={item.icon}
@@ -47,11 +50,11 @@ export default function MainScreen({ navigation }) {
       </View>
 
       <View style={styles.eventInfo}>
-        <Text style={styles.eventTitle}>
+        <Text style={[styles.eventTitle, { color: colors.text }]}>
           {item.title}
         </Text>
 
-        <Text style={styles.eventDate}>
+        <Text style={[styles.eventDate, { color: colors.textMuted }]}>
           {item.date}
         </Text>
       </View>
@@ -65,7 +68,8 @@ export default function MainScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
 
       {/* Header */}
       <View style={styles.header}>
@@ -98,7 +102,7 @@ export default function MainScreen({ navigation }) {
       <View style={styles.actionContainer}>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() =>
             navigation.navigate("Events", {
               screen: "EventTypes",
@@ -119,7 +123,7 @@ export default function MainScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() =>
             navigation.navigate("Events", {
               screen: "MyEvents",
@@ -140,7 +144,7 @@ export default function MainScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() =>
             navigation.navigate("Contacts")
           }
@@ -163,7 +167,7 @@ export default function MainScreen({ navigation }) {
       {/* Event List */}
       <View style={styles.eventsContainer}>
 
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
           Upcoming Events
         </Text>
 
@@ -194,7 +198,7 @@ export default function MainScreen({ navigation }) {
           />
 
           {/* Side menu */}
-          <View style={styles.profileMenu}>
+          <View style={[styles.profileMenu, { backgroundColor: colors.surface }]}>
 
             {/* Profile Header */}
             <View style={styles.profileHeader}>
@@ -256,6 +260,14 @@ export default function MainScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
 
+              <View style={styles.appearanceRow}>
+                <View style={styles.appearanceLabel}>
+                  <Ionicons name="color-palette-outline" size={21} color={colors.textMuted} />
+                  <Text style={[styles.menuText, { color: colors.text }]}>Appearance</Text>
+                </View>
+                <AppearanceToggle mode={mode} onChange={setMode} />
+              </View>
+
               <View style={styles.menuDivider} />
 
               <TouchableOpacity
@@ -292,6 +304,7 @@ export default function MainScreen({ navigation }) {
 
       </Modal>
 
+      </ThemeTree>
     </SafeAreaView>
   );
 }
@@ -479,6 +492,18 @@ const styles = StyleSheet.create({
   menuItems: {
     paddingHorizontal: 20,
     paddingTop: 20,
+  },
+  appearanceRow: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  appearanceLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
 
   menuItem: {

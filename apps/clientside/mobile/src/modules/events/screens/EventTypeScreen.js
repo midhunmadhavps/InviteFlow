@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 
 import { getEventTypes } from '../api/event.api';
+import { ThemeTree, useAppTheme } from '../../../../../web/src/shared/theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const EventTypeScreen = ({ navigation }) => {
+  const { colors, isDark } = useAppTheme();
   const [eventTypes, setEventTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -128,10 +130,11 @@ const EventTypeScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
       {/* BACKGROUND — fixed backdrop, never moves */}
       <ImageBackground
-        source={require('../../../../assets/Vector1.png')}
+        source={isDark ? undefined : require('../../../../assets/Vector1.png')}
         style={styles.backgroundFixed}
         resizeMode="stretch"
       />
@@ -228,6 +231,7 @@ const EventTypeScreen = ({ navigation }) => {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </SafeAreaView>
   );
 };

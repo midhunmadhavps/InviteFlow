@@ -16,8 +16,10 @@ import { loginUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
 import { validateEmail, validateRequired } from "../../../utils/validation";
 import { RequiredLabel } from "../../../components/RequiredLabel";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function LoginScreen({ navigation }) {
+  const { colors, isDark } = useAppTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -68,14 +70,15 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -204,6 +207,7 @@ export default function LoginScreen({ navigation }) {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </KeyboardAvoidingView>
   );
 }

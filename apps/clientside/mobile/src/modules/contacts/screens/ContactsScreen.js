@@ -16,8 +16,10 @@ import * as Contacts from "expo-contacts";
 import { bulkCreateContacts, getContactsByUserId } from "../api/contact.api";
 import { getUser } from "../../../utils/auth";
 import { useToast } from "../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function ContactsScreen({ navigation, route }) {
+  const { colors, isDark } = useAppTheme();
   const { eventId } = route.params || {};
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -238,9 +240,10 @@ export default function ContactsScreen({ navigation, route }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
       <ImageBackground
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -301,6 +304,7 @@ export default function ContactsScreen({ navigation, route }) {
           )}
         </View>
       </ImageBackground>
+      </ThemeTree>
     </View>
   );
 }

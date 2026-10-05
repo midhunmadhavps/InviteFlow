@@ -7,15 +7,18 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function WelcomeScreen({ navigation }) {
+  const { colors, isDark } = useAppTheme();
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -24,8 +27,8 @@ export default function WelcomeScreen({ navigation }) {
       <View style={styles.content}>
 
         <View style={styles.welcomeSection}>
-            <Text style={styles.title}>Welcome</Text>
-            <Text style={styles.description}>
+            <Text style={[styles.title, { color: colors.text }]}>Welcome</Text>
+            <Text style={[styles.description, { color: colors.textMuted }]}>
             Lorem ipsum dolor sit amet consectetur.
             {"\n"}
             Lorem ipsum dolor sit.
@@ -36,13 +39,14 @@ export default function WelcomeScreen({ navigation }) {
             style={styles.continueButton}
             onPress={() => navigation.navigate("Login")}
         >
-          <Text style={styles.continueText}>Continue</Text>
+          <Text style={[styles.continueText, { color: colors.textMuted }]}>Continue</Text>
 
           <View style={styles.arrowCircle}>
             <Text style={styles.arrow}>→</Text>
           </View>
         </TouchableOpacity>
       </View>
+      </ThemeTree>
     </View>
   );
 }

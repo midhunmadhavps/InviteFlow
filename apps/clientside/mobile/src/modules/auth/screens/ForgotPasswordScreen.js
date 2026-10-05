@@ -14,8 +14,10 @@ import { StatusBar } from "expo-status-bar";
 import { forgotPasswordUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
 import { validatePhone } from "../../../utils/validation";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const { colors, isDark } = useAppTheme();
   const [phone, setPhone] = useState("");
 
   const { showSuccess, showError } = useToast();
@@ -55,14 +57,15 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -133,6 +136,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </KeyboardAvoidingView>
   );
 }

@@ -13,8 +13,10 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { verifyOtp, resendOtp } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function OtpScreen({ navigation, route }) {
+  const { colors, isDark } = useAppTheme();
   const { phone } = route.params;
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -124,14 +126,15 @@ export default function OtpScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -209,6 +212,7 @@ export default function OtpScreen({ navigation, route }) {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </KeyboardAvoidingView>
   );
 }

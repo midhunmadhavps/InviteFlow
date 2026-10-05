@@ -2,19 +2,22 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import AppearanceToggle from "../shared/components/AppearanceToggle";
+import { useAppTheme } from "../shared/theme/ThemeContext";
 
 const AdminHeader = ({ title, onMenuToggle, isMobile }) => {
   const { admin, logout } = useAdminAuth();
+  const { mode, setMode, colors } = useAppTheme();
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <View style={styles.leftContainer}>
         {isMobile && (
           <TouchableOpacity onPress={onMenuToggle} style={styles.menuBtn}>
-            <MaterialCommunityIcons name="menu" size={24} color="#334155" />
+            <MaterialCommunityIcons name="menu" size={24} color={colors.text} />
           </TouchableOpacity>
         )}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       </View>
 
       <View style={styles.rightContainer}>
@@ -25,7 +28,7 @@ const AdminHeader = ({ title, onMenuToggle, isMobile }) => {
             </Text>
           </View>
           <View style={styles.adminMeta}>
-            <Text style={styles.adminName}>
+            <Text style={[styles.adminName, { color: colors.text }]}>
               {admin ? `${admin.firstName || ""} ${admin.lastName || ""}`.trim() : "Administrator"}
             </Text>
             <View style={styles.roleTag}>
@@ -34,6 +37,7 @@ const AdminHeader = ({ title, onMenuToggle, isMobile }) => {
           </View>
         </View>
 
+        <AppearanceToggle mode={mode} onChange={setMode} />
         <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.7}>
           <MaterialCommunityIcons name="logout-variant" size={18} color="#EF4444" />
           <Text style={styles.logoutText}>Logout</Text>
@@ -45,6 +49,7 @@ const AdminHeader = ({ title, onMenuToggle, isMobile }) => {
 
 const styles = StyleSheet.create({
   header: {
+    position: "relative",
     height: 70,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,

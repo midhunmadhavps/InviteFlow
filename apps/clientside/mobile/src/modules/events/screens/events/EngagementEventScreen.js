@@ -29,6 +29,7 @@ import {
   validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../../web/src/shared/theme/ThemeContext";
 import {
   RequiredLabel,
   Label,
@@ -38,6 +39,7 @@ export default function EngagementEventScreen({
   navigation,
   route,
 }) {
+  const { colors, isDark } = useAppTheme();
   const { eventTypeId } = route.params || {};
 
   const { showSuccess, showError } = useToast();
@@ -547,11 +549,12 @@ export default function EngagementEventScreen({
 
   return (
     <ImageBackground
-      source={require("../../../../../assets/Vector1.png")}
+      source={isDark ? undefined : require("../../../../../assets/Vector1.png")}
       style={styles.background}
       resizeMode="cover"
     >
-      <View style={styles.container}>
+      <ThemeTree>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
 
         {/* Header */}
 
@@ -996,6 +999,7 @@ export default function EngagementEventScreen({
 
         </ScrollView>
       </View>
+      </ThemeTree>
     </ImageBackground>
   );
 }

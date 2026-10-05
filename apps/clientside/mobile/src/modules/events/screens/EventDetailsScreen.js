@@ -27,11 +27,13 @@ import {
   validateImageOrPdf
 } from "../../../utils/validation";
 import { useToast } from "../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 // Event types that support two hosts (e.g. bride & groom, couple, partners)
 const DUAL_HOST_EVENT_TYPES = ["Wedding", "Anniversary", "Engagement"];
 
 export default function EventDetailsScreen({ navigation, route }) {
+  const { colors, isDark } = useAppTheme();
   const { event } = route.params || {};
   const { showSuccess, showError } = useToast();
 
@@ -505,9 +507,10 @@ export default function EventDetailsScreen({ navigation, route }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
       <ImageBackground
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -1220,6 +1223,7 @@ export default function EventDetailsScreen({ navigation, route }) {
           )}
         </ScrollView>
       </ImageBackground>
+      </ThemeTree>
     </View>
   );
 }

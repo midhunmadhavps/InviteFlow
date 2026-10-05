@@ -7,8 +7,10 @@ import {
   isTokenExpired,
 } from "../../../utils/auth";
 import { useToast } from "../../../context/ToastContext";
+import { useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function AuthLoadingScreen({ navigation }) {
+  const { colors } = useAppTheme();
   useEffect(() => {
     checkAuth();
   }, []);
@@ -49,9 +51,10 @@ export default function AuthLoadingScreen({ navigation }) {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: colors.background,
       }}
     >
-      <ActivityIndicator size="large" />
+      <ActivityIndicator size="large" color={colors.textMuted} />
     </View>
   );
 }

@@ -15,8 +15,10 @@ import { registerUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
 import { validateName, validateEmail, validatePhone, } from "../../../utils/validation";
 import { RequiredLabel, Label } from "../../../components/RequiredLabel";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function RegisterScreen({ navigation }) {
+  const { colors, isDark } = useAppTheme();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -77,14 +79,15 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -206,6 +209,7 @@ export default function RegisterScreen({ navigation }) {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </KeyboardAvoidingView>
   );
 }

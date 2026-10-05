@@ -29,12 +29,14 @@ import {
   validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../../web/src/shared/theme/ThemeContext";
 import {
   RequiredLabel,
   Label,
 } from "../../../../components/RequiredLabel";
 
 export default function WeddingEventScreen({ navigation, route }) {
+  const { colors, isDark } = useAppTheme();
   const { eventTypeId } = route.params || {};
 
   const { showSuccess, showError } = useToast();
@@ -533,7 +535,8 @@ export default function WeddingEventScreen({ navigation, route }) {
   // --------------------------------------------------
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
 
       {/* Header */}
       <View style={styles.header}>
@@ -566,7 +569,7 @@ export default function WeddingEventScreen({ navigation, route }) {
       </View>
 
       <ImageBackground
-        source={require("../../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../../assets/Vector1.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -979,6 +982,7 @@ export default function WeddingEventScreen({ navigation, route }) {
 
         </ScrollView>
       </ImageBackground>
+      </ThemeTree>
     </View>
   );
 }

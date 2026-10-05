@@ -14,9 +14,11 @@ import { StatusBar } from "expo-status-bar";
 import { setPasswordUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
 import { validateNameOnly, validatePassword } from "../../../utils/validation";
+import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 
 export default function SetPasswordScreen({ navigation, route }) {
+  const { colors, isDark } = useAppTheme();
   const { userId } = route.params;
   const { purpose } = route.params;
 
@@ -95,14 +97,15 @@ export default function SetPasswordScreen({ navigation, route }) {
   
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <ThemeTree>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Pink patterned background */}
       <Image
-        source={require("../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../assets/Vector1.png")}
         style={styles.backgroundImage}
         resizeMode="stretch"
       />
@@ -208,6 +211,7 @@ export default function SetPasswordScreen({ navigation, route }) {
 
         </View>
       </ScrollView>
+      </ThemeTree>
     </KeyboardAvoidingView>
   );
 }

@@ -29,6 +29,7 @@ import {
   validateImageOrPdf
 } from "../../../../utils/validation";
 import { useToast } from "../../../../context/ToastContext";
+import { ThemeTree, useAppTheme } from "../../../../../../web/src/shared/theme/ThemeContext";
 import {
   RequiredLabel,
   Label,
@@ -38,6 +39,7 @@ export default function AnniversaryEventScreen({
   navigation,
   route,
 }) {
+  const { colors, isDark } = useAppTheme();
   const { eventTypeId } = route.params || {};
 
   const showAlert = (title, message) => {
@@ -480,7 +482,8 @@ export default function AnniversaryEventScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ThemeTree>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -507,7 +510,7 @@ export default function AnniversaryEventScreen({
       </View>
 
       <ImageBackground
-        source={require("../../../../../assets/Vector1.png")}
+        source={isDark ? undefined : require("../../../../../assets/Vector1.png")}
         style={styles.background}
         resizeMode="cover"
       >
@@ -906,6 +909,7 @@ export default function AnniversaryEventScreen({
           </TouchableOpacity>
         </ScrollView>
       </ImageBackground>
+      </ThemeTree>
     </View>
   );
 }
