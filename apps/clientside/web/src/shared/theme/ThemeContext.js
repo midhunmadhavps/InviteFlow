@@ -120,6 +120,20 @@ const transformStyle = (style, mode) => {
   }));
 };
 
+const restoreWebThemeOverrides = (node, overrides) => {
+  overrides.forEach(({ property, value, priority, appliedValue, appliedPriority }) => {
+    if (
+      node.style.getPropertyValue(property) !== appliedValue
+      || node.style.getPropertyPriority(property) !== appliedPriority
+    ) {
+      return;
+    }
+    WEB_THEME_SELF_WRITES.add(node);
+    if (value) node.style.setProperty(property, value, priority);
+    else node.style.removeProperty(property);
+  });
+};
+
 const themeElement = (element, mode) => {
   if (!React.isValidElement(element)) return element;
   const props = { ...element.props };
@@ -165,11 +179,7 @@ const applyWebTheme = (mode) => {
     const previous = WEB_THEME_OVERRIDES.get(node);
     if (mode !== "dark") {
       if (!previous) return;
-      previous.forEach(({ property, value, priority }) => {
-        WEB_THEME_SELF_WRITES.add(node);
-        if (value) node.style.setProperty(property, value, priority);
-        else node.style.removeProperty(property);
-      });
+      restoreWebThemeOverrides(node, previous);
       WEB_THEME_OVERRIDES.delete(node);
       return;
     }
@@ -185,13 +195,17 @@ const applyWebTheme = (mode) => {
           : "border";
       const mapped = mapThemeColor(computed[property], kind);
       if (mapped === computed[property]) return;
-      overrides.push({
-        property: cssProperty,
-        value: node.style.getPropertyValue(cssProperty),
-        priority: node.style.getPropertyPriority(cssProperty),
-      });
+      const value = node.style.getPropertyValue(cssProperty);
+      const priority = node.style.getPropertyPriority(cssProperty);
       WEB_THEME_SELF_WRITES.add(node);
       node.style.setProperty(cssProperty, mapped, "important");
+      overrides.push({
+        property: cssProperty,
+        value,
+        priority,
+        appliedValue: node.style.getPropertyValue(cssProperty),
+        appliedPriority: node.style.getPropertyPriority(cssProperty),
+      });
     });
     if (overrides.length) WEB_THEME_OVERRIDES.set(node, overrides);
   });
@@ -200,11 +214,7 @@ const applyWebTheme = (mode) => {
 const restoreWebThemeNode = (node) => {
   const previous = WEB_THEME_OVERRIDES.get(node);
   if (!previous) return;
-  previous.forEach(({ property, value, priority }) => {
-    WEB_THEME_SELF_WRITES.add(node);
-    if (value) node.style.setProperty(property, value, priority);
-    else node.style.removeProperty(property);
-  });
+  restoreWebThemeOverrides(node, previous);
   WEB_THEME_OVERRIDES.delete(node);
 };
 
