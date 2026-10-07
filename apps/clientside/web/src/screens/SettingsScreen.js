@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,20 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   getEmailConfigApi,
   getSettingsApi,
+  getSystemConfigApi,
   getSmsConfigApi,
   saveEmailConfigApi,
+  saveSystemConfigApi,
   saveSmsConfigApi,
 } from "../api/admin.api";
+
+const EMPTY_SYSTEM_CONFIG = {
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  logo: "",
+};
 
 const EMPTY_EMAIL_CONFIG = {
   provider: "",
@@ -46,6 +56,7 @@ const EMPTY_SMS_CONFIG = {
 
 const SettingsScreen = ({ configSection }) => {
   const [settings, setSettings] = useState(null);
+  const [systemConfig, setSystemConfig] = useState(EMPTY_SYSTEM_CONFIG);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [autoApprove, setAutoApprove] = useState(false);
@@ -57,36 +68,48 @@ const SettingsScreen = ({ configSection }) => {
   const [smsConfiguredSecrets, setSmsConfiguredSecrets] = useState({});
   const [savingConfig, setSavingConfig] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [selectedLogo, setSelectedLogo] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const logoInput = useRef(null);
 
   const loadSettings = async () => {
     setLoading(true);
     setError("");
     try {
-      const [settingsResponse, emailResponse, smsResponse] = await Promise.all([
-        getSettingsApi(),
-        getEmailConfigApi(),
-        getSmsConfigApi(),
-      ]);
-      if (settingsResponse.success && settingsResponse.data) {
-        setSettings(settingsResponse.data);
-        setAutoApprove(settingsResponse.data.autoApproveCustomers);
-        setMaintenance(settingsResponse.data.maintenanceMode);
-        setAllowRegistration(settingsResponse.data.allowRegistration);
+      if (configSection === "email") {
+        const response = await getEmailConfigApi();
+        const emailData = response.data || {};
+        setEmailConfig({
+          ...EMPTY_EMAIL_CONFIG,
+          ...emailData.config,
+          port: emailData.config?.port == null ? "" : String(emailData.config.port),
+        });
+        setEmailConfiguredSecrets(emailData.configuredSecrets || {});
+      } else if (configSection === "sms") {
+        const response = await getSmsConfigApi();
+        const smsData = response.data || {};
+        setSmsConfig({
+          ...EMPTY_SMS_CONFIG,
+          ...smsData.config,
+          port: smsData.config?.port == null ? "" : String(smsData.config.port),
+        });
+        setSmsConfiguredSecrets(smsData.configuredSecrets || {});
+      } else {
+        const [settingsResponse, systemConfigResponse] = await Promise.all([
+          getSettingsApi(),
+          getSystemConfigApi(),
+        ]);
+        if (settingsResponse.success && settingsResponse.data) {
+          setSettings(settingsResponse.data);
+          setAutoApprove(settingsResponse.data.autoApproveCustomers);
+          setMaintenance(settingsResponse.data.maintenanceMode);
+          setAllowRegistration(settingsResponse.data.allowRegistration);
+        }
+        setSystemConfig({
+          ...EMPTY_SYSTEM_CONFIG,
+          ...(systemConfigResponse.data || {}),
+        });
       }
-      const emailData = emailResponse.data || {};
-      const smsData = smsResponse.data || {};
-      setEmailConfig({
-        ...EMPTY_EMAIL_CONFIG,
-        ...emailData.config,
-        port: emailData.config?.port == null ? "" : String(emailData.config.port),
-      });
-      setSmsConfig({
-        ...EMPTY_SMS_CONFIG,
-        ...smsData.config,
-        port: smsData.config?.port == null ? "" : String(smsData.config.port),
-      });
-      setEmailConfiguredSecrets(emailData.configuredSecrets || {});
-      setSmsConfiguredSecrets(smsData.configuredSecrets || {});
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to load settings.");
     } finally {
@@ -97,6 +120,16 @@ const SettingsScreen = ({ configSection }) => {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (!selectedLogo) {
+      setLogoPreviewUrl("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(selectedLogo);
+    setLogoPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedLogo]);
 
   const updateConfigField = (setter, key, value) => {
     setter((current) => ({ ...current, [key]: value }));
@@ -139,6 +172,44 @@ const SettingsScreen = ({ configSection }) => {
     }
   };
 
+  const saveSystemDetails = async () => {
+    if (selectedLogo && !/^image\/(jpeg|png|webp)$/.test(selectedLogo.type)) {
+      setError("Logo must be a JPG, PNG, or WEBP image.");
+      return;
+    }
+    if (selectedLogo && selectedLogo.size > 5 * 1024 * 1024) {
+      setError("Logo must be 5 MB or smaller.");
+      return;
+    }
+
+    setSavingConfig("system");
+    setError("");
+    setSuccessMessage("");
+    try {
+      const payload = new FormData();
+      ["name", "email", "phone", "address"].forEach((field) => {
+        payload.append(field, systemConfig[field]);
+      });
+      if (selectedLogo) payload.append("logo", selectedLogo);
+
+      const response = await saveSystemConfigApi(payload);
+      setSystemConfig({ ...EMPTY_SYSTEM_CONFIG, ...(response.data || {}) });
+      setSelectedLogo(null);
+      setSuccessMessage(response.message || "System details saved successfully.");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to save system details.");
+    } finally {
+      setSavingConfig("");
+    }
+  };
+
+  const getLogoUrl = (logo) => {
+    if (!logo) return "";
+    if (/^https?:\/\//i.test(logo)) return logo;
+    if (logo.startsWith("/uploads/")) return `http://localhost:3000${logo}`;
+    return `http://localhost:3000/uploads/${encodeURIComponent(logo)}`;
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -179,7 +250,7 @@ const SettingsScreen = ({ configSection }) => {
         </View>
       ) : null}
 
-      {(!configSection || configSection === "email") && <View style={styles.card}>
+      {configSection === "email" && <View style={styles.card}>
         <View style={styles.configHeading}>
           <View style={styles.configHeadingIcon}>
             <MaterialCommunityIcons name="email-outline" size={20} color="#4F46E5" />
@@ -242,7 +313,7 @@ const SettingsScreen = ({ configSection }) => {
         </View>
       </View>}
 
-      {(!configSection || configSection === "sms") && <View style={styles.card}>
+      {configSection === "sms" && <View style={styles.card}>
         <View style={styles.configHeading}>
           <View style={styles.configHeadingIcon}>
             <MaterialCommunityIcons name="message-text-outline" size={20} color="#4F46E5" />
@@ -306,6 +377,87 @@ const SettingsScreen = ({ configSection }) => {
       </View>}
 
       {/* General Configuration */}
+      {!configSection && <View style={styles.card}>
+        <Text style={styles.cardTitle}>System Details</Text>
+        <Text style={[styles.cardSubtitle, { marginBottom: 16 }]}>
+          Contact information and branding for your platform
+        </Text>
+
+        <View style={styles.configGrid}>
+          {[
+            { key: "name", label: "Name", placeholder: "System name" },
+            { key: "email", label: "Email", placeholder: "contact@example.com", keyboardType: "email-address" },
+            { key: "phone", label: "Phone", placeholder: "Contact phone", keyboardType: "phone-pad" },
+          ].map((field) => (
+            <View key={field.key} style={styles.configField}>
+              <Text style={styles.configLabel}>{field.label}</Text>
+              <TextInput
+                style={styles.configInput}
+                value={systemConfig[field.key]}
+                onChangeText={(value) => updateConfigField(setSystemConfig, field.key, value)}
+                placeholder={field.placeholder}
+                placeholderTextColor="#94A3B8"
+                keyboardType={field.keyboardType || "default"}
+                autoCapitalize={field.key === "email" ? "none" : "sentences"}
+              />
+            </View>
+          ))}
+          <View style={styles.configField}>
+            <Text style={styles.configLabel}>Address</Text>
+            <TextInput
+              style={[styles.configInput, styles.addressInput]}
+              value={systemConfig.address}
+              onChangeText={(value) => updateConfigField(setSystemConfig, "address", value)}
+              placeholder="System address"
+              placeholderTextColor="#94A3B8"
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+
+        <View style={styles.logoField}>
+          <Text style={styles.configLabel}>Logo</Text>
+          <input
+            ref={logoInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style={styles.hiddenFileInput}
+            onChange={(event) => setSelectedLogo(event.target.files?.[0] || null)}
+          />
+          <TouchableOpacity
+            style={styles.filePickerButton}
+            onPress={() => logoInput.current?.click()}
+          >
+            <MaterialCommunityIcons name="image-outline" size={18} color="#4F46E5" />
+            <Text style={styles.filePickerButtonText}>Choose logo</Text>
+          </TouchableOpacity>
+          <Text style={styles.fileName} numberOfLines={1}>
+            {selectedLogo?.name || (systemConfig.logo ? "Current logo" : "No logo selected")}
+          </Text>
+          {(logoPreviewUrl || systemConfig.logo) ? (
+            <img
+              src={logoPreviewUrl || getLogoUrl(systemConfig.logo)}
+              alt={selectedLogo?.name || "System logo preview"}
+              style={styles.logoPreview}
+            />
+          ) : null}
+          <Text style={styles.logoHint}>JPG, PNG, or WEBP; maximum 5 MB.</Text>
+        </View>
+
+        <View style={styles.configFooter}>
+          <TouchableOpacity
+            style={styles.saveConfigButton}
+            onPress={saveSystemDetails}
+            disabled={Boolean(savingConfig)}
+          >
+            <Text style={styles.saveConfigButtonText}>
+              {savingConfig === "system" ? "Saving..." : "Save System Details"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>}
+
       {!configSection && <View style={styles.card}>
         <Text style={styles.cardTitle}>Platform Operations</Text>
         <Text style={[styles.cardSubtitle, { marginBottom: 16 }]}>
@@ -527,6 +679,52 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     fontSize: 14,
     outlineStyle: "none",
+  },
+  addressInput: {
+    minHeight: 84,
+    paddingTop: 10,
+  },
+  logoField: {
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 18,
+  },
+  hiddenFileInput: {
+    display: "none",
+  },
+  filePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    backgroundColor: "#EEF2FF",
+  },
+  filePickerButtonText: {
+    color: "#4338CA",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  fileName: {
+    maxWidth: "100%",
+    color: "#64748B",
+    fontSize: 12,
+  },
+  logoPreview: {
+    width: 112,
+    height: 112,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    objectFit: "contain",
+    backgroundColor: "#FFFFFF",
+  },
+  logoHint: {
+    color: "#64748B",
+    fontSize: 12,
   },
   configFooter: {
     marginTop: 14,

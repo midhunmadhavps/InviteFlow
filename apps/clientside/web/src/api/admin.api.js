@@ -124,6 +124,18 @@ export const getSettingsApi = async () => {
   return response.data;
 };
 
+export const getSystemConfigApi = async () => {
+  const response = await apiClient.get("/admin/system-config");
+  return response.data;
+};
+
+export const saveSystemConfigApi = async (config) => {
+  const response = await apiClient.put("/admin/system-config", config, {
+    headers: { "Content-Type": undefined },
+  });
+  return response.data;
+};
+
 export const getEmailConfigApi = async () => {
   const response = await apiClient.get("/admin/config/email");
   return response.data;

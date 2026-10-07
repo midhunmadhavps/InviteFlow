@@ -57,6 +57,20 @@ router.get("/contacts", adminController.getContacts);
 router.get("/whatsapp", adminController.getWhatsApp);
 router.get("/firebase", adminController.getFirebase);
 router.get("/settings", adminController.getSettings);
+router.get("/system-config", adminController.getSystemConfig);
+router.put(
+  "/system-config",
+  (req, res, next) => {
+    upload.logo.single("logo")(req, res, (error) => {
+      if (error) {
+        const statusCode = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+        return res.status(statusCode).json({ success: false, message: error.message });
+      }
+      next();
+    });
+  },
+  adminController.saveSystemConfig
+);
 router.get("/config/email", adminController.getEmailConfig);
 router.put("/config/email", adminController.saveEmailConfig);
 router.get("/config/sms", adminController.getSmsConfig);

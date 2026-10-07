@@ -9,6 +9,7 @@ const EventType = require("../../models/eventType.model");
 const eventService = require("../events/event.service");
 const EmailConfig = require("../../models/emailConfig.model");
 const SmsConfig = require("../../models/smsConfig.model");
+const SystemConfig = require("../../models/systemConfig.model");
 const { createUsername } = require("../users/user.utils");
 
 // In-memory rate limiting map for OTP requests and verification attempts
@@ -944,6 +945,59 @@ exports.getSettings = async () => {
     maintenanceMode: false,
     allowRegistration: true,
   };
+};
+
+const EMPTY_SYSTEM_CONFIG = {
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  logo: "",
+};
+
+exports.getSystemConfig = async () => {
+  const config = await SystemConfig.findById("default").lean();
+  if (!config) return EMPTY_SYSTEM_CONFIG;
+  return {
+    name: config.name,
+    email: config.email,
+    phone: config.phone,
+    address: config.address,
+    logo: config.logo,
+  };
+};
+
+exports.saveSystemConfig = async (input, logo) => {
+  const update = {};
+  ["name", "email", "phone", "address"].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) {
+      if (typeof input[field] !== "string") {
+        const error = new Error(`${field} must be a string.`);
+        error.statusCode = 400;
+        throw error;
+      }
+      update[field] = input[field].trim();
+    }
+  });
+
+  if (update.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(update.email)) {
+    const error = new Error("Enter a valid system email address.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (logo) update.logo = logo;
+  if (!Object.keys(update).length) {
+    const error = new Error("Provide system details or a logo to save.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await SystemConfig.findByIdAndUpdate(
+    "default",
+    { $set: update },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  );
+  return exports.getSystemConfig();
 };
 
 const adminConfigFields = {

@@ -365,6 +365,31 @@ exports.getSettings = async (req, res) => {
   }
 };
 
+exports.getSystemConfig = async (req, res) => {
+  try {
+    const config = await adminService.getSystemConfig();
+    return res.status(200).json({ success: true, data: config });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch system details.");
+  }
+};
+
+exports.saveSystemConfig = async (req, res) => {
+  try {
+    const config = await adminService.saveSystemConfig(
+      req.body,
+      req.file?.filename
+    );
+    return res.status(200).json({
+      success: true,
+      message: "System details saved successfully.",
+      data: config,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save system details.");
+  }
+};
+
 exports.getEmailConfig = async (req, res) => {
   try {
     const data = await adminService.getEmailConfig();
