@@ -109,39 +109,37 @@ const DataTable = ({
               <Text style={styles.emptyText}>{emptyMessage}</Text>
             </View>
           ) : (
-            data.map((row, rowIndex) => {
-              return (
-                <View
-                  key={row._id || row.id || rowIndex}
-                  style={[
-                    styles.tableRow,
-                    rowIndex % 2 === 1 && styles.tableRowAlt,
-                    onRowPress && styles.clickableTableRow,
-                  ]}
-                  onClick={onRowPress ? () => onRowPress(row) : undefined}
-                  accessibilityRole={onRowPress ? "button" : undefined}
-                  accessibilityLabel={onRowPress ? "Open row actions" : undefined}
-                >
-                  {columns.map((col, colIndex) => (
-                    <View
-                      key={colIndex}
-                      style={[
-                        styles.cell,
-                        { flex: col.flex || 1, minWidth: col.width || 120 },
-                      ]}
-                    >
-                      {col.renderCell ? (
-                        col.renderCell(row)
-                      ) : (
-                        <Text style={styles.cellText} numberOfLines={2}>
-                          {row[col.field] !== undefined ? String(row[col.field]) : "-"}
-                        </Text>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              );
-            })
+            data.map((row, rowIndex) => (
+              <View
+                key={row._id || row.id || rowIndex}
+                style={[
+                  styles.tableRow,
+                  rowIndex % 2 === 1 && styles.tableRowAlt,
+                  onRowPress && styles.clickableTableRow,
+                ]}
+                onClick={onRowPress ? () => onRowPress(row) : undefined}
+                accessibilityRole={onRowPress ? "button" : undefined}
+                accessibilityLabel={onRowPress ? "Open row actions" : undefined}
+              >
+                {columns.map((col, colIndex) => (
+                  <View
+                    key={colIndex}
+                    style={[
+                      styles.cell,
+                      { flex: col.flex || 1, minWidth: col.width || 120 },
+                    ]}
+                  >
+                    {col.renderCell ? (
+                      col.renderCell(row)
+                    ) : (
+                      <Text style={styles.cellText} numberOfLines={2}>
+                        {row[col.field] !== undefined ? String(row[col.field]) : "-"}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ))
           )}
         </View>
       </ScrollView>

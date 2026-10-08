@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Pressable,
   TouchableOpacity,
   TextInput,
   Image,
@@ -113,7 +114,7 @@ const CustomerScreen = () => {
         role: "customer",
         status: currentStatus,
         search: currentSearch,
-        limit: 10,
+        limit: 5,
       });
       if (res.success && res.data) {
         setUsers(res.data.users || []);
@@ -267,7 +268,7 @@ const CustomerScreen = () => {
       renderCell: (row) => (
         <View style={styles.statusCell}>
           {row.status === "Active" || row.status === "Blocked" ? (
-            <TouchableOpacity
+            <Pressable
               style={styles.statusPickerButton}
               onPress={(event) => {
                 event.stopPropagation();
@@ -277,13 +278,13 @@ const CustomerScreen = () => {
               accessibilityLabel={`Change customer status, currently ${row.status}`}
             >
               <StatusBadge status={row.status} />
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <StatusBadge status={row.status} />
           )}
           {row.status === "Pending" && (
             <View style={styles.statusActions}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.approveBtn}
                 onPress={(event) => {
                   event.stopPropagation();
@@ -292,8 +293,8 @@ const CustomerScreen = () => {
               >
                 <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
                 <Text style={styles.approveBtnText}>Approve</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={styles.rejectBtn}
                 onPress={(event) => {
                   event.stopPropagation();
@@ -302,7 +303,7 @@ const CustomerScreen = () => {
               >
                 <MaterialCommunityIcons name="close" size={16} color="#DC2626" />
                 <Text style={styles.rejectBtnText}>Block</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </View>
@@ -312,7 +313,7 @@ const CustomerScreen = () => {
       title: "Access",
       width: 130,
       renderCell: (row) => (
-        <TouchableOpacity
+        <Pressable
           style={[
             styles.customerAccessButton,
             row.isEnabled === false && styles.customerAccessButtonDisabled,
@@ -332,64 +333,65 @@ const CustomerScreen = () => {
           >
             {row.isEnabled === false ? "Disable" : "Enable"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ),
     },
   ];
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>{isRegistering ? "Register Customer" : "Customer Management"}</Text>
-          <Text style={styles.headerSubtitle}>
-            {isRegistering
-              ? "Create an active customer account with verified contact details"
-              : "Manage registered customers, approve pending accounts, and review profiles"}
-          </Text>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>{isRegistering ? "Register Customer" : "Customer Management"}</Text>
+            <Text style={styles.headerSubtitle}>
+              {isRegistering
+                ? "Create an active customer account with verified contact details"
+                : "Manage registered customers, approve pending accounts, and review profiles"}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => {
+              setError("");
+              setSuccessMessage("");
+              setIsRegistering(!isRegistering);
+            }}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name={isRegistering ? "arrow-left" : "account-plus-outline"}
+              size={18}
+              color="#FFFFFF"
+            />
+            <Text style={styles.registerButtonText}>
+              {isRegistering ? "Back to Customers" : "Register Customer"}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => {
-            setError("");
-            setSuccessMessage("");
-            setIsRegistering(!isRegistering);
-          }}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons
-            name={isRegistering ? "arrow-left" : "account-plus-outline"}
-            size={18}
-            color="#FFFFFF"
-          />
-          <Text style={styles.registerButtonText}>
-            {isRegistering ? "Back to Customers" : "Register Customer"}
-          </Text>
-        </TouchableOpacity>
-      </View>
 
-      {error ? (
-        <View style={styles.errorBanner}>
-          <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
-      {successMessage ? (
-        <View style={styles.successBanner}>
-          <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      ) : null}
+        {successMessage ? (
+          <View style={styles.successBanner}>
+            <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
 
-      {isRegistering ? (
-        <ScrollView
-          style={styles.registrationScroll}
-          contentContainerStyle={styles.registrationScrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.registrationCard}>
+        {isRegistering ? (
+          <View style={styles.registrationScroll}>
+            <View style={styles.registrationScrollContent}>
+              <View style={styles.registrationCard}>
             <Image
               source={require("../../assets/Vector1.png")}
               style={styles.registrationBackground}
@@ -496,39 +498,41 @@ const CustomerScreen = () => {
                 {registrationLoading ? "Registering..." : "Create Customer Account"}
               </Text>
             </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </ScrollView>
-      ) : (
-      <DataTable
-        columns={columns}
-        data={users}
-        onRowPress={(user) => {
-          setError("");
-          setSuccessMessage("");
-          setActionMenuUser(user);
-        }}
-        loading={loading}
-        searchValue={search}
-        onSearchChange={(text) => {
-          setSearch(text);
-          fetchUsers(1, statusFilter, text);
-        }}
-        searchPlaceholder="Search customers by name, email, phone..."
-        filters={[
-          { key: "All", label: "All Customers" },
-          { key: "Pending", label: "Pending Approvals" },
-          { key: "Active", label: "Active" },
-          { key: "Blocked", label: "Blocked" },
-        ]}
-        activeFilter={statusFilter}
-        onFilterChange={(filter) => setStatusFilter(filter)}
-        page={page}
-        totalPages={totalPages}
-        total={total}
-        onPageChange={(p) => fetchUsers(p, statusFilter, search)}
-        emptyMessage="No customer records found."
-      />
-      )}
+        ) : (
+          <DataTable
+            columns={columns}
+            data={users}
+            onRowPress={(user) => {
+              setError("");
+              setSuccessMessage("");
+              setActionMenuUser(user);
+            }}
+            loading={loading}
+            searchValue={search}
+            onSearchChange={(text) => {
+              setSearch(text);
+              fetchUsers(1, statusFilter, text);
+            }}
+            searchPlaceholder="Search customers by name, email, phone..."
+            filters={[
+              { key: "All", label: "All Customers" },
+              { key: "Pending", label: "Pending Approvals" },
+              { key: "Active", label: "Active" },
+              { key: "Blocked", label: "Blocked" },
+            ]}
+            activeFilter={statusFilter}
+            onFilterChange={(filter) => setStatusFilter(filter)}
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={(p) => fetchUsers(p, statusFilter, search)}
+            emptyMessage="No customer records found."
+          />
+        )}
+      </ScrollView>
 
       {/* Details Modal */}
       <Modal
@@ -778,9 +782,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+  },
+  pageScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  pageContent: {
     padding: 24,
     gap: 20,
-    minHeight: 0,
   },
   header: {
     flexDirection: "row",
@@ -820,12 +829,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   registrationScroll: {
-    flex: 1,
+    width: "100%",
   },
   registrationScrollContent: {
-    flexGrow: 1,
     alignItems: "center",
-    justifyContent: "center",
     padding: 12,
   },
   registrationCard: {

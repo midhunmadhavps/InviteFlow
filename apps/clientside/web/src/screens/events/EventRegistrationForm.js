@@ -182,7 +182,14 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
   }
 
   const renderTextField = (key, label, placeholder, options = {}) => (
-    <View style={[styles.field, options.multiline && styles.fullWidthField]} key={key}>
+    <View
+      style={[
+        styles.field,
+        options.column && styles.columnField,
+        (options.fullWidth || options.multiline) && styles.fullWidthField,
+      ]}
+      key={key}
+    >
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={[styles.input, options.multiline && styles.multilineInput]}
@@ -223,9 +230,9 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Event hosts</Text>
           <View style={styles.twoColumn}>
-            {renderTextField("hostOne", config.firstHostLabel, `Enter ${config.firstHostLabel.toLowerCase()}`)}
+            {renderTextField("hostOne", config.firstHostLabel, `Enter ${config.firstHostLabel.toLowerCase()}`, { column: true })}
             {eventName !== "Birthday"
-              ? renderTextField("hostTwo", config.secondHostLabel, `Enter ${config.secondHostLabel.toLowerCase()}`)
+              ? renderTextField("hostTwo", config.secondHostLabel, `Enter ${config.secondHostLabel.toLowerCase()}`, { column: true })
               : null}
           </View>
         </View>
@@ -233,7 +240,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Date and time</Text>
           <View style={styles.twoColumn}>
-            <View style={styles.field}>
+            <View style={[styles.field, styles.columnField]}>
               <Text style={styles.label}>{eventName} date</Text>
               <input
                 type="date"
@@ -242,7 +249,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
                 style={styles.webInput}
               />
             </View>
-            <View style={styles.field}>
+            <View style={[styles.field, styles.columnField]}>
               <Text style={styles.label}>{eventName} time</Text>
               <input
                 type="time"
@@ -262,7 +269,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
                 "googleMapsUrl",
                 "Event location (Google Maps URL)",
                 "Paste Google Maps URL",
-                { autoCapitalize: "none", keyboardType: "url" }
+                { autoCapitalize: "none", keyboardType: "url", fullWidth: true }
               )}
             </>
           ) : null}
@@ -273,7 +280,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
           <Text style={styles.sectionTitle}>Invitation</Text>
           {renderTextField("message", "Invitation message (optional)", "Write a message for your guests", { multiline: true })}
 
-          <View style={styles.field}>
+          <View style={[styles.field, styles.uploadField]}>
             <Text style={styles.label}>{config.imageLabel}</Text>
             <input
               ref={hostImageInput}
@@ -292,7 +299,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
             {hostPreview ? <img src={hostPreview} alt={config.imageLabel} style={styles.photoPreview} /> : null}
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, styles.uploadField]}>
             <Text style={styles.label}>Invitation image or PDF</Text>
             <input
               ref={invitationInput}
@@ -399,6 +406,7 @@ const styles = StyleSheet.create({
   section: {
     width: "100%",
     minWidth: 0,
+    flexShrink: 0,
     boxSizing: "border-box",
     gap: 14,
     padding: 18,
@@ -419,16 +427,23 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   field: {
+    width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
+    flexShrink: 0,
+    gap: 6,
+  },
+  uploadField: {
+    marginTop: 8,
+  },
+  columnField: {
     flex: 1,
     minWidth: 230,
-    maxWidth: "100%",
-    flexShrink: 1,
-    gap: 6,
   },
   fullWidthField: {
     width: "100%",
     minWidth: 0,
-    flexBasis: "100%",
+    flexGrow: 0,
   },
   label: {
     color: "#334155",
@@ -455,7 +470,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
     flexGrow: 0,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   webInput: {
     width: "100%",

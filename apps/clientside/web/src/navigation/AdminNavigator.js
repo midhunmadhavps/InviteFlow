@@ -174,6 +174,7 @@ const styles = StyleSheet.create({
   },
   screenWrapper: {
     flex: 1,
+    minHeight: 0,
   },
   loadingContainer: {
     flex: 1,

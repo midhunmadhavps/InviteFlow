@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Pressable,
   TouchableOpacity,
   TextInput,
 } from "react-native";
@@ -107,7 +108,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
       const res = await getEventsApi({
         page: currentPage,
         search: currentSearch,
-        limit: 10,
+        limit: 5,
       });
       if (res.success && res.data) {
         setEvents(res.data.events || []);
@@ -344,7 +345,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
       title: "Status",
       width: 120,
       renderCell: (row) => (
-        <TouchableOpacity
+        <Pressable
           style={styles.rowStatusButton}
           onPress={(event) => {
             event.stopPropagation();
@@ -354,14 +355,14 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
           accessibilityLabel={`Change event status, currently ${row.status || "Draft"}`}
         >
           <StatusBadge status={row.status} />
-        </TouchableOpacity>
+        </Pressable>
       ),
     },
     {
       title: "Access",
       width: 140,
       renderCell: (row) => (
-        <TouchableOpacity
+        <Pressable
           style={[styles.accessSelect, !row.isEnabled && styles.accessSelectDisabled]}
           onPress={(event) => {
             event.stopPropagation();
@@ -373,7 +374,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
           <Text style={[styles.accessSelectText, !row.isEnabled && styles.accessSelectTextDisabled]}>
             {row.isEnabled === false ? "Disable" : "Enable"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ),
     },
   ];
