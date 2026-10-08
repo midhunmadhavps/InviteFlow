@@ -110,17 +110,15 @@ const DataTable = ({
             </View>
           ) : (
             data.map((row, rowIndex) => {
-              const RowContainer = onRowPress ? TouchableOpacity : View;
               return (
-                <RowContainer
+                <View
                   key={row._id || row.id || rowIndex}
                   style={[
                     styles.tableRow,
                     rowIndex % 2 === 1 && styles.tableRowAlt,
                     onRowPress && styles.clickableTableRow,
                   ]}
-                  onPress={onRowPress ? () => onRowPress(row) : undefined}
-                  activeOpacity={onRowPress ? 0.75 : undefined}
+                  onClick={onRowPress ? () => onRowPress(row) : undefined}
                   accessibilityRole={onRowPress ? "button" : undefined}
                   accessibilityLabel={onRowPress ? "Open row actions" : undefined}
                 >
@@ -141,7 +139,7 @@ const DataTable = ({
                       )}
                     </View>
                   ))}
-                </RowContainer>
+                </View>
               );
             })
           )}
