@@ -16,7 +16,7 @@ const ConfigurationsScreen = () => {
 
   const tabs = [
     { key: "whatsapp", label: "WhatsApp Gateway", icon: "whatsapp" },
-    { key: "sms", label: "SMS", icon: "message-text-outline" },
+    { key: "sms", label: "Email & SMS", icon: "message-text-outline" },
     { key: "settings", label: "System Settings", icon: "cog-outline" },
   ];
 

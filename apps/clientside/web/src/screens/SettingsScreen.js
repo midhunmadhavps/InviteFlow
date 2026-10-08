@@ -70,6 +70,7 @@ const SettingsScreen = ({ configSection }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+  const scrollViewRef = useRef(null);
   const logoInput = useRef(null);
 
   const loadSettings = async () => {
@@ -143,8 +144,19 @@ const SettingsScreen = ({ configSection }) => {
     return () => URL.revokeObjectURL(previewUrl);
   }, [selectedLogo]);
 
+  useEffect(() => {
+    if (!successMessage) return undefined;
+
+    const timeoutId = setTimeout(() => setSuccessMessage(""), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [successMessage]);
+
   const updateConfigField = (setter, key, value) => {
     setter((current) => ({ ...current, [key]: value }));
+  };
+
+  const scrollToTop = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const saveConfig = async (type) => {
@@ -181,16 +193,19 @@ const SettingsScreen = ({ configSection }) => {
       setError(err.response?.data?.message || err.message || `Failed to save ${type} configuration.`);
     } finally {
       setSavingConfig("");
+      scrollToTop();
     }
   };
 
   const saveSystemDetails = async () => {
     if (selectedLogo && !/^image\/(jpeg|png|webp)$/.test(selectedLogo.type)) {
       setError("Logo must be a JPG, PNG, or WEBP image.");
+      scrollToTop();
       return;
     }
     if (selectedLogo && selectedLogo.size > 5 * 1024 * 1024) {
       setError("Logo must be 5 MB or smaller.");
+      scrollToTop();
       return;
     }
 
@@ -212,6 +227,7 @@ const SettingsScreen = ({ configSection }) => {
       setError(err.response?.data?.message || err.message || "Failed to save system details.");
     } finally {
       setSavingConfig("");
+      scrollToTop();
     }
   };
 
@@ -232,7 +248,11 @@ const SettingsScreen = ({ configSection }) => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      ref={scrollViewRef}
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>
