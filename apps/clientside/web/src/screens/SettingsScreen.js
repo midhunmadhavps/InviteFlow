@@ -459,8 +459,30 @@ const SettingsScreen = ({ configSection }) => {
       </View>}
 
       {!configSection && <View style={styles.card}>
-        <Text style={styles.cardTitle}>Platform Operations</Text>
+        <Text style={styles.cardTitle}>Mobile settings</Text>
         <Text style={[styles.cardSubtitle, { marginBottom: 16 }]}>
+          Mobile app access and registration controls
+        </Text>
+
+        <View style={styles.settingRow}>
+          <View style={styles.settingMeta}>
+            <Text style={styles.settingTitle}>Registration enable</Text>
+            <Text style={styles.settingDesc}>
+              Allow new customers to sign up from the mobile application.
+            </Text>
+          </View>
+          <Switch
+            value={allowRegistration}
+            onValueChange={setAllowRegistration}
+            trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
+            thumbColor={allowRegistration ? "#4F46E5" : "#FFFFFF"}
+          />
+        </View>
+      </View>}
+
+      {!configSection && <View style={styles.card}>
+        <Text style={styles.cardTitle}>Platform Operations</Text>
+        <Text style={[styles.cardSubtitle, { marginBottom: 16 }]}> 
           Customer registration and account approval workflows
         </Text>
 
@@ -476,21 +498,6 @@ const SettingsScreen = ({ configSection }) => {
             onValueChange={setAutoApprove}
             trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
             thumbColor={autoApprove ? "#4F46E5" : "#FFFFFF"}
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <View style={styles.settingMeta}>
-            <Text style={styles.settingTitle}>Allow New Customer Registrations</Text>
-            <Text style={styles.settingDesc}>
-              Allow new customers to sign up from the mobile application.
-            </Text>
-          </View>
-          <Switch
-            value={allowRegistration}
-            onValueChange={setAllowRegistration}
-            trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
-            thumbColor={allowRegistration ? "#4F46E5" : "#FFFFFF"}
           />
         </View>
 
@@ -683,6 +690,10 @@ const styles = StyleSheet.create({
   addressInput: {
     minHeight: 84,
     paddingTop: 10,
+  },
+  mobileSettingsSection: {
+    marginTop: 18,
+    gap: 8,
   },
   logoField: {
     alignItems: "flex-start",
