@@ -86,8 +86,20 @@ const SettingsScreen = ({ configSection }) => {
         });
         setEmailConfiguredSecrets(emailData.configuredSecrets || {});
       } else if (configSection === "sms") {
-        const response = await getSmsConfigApi();
-        const smsData = response.data || {};
+        const [emailResponse, smsResponse] = await Promise.all([
+          getEmailConfigApi(),
+          getSmsConfigApi(),
+        ]);
+
+        const emailData = emailResponse.data || {};
+        setEmailConfig({
+          ...EMPTY_EMAIL_CONFIG,
+          ...emailData.config,
+          port: emailData.config?.port == null ? "" : String(emailData.config.port),
+        });
+        setEmailConfiguredSecrets(emailData.configuredSecrets || {});
+
+        const smsData = smsResponse.data || {};
         setSmsConfig({
           ...EMPTY_SMS_CONFIG,
           ...smsData.config,
@@ -227,7 +239,7 @@ const SettingsScreen = ({ configSection }) => {
             {configSection === "email"
               ? "Email Configuration"
               : configSection === "sms"
-                ? "SMS Configuration"
+                ? "Email & SMS Configuration"
                 : "System Settings & Security Policy"}
           </Text>
           <Text style={styles.headerSubtitle}>
@@ -250,7 +262,7 @@ const SettingsScreen = ({ configSection }) => {
         </View>
       ) : null}
 
-      {configSection === "email" && <View style={styles.card}>
+      {(configSection === "email" || configSection === "sms") && <View style={styles.card}>
         <View style={styles.configHeading}>
           <View style={styles.configHeadingIcon}>
             <MaterialCommunityIcons name="email-outline" size={20} color="#4F46E5" />
@@ -259,7 +271,7 @@ const SettingsScreen = ({ configSection }) => {
             <Text style={styles.cardTitle}>Email Configuration</Text>
             <Text style={styles.cardSubtitle}>SMTP provider and sender details</Text>
           </View>
-          {configSection !== "sms" && (
+          {(configSection === "email" || configSection === "sms") && (
             <View style={styles.configToggle}>
               <Text style={styles.configToggleLabel}>
                 {emailConfig.is_active ? "Enabled" : "Disabled"}
@@ -322,19 +334,17 @@ const SettingsScreen = ({ configSection }) => {
             <Text style={styles.cardTitle}>SMS Configuration</Text>
             <Text style={styles.cardSubtitle}>SMS gateway connection and credentials</Text>
           </View>
-          {configSection !== "email" && (
-            <View style={styles.configToggle}>
-              <Text style={styles.configToggleLabel}>
-                {smsConfig.is_active ? "Enabled" : "Disabled"}
-              </Text>
-              <Switch
-                value={smsConfig.is_active}
-                onValueChange={(value) => updateConfigField(setSmsConfig, "is_active", value)}
-                trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
-                thumbColor={smsConfig.is_active ? "#4F46E5" : "#FFFFFF"}
-              />
-            </View>
-          )}
+          <View style={styles.configToggle}>
+            <Text style={styles.configToggleLabel}>
+              {smsConfig.is_active ? "Enabled" : "Disabled"}
+            </Text>
+            <Switch
+              value={smsConfig.is_active}
+              onValueChange={(value) => updateConfigField(setSmsConfig, "is_active", value)}
+              trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
+              thumbColor={smsConfig.is_active ? "#4F46E5" : "#FFFFFF"}
+            />
+          </View>
         </View>
         <View style={styles.configGrid}>
           {[

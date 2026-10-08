@@ -9,7 +9,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Sub-views
 import WhatsAppLoginsScreen from "./WhatsAppLoginsScreen";
-import FirebaseDetailsScreen from "./FirebaseDetailsScreen";
 import SettingsScreen from "./SettingsScreen";
 
 const ConfigurationsScreen = () => {
@@ -17,8 +16,6 @@ const ConfigurationsScreen = () => {
 
   const tabs = [
     { key: "whatsapp", label: "WhatsApp Gateway", icon: "whatsapp" },
-    { key: "firebase", label: "Firebase & Auth", icon: "firebase" },
-    { key: "email", label: "Email", icon: "email-outline" },
     { key: "sms", label: "SMS", icon: "message-text-outline" },
     { key: "settings", label: "System Settings", icon: "cog-outline" },
   ];
@@ -54,8 +51,6 @@ const ConfigurationsScreen = () => {
       {/* Screen Content */}
       <View style={styles.contentArea}>
         {activeConfigTab === "whatsapp" && <WhatsAppLoginsScreen />}
-        {activeConfigTab === "firebase" && <FirebaseDetailsScreen />}
-        {activeConfigTab === "email" && <SettingsScreen configSection="email" />}
         {activeConfigTab === "sms" && <SettingsScreen configSection="sms" />}
         {activeConfigTab === "settings" && <SettingsScreen />}
       </View>
