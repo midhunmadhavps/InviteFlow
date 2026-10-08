@@ -28,6 +28,10 @@ const DataTable = ({
   headerAction,
   onRowPress,
 }) => {
+  const rows = Array.isArray(data)
+    ? data.filter((row) => row && typeof row === "object" && !Array.isArray(row))
+    : [];
+
   return (
     <View style={styles.container}>
       {/* Controls Bar */}
@@ -80,78 +84,84 @@ const DataTable = ({
       </View>
 
       {/* Table Content */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.tableWrapper}>
-          {/* Header Row */}
-          <View style={styles.tableHeader}>
-            {columns.map((col, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.headerCell,
-                  { flex: col.flex || 1, minWidth: col.width || 120 },
-                ]}
-              >
-                <Text style={styles.headerCellText}>{col.title}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Rows */}
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4F46E5" />
-              <Text style={styles.loadingText}>Loading data...</Text>
-            </View>
-          ) : data.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="folder-open-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyText}>{emptyMessage}</Text>
-            </View>
-          ) : (
-            data.map((row, rowIndex) => {
-              const RowContainer = onRowPress ? TouchableOpacity : View;
-              return (
-                <RowContainer
-                  key={row._id || row.id || rowIndex}
+      <ScrollView
+        style={styles.rowsScroll}
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+      >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.tableWrapper}>
+            {/* Header Row */}
+            <View style={styles.tableHeader}>
+              {columns.map((col, index) => (
+                <View
+                  key={index}
                   style={[
-                    styles.tableRow,
-                    rowIndex % 2 === 1 && styles.tableRowAlt,
-                    onRowPress && styles.clickableTableRow,
+                    styles.headerCell,
+                    { flex: col.flex || 1, minWidth: col.width || 120 },
                   ]}
-                  onPress={onRowPress ? () => onRowPress(row) : undefined}
-                  activeOpacity={onRowPress ? 0.75 : undefined}
-                  accessibilityRole={onRowPress ? "button" : undefined}
-                  accessibilityLabel={onRowPress ? "Open row actions" : undefined}
                 >
-                  {columns.map((col, colIndex) => (
-                    <View
-                      key={colIndex}
-                      style={[
-                        styles.cell,
-                        { flex: col.flex || 1, minWidth: col.width || 120 },
-                      ]}
-                    >
-                      {col.renderCell ? (
-                        col.renderCell(row)
-                      ) : (
-                        <Text style={styles.cellText} numberOfLines={2}>
-                          {row[col.field] !== undefined ? String(row[col.field]) : "-"}
-                        </Text>
-                      )}
-                    </View>
-                  ))}
-                </RowContainer>
-              );
-            })
-          )}
-        </View>
+                  <Text style={styles.headerCellText}>{col.title}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Rows */}
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4F46E5" />
+                <Text style={styles.loadingText}>Loading data...</Text>
+              </View>
+            ) : rows.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="folder-open-outline" size={48} color="#CBD5E1" />
+                <Text style={styles.emptyText}>{emptyMessage}</Text>
+              </View>
+            ) : (
+              rows.map((row, rowIndex) => {
+                const RowContainer = onRowPress ? TouchableOpacity : View;
+                return (
+                  <RowContainer
+                    key={row._id || row.id || rowIndex}
+                    style={[
+                      styles.tableRow,
+                      rowIndex % 2 === 1 && styles.tableRowAlt,
+                      onRowPress && styles.clickableTableRow,
+                    ]}
+                    onPress={onRowPress ? () => onRowPress(row) : undefined}
+                    activeOpacity={onRowPress ? 0.75 : undefined}
+                    accessibilityRole={onRowPress ? "button" : undefined}
+                    accessibilityLabel={onRowPress ? "Open row actions" : undefined}
+                  >
+                    {columns.map((col, colIndex) => (
+                      <View
+                        key={colIndex}
+                        style={[
+                          styles.cell,
+                          { flex: col.flex || 1, minWidth: col.width || 120 },
+                        ]}
+                      >
+                        {col.renderCell ? (
+                          col.renderCell(row)
+                        ) : (
+                          <Text style={styles.cellText} numberOfLines={2}>
+                            {row[col.field] !== undefined ? String(row[col.field]) : "-"}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </RowContainer>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
       </ScrollView>
 
       {/* Pagination Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerInfo}>
-          Showing {data.length} of {total} items
+          Showing {rows.length} of {total} items
         </Text>
 
         {totalPages > 1 && onPageChange && (
@@ -200,6 +210,8 @@ const DataTable = ({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    minHeight: 0,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,
@@ -277,6 +289,10 @@ const styles = StyleSheet.create({
   },
   tableWrapper: {
     minWidth: "100%",
+  },
+  rowsScroll: {
+    flex: 1,
+    minHeight: 0,
   },
   tableHeader: {
     flexDirection: "row",
