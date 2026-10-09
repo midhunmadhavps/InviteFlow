@@ -1,4 +1,4 @@
-const SmsConfig = require("../../models/smsConfig.model");
+const SmsConfig = require("../../../models/smsConfig.model");
 
 
 exports.sendSms = async ({ to, message }) => {

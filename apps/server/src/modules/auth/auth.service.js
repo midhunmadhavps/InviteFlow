@@ -1,7 +1,7 @@
 const User = require("../../models/user.model");
 const Otp = require("../../models/otp.model");
 const SystemConfig = require("../../models/systemConfig.model");
-const smsService = require("./sms.service");
+const smsService = require("./services/sms.service");
 
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
