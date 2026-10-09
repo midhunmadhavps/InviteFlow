@@ -149,15 +149,13 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
     if (
       !form.eventDate ||
       !form.eventTime ||
-      (eventName !== "Birthday" && !form.googleMapsUrl.trim()) ||
+      !form.googleMapsUrl.trim() ||
       !form.address.trim()
     ) {
-      setError(eventName === "Birthday"
-        ? "Event date, time, and address are required."
-        : "Event date, time, Google Maps location, and address are required.");
+      setError("Event date, time, Google Maps location, and address are required.");
       return;
     }
-    if (eventName !== "Birthday" && !isValidMapUrl(form.googleMapsUrl)) {
+    if (!isValidMapUrl(form.googleMapsUrl)) {
       setError("Enter a valid Google Maps URL starting with http:// or https://.");
       return;
     }
@@ -417,17 +415,13 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
         </View>
 
         <View style={styles.section}>
-          {eventName !== "Birthday" ? (
-            <>
-              <Text style={styles.sectionTitle}>Location</Text>
-              {renderTextField(
-                "googleMapsUrl",
-                "Event location (Google Maps URL)",
-                "Paste Google Maps URL",
-                { autoCapitalize: "none", keyboardType: "url", fullWidth: true }
-              )}
-            </>
-          ) : null}
+          <Text style={styles.sectionTitle}>Location</Text>
+          {renderTextField(
+            "googleMapsUrl",
+            "Event location (Google Maps URL)",
+            "Paste Google Maps URL",
+            { autoCapitalize: "none", keyboardType: "url", fullWidth: true }
+          )}
           {renderTextField("address", `${eventName} address / venue`, "Enter venue and full address", { multiline: true })}
         </View>
 

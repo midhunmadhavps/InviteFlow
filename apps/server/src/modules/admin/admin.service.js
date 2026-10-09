@@ -678,20 +678,18 @@ exports.createEvent = async (eventData) => {
     throw error;
   }
 
-  if (eventType.name !== "Birthday") {
-    let mapUrl;
-    try {
-      mapUrl = new URL(location.googleMapsUrl);
-    } catch (parseError) {
-      const error = new Error("A valid Google Maps URL is required for the event location.");
-      error.statusCode = 400;
-      throw error;
-    }
-    if (mapUrl.protocol !== "http:" && mapUrl.protocol !== "https:") {
-      const error = new Error("Event location must be an HTTP or HTTPS Google Maps URL.");
-      error.statusCode = 400;
-      throw error;
-    }
+  let mapUrl;
+  try {
+    mapUrl = new URL(location.googleMapsUrl);
+  } catch (parseError) {
+    const error = new Error("A valid Google Maps URL is required for the event location.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (mapUrl.protocol !== "http:" && mapUrl.protocol !== "https:") {
+    const error = new Error("Event location must be an HTTP or HTTPS Google Maps URL.");
+    error.statusCode = 400;
+    throw error;
   }
   if (
     ["Wedding", "Anniversary", "Engagement"].includes(eventType.name) &&
