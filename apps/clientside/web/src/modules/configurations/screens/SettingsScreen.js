@@ -19,7 +19,7 @@ import {
   saveSettingsApi,
   saveSystemConfigApi,
   saveSmsConfigApi,
-} from "../api/admin.api";
+} from "../api/configuration.api";
 
 const EMPTY_SYSTEM_CONFIG = {
   name: "",

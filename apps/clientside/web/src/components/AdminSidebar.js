@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAdminAuth } from "../context/AdminAuthContext";
-import { getSystemConfigApi } from "../api/admin.api";
+import { getSystemConfigApi } from "../modules/configurations/api/configuration.api";
 import Modal from "./Modal";
 
 const AdminSidebar = ({ activeTab, onSelectTab, isMobile, onCloseMobile }) => {

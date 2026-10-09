@@ -5,8 +5,8 @@ import {
   StyleSheet,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DataTable from "../components/DataTable";
-import { getContactsApi } from "../api/admin.api";
+import DataTable from "../../../components/DataTable";
+import { getContactsApi } from "../api/contact.api";
 
 const ContactsScreen = () => {
   const [contacts, setContacts] = useState([]);

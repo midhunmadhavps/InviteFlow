@@ -9,9 +9,9 @@ import {
   TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DataTable from "../components/DataTable";
-import StatusBadge from "../components/StatusBadge";
-import Modal from "../components/Modal";
+import DataTable from "../../../components/DataTable";
+import StatusBadge from "../../../components/StatusBadge";
+import Modal from "../../../components/Modal";
 import {
   deleteEventApi,
   getEventsApi,
@@ -19,7 +19,8 @@ import {
   updateEventEnabledApi,
   updateEventStatusApi,
   getAdminEventTypesApi,
-} from "../api/admin.api";
+} from "../api/event.api";
+import { getUsersApi } from "../../customers/api/customer.api";
 
 const EVENT_STATUSES = ["Draft", "Active", "Completed", "Cancelled"];
 

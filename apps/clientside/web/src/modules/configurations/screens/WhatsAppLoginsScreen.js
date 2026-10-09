@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import StatusBadge from "../components/StatusBadge";
-import { getWhatsAppDetailsApi } from "../api/admin.api";
+import StatusBadge from "../../../components/StatusBadge";
+import { getWhatsAppDetailsApi } from "../api/configuration.api";
 
 const WhatsAppLoginsScreen = () => {
   const [data, setData] = useState(null);

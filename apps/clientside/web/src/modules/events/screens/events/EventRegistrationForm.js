@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { createAdminEventApi, getUsersApi } from "../../api/admin.api";
+import { createAdminEventApi } from "../../api/event.api";
+import { getUsersApi } from "../../../customers/api/customer.api";
 
 const EVENT_FORM_CONFIG = {
   Wedding: {

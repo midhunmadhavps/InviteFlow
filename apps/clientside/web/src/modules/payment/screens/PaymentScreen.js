@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import StatusBadge from "../components/StatusBadge";
+import StatusBadge from "../../../components/StatusBadge";
 
 const PaymentScreen = () => {
   return (

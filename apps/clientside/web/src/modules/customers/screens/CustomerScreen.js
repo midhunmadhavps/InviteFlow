@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DataTable from "../components/DataTable";
-import StatusBadge from "../components/StatusBadge";
-import Modal from "../components/Modal";
+import DataTable from "../../../components/DataTable";
+import StatusBadge from "../../../components/StatusBadge";
+import Modal from "../../../components/Modal";
 import {
   getUsersApi,
   createCustomerApi,
@@ -22,7 +22,7 @@ import {
   updateUserAccessApi,
   updateCustomerApi,
   deleteCustomerApi,
-} from "../api/admin.api";
+} from "../api/customer.api";
 
 const CustomerScreen = () => {
   const [isRegistering, setIsRegistering] = useState(false);

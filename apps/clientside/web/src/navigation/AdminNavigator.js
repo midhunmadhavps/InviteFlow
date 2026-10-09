@@ -14,14 +14,14 @@ import AdminHeader from "../components/AdminHeader";
 import AdminLoginScreen from "../screens/AdminLoginScreen";
 import AdminOtpScreen from "../screens/AdminOtpScreen";
 import AdminDashboardScreen from "../screens/AdminDashboardScreen";
-import CustomerScreen from "../screens/CustomerScreen";
-import EventsScreen from "../screens/EventsScreen";
-import PaymentScreen from "../screens/PaymentScreen";
-import ConfigurationsScreen from "../screens/ConfigurationsScreen";
-import WeddingRegistrationScreen from "../screens/events/WeddingRegistrationScreen";
-import AnniversaryRegistrationScreen from "../screens/events/AnniversaryRegistrationScreen";
-import EngagementRegistrationScreen from "../screens/events/EngagementRegistrationScreen";
-import BirthdayRegistrationScreen from "../screens/events/BirthdayRegistrationScreen";
+import CustomerScreen from "../modules/customers/screens/CustomerScreen";
+import EventsScreen from "../modules/events/screens/EventsScreen";
+import PaymentScreen from "../modules/payment/screens/PaymentScreen";
+import ConfigurationsScreen from "../modules/configurations/screens/ConfigurationsScreen";
+import WeddingRegistrationScreen from "../modules/events/screens/events/WeddingRegistrationScreen";
+import AnniversaryRegistrationScreen from "../modules/events/screens/events/AnniversaryRegistrationScreen";
+import EngagementRegistrationScreen from "../modules/events/screens/events/EngagementRegistrationScreen";
+import BirthdayRegistrationScreen from "../modules/events/screens/events/BirthdayRegistrationScreen";
 import { useAppTheme } from "../shared/theme/ThemeContext";
 
 const EVENT_REGISTRATION_SCREENS = {
