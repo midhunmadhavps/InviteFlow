@@ -10,23 +10,23 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { saveToken,saveUser } from "../../../utils/auth";
 import { StatusBar } from "expo-status-bar";
-import { getRegistrationSettings, loginUser } from "../api/auth.api";
+import { getRegistrationSettings, requestLoginOtp } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
-import { validateEmail, validateRequired } from "../../../utils/validation";
+import { validateEmail, validatePhone } from "../../../utils/validation";
 import { RequiredLabel } from "../../../components/RequiredLabel";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function LoginScreen({ navigation }) {
   const { colors, isDark } = useAppTheme();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState("");
+  // const [password, setPassword] = useState("");
+  // const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
 
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
 
   useEffect(() => {
     let isActive = true;
@@ -49,46 +49,56 @@ export default function LoginScreen({ navigation }) {
     };
   }, []);
 
-  const handleLogin = async () => {
+  const handleRequestLoginOtp = async () => {
+    const emailError = validateEmail(email);
+    if (emailError) {
+      showError(emailError);
+      return;
+    }
+
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
+      showError(phoneError);
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      
-      let errorMessage;
-      errorMessage = validateEmail(email);
-      if (errorMessage) {
-        showError(errorMessage);
-        return;
-      }
-
-      errorMessage = validateRequired(password, "Password");
-      if (errorMessage) {
-        showError(errorMessage);
-        return;
-      }
-
-      const response = await loginUser(email.trim(), password);
-
-      if (response.success) {
-        const token = response.data.token;
-
-        await saveToken(token);
-        await saveUser(response.data.user);
-
-        console.log("Login successful:", response);
-        showSuccess("Login successful!");
-
-        navigation.replace("Main");
-      }
-      
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPhone = phone.trim();
+      await requestLoginOtp({ email: normalizedEmail, phone: normalizedPhone });
+      navigation.navigate("UserLoginOtp", {
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      });
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Something went wrong. Please try again.";
-
-      console.log("Login error:", message);
-      showError(message);
+      showError(error.response?.data?.message || error.message || "Unable to send login OTP.");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Future password login:
+  // const handleLogin = async () => {
+  //   try {
+  //     const emailError = validateEmail(email);
+  //     if (emailError) return showError(emailError);
+  //     const passwordError = validateRequired(password, "Password");
+  //     if (passwordError) return showError(passwordError);
+  //     const response = await loginUser(email.trim(), password);
+  //     if (response.success) {
+  //       await saveToken(response.data.token);
+  //       await saveUser(response.data.user);
+  //       navigation.replace("Main");
+  //     }
+  //   } catch (error) {
+  //     showError(error.response?.data?.message || error.message || "Unable to log in.");
+  //   }
+  // };
+  // Future password flow imports:
+  // import { saveToken, saveUser } from "../../../utils/auth";
+  // import { loginUser } from "../api/auth.api";
+  // import { validateRequired } from "../../../utils/validation";
 
   return (
     <KeyboardAvoidingView
@@ -140,13 +150,32 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Password */}
-          <View style={styles.passwordContainer}>
-            <RequiredLabel>Password</RequiredLabel>
+          {/* Mobile number */}
+          <View style={styles.inputContainer}>
+            <RequiredLabel>Mobile number</RequiredLabel>
 
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>◉</Text>
+              <Text style={styles.inputIcon}>▯</Text>
 
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Enter your mobile number"
+                placeholderTextColor="#bdbdbd"
+                keyboardType="phone-pad"
+                maxLength={10}
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/*
+          Future password login UI:
+          <View style={styles.passwordContainer}>
+            <RequiredLabel>Password</RequiredLabel>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputIcon}>◉</Text>
               <TextInput
                 style={styles.input}
                 value={password}
@@ -157,58 +186,27 @@ export default function LoginScreen({ navigation }) {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
               >
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? "◉" : "◌"}
-                </Text>
+                <Text style={styles.eyeIcon}>{showPassword ? "◉" : "◌"}</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Remember + Forgot Password */}
-          <View style={styles.optionsContainer}>
-
-            <TouchableOpacity
-              style={styles.rememberContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  rememberMe && styles.checkboxSelected,
-                ]}
-              >
-                {rememberMe && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </View>
-
-              <Text style={styles.rememberText}>
-                Remember Me
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ForgotPassword")}
-            >
-              <Text style={styles.forgotText}>
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-
-          </View>
+          <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+          */}
 
           {/* Login button */}
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={handleLogin}
+            onPress={handleRequestLoginOtp}
+            disabled={submitting}
           >
             <Text style={styles.loginButtonText}>
-              Login
+              {submitting ? "Sending OTP..." : "Continue"}
             </Text>
           </TouchableOpacity>
 

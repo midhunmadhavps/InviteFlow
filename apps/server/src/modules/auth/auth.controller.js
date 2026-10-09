@@ -31,6 +31,54 @@ const getRegistrationSettings = async (req, res) => {
   }
 };
 
+const requestLoginOtp = async (req, res) => {
+  try {
+    const result = await authService.requestLoginOtp(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Login OTP sent successfully.",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const result = await authService.verifyLoginOtp(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Login successful.",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const resendLoginOtp = async (req, res) => {
+  try {
+    const result = await authService.resendLoginOtp(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Login OTP resent successfully.",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const verifyOtp = async (req, res) => {
   try {
     const result = await authService.verifyOtp(req.body);
@@ -148,6 +196,9 @@ const logout = async (req, res) => {
 
 module.exports = {
   getRegistrationSettings,
+  requestLoginOtp,
+  verifyLoginOtp,
+  resendLoginOtp,
   register,
   verifyOtp,
   resendOtp,

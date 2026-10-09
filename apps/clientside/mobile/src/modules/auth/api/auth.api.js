@@ -5,6 +5,21 @@ export const getRegistrationSettings = async () => {
   return response.data;
 };
 
+export const requestLoginOtp = async (data) => {
+  const response = await api.post("/auth/login/request-otp", data);
+  return response.data;
+};
+
+export const verifyLoginOtp = async (data) => {
+  const response = await api.post("/auth/login/verify-otp", data);
+  return response.data;
+};
+
+export const resendLoginOtp = async (data) => {
+  const response = await api.post("/auth/login/resend-otp", data);
+  return response.data;
+};
+
 export const loginUser = async (email, password) => {
   const response = await api.post("/auth/login", {
     email,
