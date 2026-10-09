@@ -12,12 +12,14 @@ exports.sendSms = async ({ to, message }) => {
   try {
     endpoint = new URL(config.api_url);
   } catch {
-    const error = new Error("The configured SMS API URL is invalid.");
+    const error = new Error("Something went wrong, please contact admin.");
+    console.log("The configured SMS API URL is invalid.");
     error.statusCode = 503;
     throw error;
   }
   if (!["http:", "https:"].includes(endpoint.protocol)) {
-    const error = new Error("The configured SMS API URL must use HTTP or HTTPS.");
+    const error = new Error("Something went wrong, please contact admin.");
+    console.log("The configured SMS API URL must use HTTP or HTTPS.");
     error.statusCode = 503;
     throw error;
   }
