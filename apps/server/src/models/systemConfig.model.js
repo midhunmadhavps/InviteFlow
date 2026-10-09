@@ -8,6 +8,7 @@ const systemConfigSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: "" },
     address: { type: String, trim: true, default: "" },
     logo: { type: String, trim: true, default: "" },
+    allowRegistration: { type: Boolean, default: true },
   },
   {
     collection: "system_config",

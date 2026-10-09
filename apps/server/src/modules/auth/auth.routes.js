@@ -3,6 +3,7 @@ const router = express.Router();
 
 const authController = require("./auth.controller");
 
+router.get("/registration-settings", authController.getRegistrationSettings);
 router.post("/register", authController.register);
 router.post("/verify-otp", authController.verifyOtp);
 router.post("/resend-otp", authController.resendOtp);

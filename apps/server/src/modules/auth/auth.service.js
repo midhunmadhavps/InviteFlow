@@ -1,11 +1,17 @@
 const User = require("../../models/user.model");
 const Otp = require("../../models/otp.model");
+const SystemConfig = require("../../models/systemConfig.model");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { createUsername } = require("../users/user.utils");
 
 exports.register = async (data) => {
+  if (!(await exports.isRegistrationEnabled())) {
+    const error = new Error("Customer registration is currently disabled.");
+    error.statusCode = 403;
+    throw error;
+  }
 
   const {
     firstName,
@@ -75,6 +81,11 @@ exports.register = async (data) => {
     phone: user.phone,
     username: user.username,
   };
+};
+
+exports.isRegistrationEnabled = async () => {
+  const config = await SystemConfig.findById("default").lean();
+  return config?.allowRegistration ?? true;
 };
 
 exports.verifyOtp = async (data) => {

@@ -1,5 +1,10 @@
 import api from "../../../api/client";
 
+export const getRegistrationSettings = async () => {
+  const response = await api.get("/auth/registration-settings");
+  return response.data;
+};
+
 export const loginUser = async (email, password) => {
   const response = await api.post("/auth/login", {
     email,

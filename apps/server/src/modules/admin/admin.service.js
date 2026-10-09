@@ -935,6 +935,7 @@ exports.getFirebaseDetails = async () => {
  * 11. Configurations (Settings)
  */
 exports.getSettings = async () => {
+  const config = await SystemConfig.findById("default").lean();
   return {
     appName: "InviteFlow Admin",
     version: "1.0.0",
@@ -943,8 +944,24 @@ exports.getSettings = async () => {
     otpExpiryMinutes: 5,
     maxLoginAttempts: 5,
     maintenanceMode: false,
-    allowRegistration: true,
+    allowRegistration: config?.allowRegistration ?? true,
   };
+};
+
+exports.saveSettings = async (input) => {
+  if (typeof input?.allowRegistration !== "boolean") {
+    const error = new Error("allowRegistration must be a boolean.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const config = await SystemConfig.findByIdAndUpdate(
+    "default",
+    { $set: { allowRegistration: input.allowRegistration } },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  ).lean();
+
+  return { allowRegistration: config.allowRegistration };
 };
 
 const EMPTY_SYSTEM_CONFIG = {

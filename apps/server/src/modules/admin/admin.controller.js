@@ -365,6 +365,19 @@ exports.getSettings = async (req, res) => {
   }
 };
 
+exports.saveSettings = async (req, res) => {
+  try {
+    const data = await adminService.saveSettings(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Settings saved successfully.",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save settings.");
+  }
+};
+
 exports.getSystemConfig = async (req, res) => {
   try {
     const config = await adminService.getSystemConfig();

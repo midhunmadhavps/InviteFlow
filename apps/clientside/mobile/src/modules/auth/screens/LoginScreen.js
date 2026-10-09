@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { saveToken,saveUser } from "../../../utils/auth";
 import { StatusBar } from "expo-status-bar";
-import { loginUser } from "../api/auth.api";
+import { getRegistrationSettings, loginUser } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
 import { validateEmail, validateRequired } from "../../../utils/validation";
 import { RequiredLabel } from "../../../components/RequiredLabel";
@@ -24,8 +24,30 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
 
   const { showSuccess, showError } = useToast();
+
+  useEffect(() => {
+    let isActive = true;
+
+    getRegistrationSettings()
+      .then((response) => {
+        if (isActive) {
+          setRegistrationEnabled(response.data?.allowRegistration === true);
+        }
+      })
+      .catch((error) => {
+        showError(
+          error.response?.data?.message ||
+            "Unable to check registration availability. Sign-up is hidden until the connection is restored."
+        );
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -191,19 +213,21 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
 
           {/* Register */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>
-              Don't have an Account?
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Register")}
-            >
-              <Text style={styles.signupText}>
-                {" "}Sign up
+          {registrationEnabled && (
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>
+                Don't have an Account?
               </Text>
-            </TouchableOpacity>
-          </View>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Register")}
+              >
+                <Text style={styles.signupText}>
+                  {" "}Sign up
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
         </View>
       </ScrollView>

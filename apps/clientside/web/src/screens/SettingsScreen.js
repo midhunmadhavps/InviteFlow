@@ -16,6 +16,7 @@ import {
   getSystemConfigApi,
   getSmsConfigApi,
   saveEmailConfigApi,
+  saveSettingsApi,
   saveSystemConfigApi,
   saveSmsConfigApi,
 } from "../api/admin.api";
@@ -225,6 +226,24 @@ const SettingsScreen = ({ configSection }) => {
       setSuccessMessage(response.message || "System details saved successfully.");
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to save system details.");
+    } finally {
+      setSavingConfig("");
+      scrollToTop();
+    }
+  };
+
+  const saveRegistrationSetting = async (enabled) => {
+    const previousValue = allowRegistration;
+    setAllowRegistration(enabled);
+    setSavingConfig("registration");
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = await saveSettingsApi({ allowRegistration: enabled });
+      setSuccessMessage(response.message || "Registration setting saved.");
+    } catch (err) {
+      setAllowRegistration(previousValue);
+      setError(err.response?.data?.message || err.message || "Failed to save registration setting.");
     } finally {
       setSavingConfig("");
       scrollToTop();
@@ -503,7 +522,8 @@ const SettingsScreen = ({ configSection }) => {
           </View>
           <Switch
             value={allowRegistration}
-            onValueChange={setAllowRegistration}
+            onValueChange={saveRegistrationSetting}
+            disabled={Boolean(savingConfig)}
             trackColor={{ false: "#CBD5E1", true: "#818CF8" }}
             thumbColor={allowRegistration ? "#4F46E5" : "#FFFFFF"}
           />

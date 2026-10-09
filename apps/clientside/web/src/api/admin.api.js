@@ -124,6 +124,11 @@ export const getSettingsApi = async () => {
   return response.data;
 };
 
+export const saveSettingsApi = async (settings) => {
+  const response = await apiClient.put("/admin/settings", settings);
+  return response.data;
+};
+
 export const getSystemConfigApi = async () => {
   const response = await apiClient.get("/admin/system-config");
   return response.data;

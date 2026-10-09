@@ -9,9 +9,24 @@ const register = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+const getRegistrationSettings = async (req, res) => {
+  try {
+    const allowRegistration = await authService.isRegistrationEnabled();
+    return res.status(200).json({
+      success: true,
+      data: { allowRegistration },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch registration settings.",
     });
   }
 };
@@ -132,6 +147,7 @@ const logout = async (req, res) => {
 };
 
 module.exports = {
+  getRegistrationSettings,
   register,
   verifyOtp,
   resendOtp,

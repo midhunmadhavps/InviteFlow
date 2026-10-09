@@ -28,8 +28,11 @@ const AdminSidebar = ({ activeTab, onSelectTab, isMobile, onCloseMobile }) => {
           setSystemLogo(response.data?.logo || "");
           setLogoLoadFailed(false);
         }
-      } catch (error) {
-        console.error("Failed to load system logo:", error);
+      } catch {
+        if (isMounted) {
+          setSystemLogo("");
+          setLogoLoadFailed(true);
+        }
       }
     };
 
