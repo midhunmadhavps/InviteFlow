@@ -31,9 +31,9 @@ const getRegistrationSettings = async (req, res) => {
   }
 };
 
-const requestLoginOtp = async (req, res) => {
+const sendLoginOtp = async (req, res) => {
   try {
-    const result = await authService.requestLoginOtp(req.body);
+    const result = await authService.sendLoginOtp(req.body);
     return res.status(200).json({
       success: true,
       message: "Login OTP sent successfully.",
@@ -52,7 +52,25 @@ const verifyLoginOtp = async (req, res) => {
     const result = await authService.verifyLoginOtp(req.body);
     return res.status(200).json({
       success: true,
-      message: "Login successful.",
+      message: result.requiresPassword
+        ? "OTP verified. Create a password to complete login."
+        : "Login successful.",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const createLoginPassword = async (req, res) => {
+  try {
+    const result = await authService.createLoginPassword(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Password created successfully.",
       data: result,
     });
   } catch (error) {
@@ -89,7 +107,7 @@ const verifyOtp = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
     });
@@ -139,7 +157,7 @@ const login = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.statusCode || 400).json({
       success: false,
       message: error.message,
     });
@@ -196,8 +214,9 @@ const logout = async (req, res) => {
 
 module.exports = {
   getRegistrationSettings,
-  requestLoginOtp,
+  sendLoginOtp,
   verifyLoginOtp,
+  createLoginPassword,
   resendLoginOtp,
   register,
   verifyOtp,

@@ -10,7 +10,7 @@ const otpSchema = new mongoose.Schema(
 
     purpose: {
       type: String,
-      enum: ["REGISTER", "FORGOT_PASSWORD", "ADMIN_LOGIN", "USER_LOGIN"],
+      enum: ["REGISTER", "FORGOT_PASSWORD", "ADMIN_LOGIN", "USER_LOGIN", "LOGIN"],
       required: true
     },
 
@@ -19,9 +19,30 @@ const otpSchema = new mongoose.Schema(
       required: true,
     },
 
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     expiresAt: {
       type: Date,
       required: true,
+    },
+
+    sentAt: {
+      type: Date,
+      default: null,
+    },
+
+    attempts: {
+      type: Number,
+      default: 0,
+    },
+
+    usedAt: {
+      type: Date,
+      default: null,
     },
 
     verified: {

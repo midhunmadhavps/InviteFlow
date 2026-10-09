@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -11,22 +12,26 @@ import {
   ScrollView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { getRegistrationSettings, requestLoginOtp } from "../api/auth.api";
+import { Ionicons } from "@expo/vector-icons";
+import { saveToken, saveUser } from "../../../utils/auth";
+import { getRegistrationSettings, loginUser, sendLoginOtp } from "../api/auth.api";
 import { useToast } from "../../../context/ToastContext";
-import { validateEmail, validatePhone } from "../../../utils/validation";
-import { RequiredLabel } from "../../../components/RequiredLabel";
+import { validateEmail, validateRequired } from "../../../utils/validation";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function LoginScreen({ navigation }) {
   const { colors, isDark } = useAppTheme();
+  const brandColor = "#ff7f86";
+  const selectorBackground = isDark ? "#3A252B" : "#FFE8E9";
+  const inputBorderColor = isDark ? "#604047" : "#F2C7CA";
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  // const [password, setPassword] = useState("");
-  // const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginMethod, setLoginMethod] = useState("password");
   const [submitting, setSubmitting] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(false);
 
-  const { showError } = useToast();
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     let isActive = true;
@@ -49,56 +54,53 @@ export default function LoginScreen({ navigation }) {
     };
   }, []);
 
-  const handleRequestLoginOtp = async () => {
+  const handleLogin = async () => {
     const emailError = validateEmail(email);
     if (emailError) {
       showError(emailError);
       return;
     }
 
-    const phoneError = validatePhone(phone);
-    if (phoneError) {
-      showError(phoneError);
-      return;
+    if (loginMethod === "password") {
+      const passwordError = validateRequired(password, "password");
+      if (passwordError) {
+        showError(passwordError);
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const normalizedPhone = phone.trim();
-      await requestLoginOtp({ email: normalizedEmail, phone: normalizedPhone });
-      navigation.navigate("UserLoginOtp", {
-        email: normalizedEmail,
-        phone: normalizedPhone,
-      });
+      if (loginMethod === "password") {
+        const response = await loginUser(normalizedEmail, password);
+        await saveToken(response.data.token);
+        await saveUser(response.data.user);
+        showSuccess("Login successful.");
+        navigation.replace("Main");
+      } else {
+        const response = await sendLoginOtp({ email: normalizedEmail });
+        if (!response.success || !response.data?.sent) {
+          throw new Error("Login code could not be sent. Please try again.");
+        }
+        showSuccess("Login code sent to your registered phone.");
+        navigation.navigate("VerifyOtp", {
+          email: normalizedEmail,
+          purpose: "LOGIN",
+        });
+      }
     } catch (error) {
-      showError(error.response?.data?.message || error.message || "Unable to send login OTP.");
+      showError(
+        error.response?.data?.message ||
+        (error.message === "Network Error"
+          ? "Unable to connect. Check your internet connection and try again."
+          : error.message) ||
+        (loginMethod === "password" ? "Unable to log in." : "Unable to send login code.")
+      );
     } finally {
       setSubmitting(false);
     }
   };
-
-  // Future password login:
-  // const handleLogin = async () => {
-  //   try {
-  //     const emailError = validateEmail(email);
-  //     if (emailError) return showError(emailError);
-  //     const passwordError = validateRequired(password, "Password");
-  //     if (passwordError) return showError(passwordError);
-  //     const response = await loginUser(email.trim(), password);
-  //     if (response.success) {
-  //       await saveToken(response.data.token);
-  //       await saveUser(response.data.user);
-  //       navigation.replace("Main");
-  //     }
-  //   } catch (error) {
-  //     showError(error.response?.data?.message || error.message || "Unable to log in.");
-  //   }
-  // };
-  // Future password flow imports:
-  // import { saveToken, saveUser } from "../../../utils/auth";
-  // import { loginUser } from "../api/auth.api";
-  // import { validateRequired } from "../../../utils/validation";
 
   return (
     <KeyboardAvoidingView
@@ -125,89 +127,152 @@ export default function LoginScreen({ navigation }) {
 
           {/* Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Sign in</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Sign in</Text>
 
-            <View style={styles.titleUnderline} />
+            <View style={[styles.titleUnderline, { backgroundColor: brandColor }]} />
+          </View>
+
+          <View
+            style={[
+              styles.methodSelector,
+              { backgroundColor: selectorBackground },
+            ]}
+          >
+            {[
+              { key: "password", label: "Login with Password", accessibilityLabel: "Login with Password" },
+              { key: "otp", label: "Login with OTP", accessibilityLabel: "Login with OTP" },
+            ].map((method) => (
+              <TouchableOpacity
+                key={method.key}
+                style={[
+                  styles.methodOption,
+                  loginMethod === method.key && [
+                    styles.methodOptionSelected,
+                    { backgroundColor: brandColor },
+                  ],
+                ]}
+                onPress={() => {
+                  setLoginMethod(method.key);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={method.accessibilityLabel}
+                accessibilityState={{ selected: loginMethod === method.key }}
+              >
+                <Text
+                  style={[
+                    styles.methodOptionText,
+                    { color: brandColor },
+                    loginMethod === method.key && styles.methodOptionTextSelected,
+                  ]}
+                >
+                  {method.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* Email */}
           <View style={styles.inputContainer}>
-            <RequiredLabel>Email</RequiredLabel>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>
+              Email address
+            </Text>
 
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>✉</Text>
-
+            <View
+              style={[
+                styles.inputWrapper,
+                { borderColor: inputBorderColor, backgroundColor: colors.surface },
+              ]}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={15}
+                color={colors.textMuted}
+                style={styles.inputIcon}
+              />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="demo@email.com"
-                placeholderTextColor="#bdbdbd"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Email address"
               />
             </View>
           </View>
 
-          {/* Mobile number */}
-          <View style={styles.inputContainer}>
-            <RequiredLabel>Mobile number</RequiredLabel>
-
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>▯</Text>
-
-              <TextInput
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter your mobile number"
-                placeholderTextColor="#bdbdbd"
-                keyboardType="phone-pad"
-                maxLength={10}
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/*
-          Future password login UI:
-          <View style={styles.passwordContainer}>
-            <RequiredLabel>Password</RequiredLabel>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>◉</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor="#bdbdbd"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
+          {loginMethod === "password" && (
+            <View style={styles.passwordContainer}>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>
+                Password
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: inputBorderColor, backgroundColor: colors.surface },
+                ]}
               >
-                <Text style={styles.eyeIcon}>{showPassword ? "◉" : "◌"}</Text>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={15}
+                  color={colors.textMuted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  accessibilityLabel="Password"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={16}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {loginMethod === "password" && (
+            <View style={styles.forgotPasswordContainer}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("ForgotPassword")}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.forgotText, { color: brandColor }]}>
+                  Forgot password?
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-          */}
+          )}
 
           {/* Login button */}
           <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleRequestLoginOtp}
+            style={[styles.loginButton, { backgroundColor: brandColor }]}
+            onPress={handleLogin}
             disabled={submitting}
           >
-            <Text style={styles.loginButtonText}>
-              {submitting ? "Sending OTP..." : "Continue"}
-            </Text>
+            {submitting ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.loginButtonText}>
+                {loginMethod === "password" ? "Login" : "Continue"}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {/* Register */}
@@ -275,7 +340,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 25,
     fontWeight: "700",
-    color: "#3d3d3d",
   },
 
   titleUnderline: {
@@ -289,48 +353,79 @@ const styles = StyleSheet.create({
    * Email / Password
    */
   inputContainer: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
 
   passwordContainer: {
-    marginBottom: 10,
+    marginBottom: 0,
+  },
+  methodSelector: {
+    flexDirection: "row",
+    borderRadius: 11,
+    overflow: "hidden",
+    padding: 3,
+    marginBottom: 15,
+  },
+  methodOption: {
+    flex: 1,
+    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  methodOptionSelected: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  methodOptionText: {
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  methodOptionTextSelected: {
+    color: "#ffffff",
+  },
+  forgotPasswordContainer: {
+    alignItems: "flex-end",
+    minHeight: 18,
+    marginTop: 7,
+  },
+
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginBottom: 5,
   },
 
   inputWrapper: {
-    height: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ff7f86",
+    height: 42,
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
   },
 
   inputIcon: {
-    width: 16,
-    fontSize: 10,
-    color: "#bdbdbd",
-    textAlign: "center",
-    marginRight: 3,
+    marginRight: 8,
   },
 
   input: {
     flex: 1,
-    height: 30,
+    height: 40,
     paddingVertical: 0,
-    paddingHorizontal: 3,
-    fontSize: 9,
-    color: "#555555",
+    fontSize: 12,
   },
 
   eyeButton: {
-    width: 22,
-    height: 30,
+    width: 28,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  eyeIcon: {
-    fontSize: 11,
-    color: "#bdbdbd",
   },
 
   /*
@@ -378,7 +473,6 @@ const styles = StyleSheet.create({
 
   forgotText: {
     fontSize: 10,
-    color: "#ff6f78",
     fontWeight: "500",
   },
 
@@ -386,12 +480,12 @@ const styles = StyleSheet.create({
    * Login button
    */
   loginButton: {
-    height: 35,
+    height: 44,
     backgroundColor: "#ff7f86",
-    borderRadius: 7,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 52,
+    marginTop: 25,
   },
 
   loginButtonText: {

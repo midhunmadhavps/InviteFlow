@@ -50,16 +50,12 @@ export const removeUser = async () => {
 };
 
 export const saveToken = async (token) => {
-  try {
-    if (Platform.OS === "web") {
-      localStorage.setItem(TOKEN_KEY, token);
-      return;
-    }
-
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-  } catch (error) {
-    console.log("Error saving token:", error);
+  if (Platform.OS === "web") {
+    localStorage.setItem(TOKEN_KEY, token);
+    return;
   }
+
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
 };
 
 export const getToken = async () => {

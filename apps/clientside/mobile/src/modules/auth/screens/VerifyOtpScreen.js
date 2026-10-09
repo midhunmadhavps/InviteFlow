@@ -12,10 +12,19 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { verifyOtp, resendOtp } from "../api/auth.api";
+import UserLoginOtpScreen from "./UserLoginOtpScreen";
 import { useToast } from "../../../context/ToastContext";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
-export default function OtpScreen({ navigation, route }) {
+export default function OtpScreen(props) {
+  if (props.route.params?.purpose === "LOGIN") {
+    return <UserLoginOtpScreen {...props} />;
+  }
+
+  return <RegistrationOtpScreen {...props} />;
+}
+
+function RegistrationOtpScreen({ navigation, route }) {
   const { colors, isDark } = useAppTheme();
   const { phone } = route.params;
 
@@ -81,46 +90,35 @@ export default function OtpScreen({ navigation, route }) {
         return;
       }
 
-      // console.log("OTP:", enteredOtp);
-      // console.log("Phone:", phone);
-
       const response = await verifyOtp({
         phone: phone,
         otp: enteredOtp,
+        purpose: route.params.purpose || "REGISTER",
       });
-
-      // console.log("verifyOtp response:", response);
 
       navigation.navigate("SetPassword", {
         userId: response.data.userId,
         purpose: response.data.purpose,
       });
 
-      // console.log("navigated to setpassword screen");
-
     } catch (error) {
-      console.log(
-        "Verify OTP error:",
-        error.response?.data?.message || error.message
+      showError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to verify the code. Please try again."
       );
-      showError(error.response?.data?.message+" Something went wrong. Please try again.");
     }
   };
 
   const handleResendOtp = async () => {
     try {
-      console.log("Resend OTP");
-
-      const response = await resendOtp({
+      await resendOtp({
         phone: phone,
+        purpose: route.params.purpose || "REGISTER",
       });
-
-      console.log("resendOtp response:", response);
+      showSuccess("A new verification code has been sent.");
     } catch (error) {
-      console.log(
-        "Resend OTP error:",
-        error.response?.data?.message || error.message
-      );
+      showError(error.response?.data?.message || error.message || "Unable to resend the code.");
     }
   };
 
