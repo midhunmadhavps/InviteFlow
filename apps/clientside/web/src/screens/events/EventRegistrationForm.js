@@ -278,7 +278,9 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
 
       <View style={styles.form}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Customer</Text>
+          <Text style={styles.sectionTitle}>
+            Customer <Text style={styles.requiredMarker}>*</Text>
+          </Text>
           <Text style={styles.customerDescription}>
             Search for the customer who will own this event.
           </Text>
@@ -305,6 +307,8 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
                 autoCapitalize="none"
                 autoCorrect={false}
                 accessibilityLabel="Search customers"
+                accessibilityHint="Required. Select the customer who will own this event."
+                accessibilityHint="Required. Select the customer who will own this event."
               />
               {selectedCustomer ? (
                 <TouchableOpacity
@@ -570,6 +574,9 @@ const styles = StyleSheet.create({
     color: "#1E293B",
     fontSize: 16,
     fontWeight: "700",
+  },
+  requiredMarker: {
+    color: "#DC2626",
   },
   customerDescription: {
     color: "#64748B",

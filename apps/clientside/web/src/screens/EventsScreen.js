@@ -678,7 +678,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
         onClose={() => {
           handleEditClose();
         }}
-        title="Edit Event"
+        title={`Edit Event${editingEvent?.eventId ? ` · ${editingEvent.eventId}` : ""}`}
         confirmText="Save Changes"
         confirmColor="#4F46E5"
         isConfirming={actionLoading}
@@ -687,6 +687,19 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
         {editForm ? (
           <View style={styles.editForm}>
             {editError ? <Text style={styles.editError}>{editError}</Text> : null}
+            <View style={styles.editField}>
+              <Text style={styles.editLabel}>Customer</Text>
+              <View style={styles.editCustomerReadOnly}>
+                <MaterialCommunityIcons name="account-outline" size={18} color="#64748B" />
+                <Text style={styles.editCustomerReadOnlyText}>
+                  {editingEvent.userId && typeof editingEvent.userId === "object"
+                    ? [editingEvent.userId.firstName, editingEvent.userId.lastName]
+                      .filter(Boolean)
+                      .join(" ") || "Customer name unavailable"
+                    : "Customer name unavailable"}
+                </Text>
+              </View>
+            </View>
             <View style={styles.editField}>
               <Text style={styles.editLabel}>Host photo</Text>
               <input
@@ -1120,6 +1133,22 @@ const styles = StyleSheet.create({
   },
   editField: {
     gap: 6,
+  },
+  editCustomerReadOnly: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 7,
+    backgroundColor: "#F8FAFC",
+  },
+  editCustomerReadOnlyText: {
+    flex: 1,
+    color: "#64748B",
+    fontSize: 14,
   },
   editLocationGrid: {
     flexDirection: "row",
