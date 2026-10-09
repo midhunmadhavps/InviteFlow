@@ -139,12 +139,7 @@ async function runTests() {
     assert(waRes.status === 200, `GET /api/admin/whatsapp returns 200 OK`);
     assert(waRes.body.data?.health !== undefined, "WhatsApp health metadata returned");
 
-    // Test 13: Firebase Details (Safe Metadata)
-    const fbRes = await requestApi("/api/admin/firebase", { token: adminToken });
-    assert(fbRes.status === 200, `GET /api/admin/firebase returns 200 OK`);
-    assert(fbRes.body.data?.projectId !== undefined, "Firebase safe metadata returned");
-
-    // Test 14: Settings
+    // Test 13: Settings
     const setRes = await requestApi("/api/admin/settings", { token: adminToken });
     assert(setRes.status === 200, `GET /api/admin/settings returns 200 OK`);
 

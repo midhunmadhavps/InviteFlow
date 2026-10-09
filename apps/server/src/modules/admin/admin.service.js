@@ -899,39 +899,6 @@ exports.getWhatsAppDetails = async () => {
 };
 
 /**
- * 10. Configurations (Firebase / Auth Details)
- */
-exports.getFirebaseDetails = async () => {
-  const totalUsers = await User.countDocuments();
-  const totalActive = await User.countDocuments({ status: "Active" });
-
-  return {
-    projectId: process.env.FIREBASE_PROJECT_ID || "inviteflow-prod-auth",
-    authProviders: [
-      { name: "Phone / SMS OTP", status: "Enabled", default: true },
-      { name: "Email / Password", status: "Enabled", default: false },
-      { name: "Google Authentication", status: "Configured", default: false },
-    ],
-    jwtConfiguration: {
-      algorithm: "HS256",
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-      secretStatus: process.env.JWT_SECRET ? "Configured (Protected)" : "Missing",
-    },
-    statistics: {
-      totalUsers,
-      activeUsers: totalActive,
-      lastSynchronized: new Date(),
-    },
-    security: {
-      otpExpiryMinutes: 5,
-      passwordHashing: "bcrypt (10 rounds)",
-      rateLimiting: "Active",
-      singleUseOtp: true,
-    },
-  };
-};
-
-/**
  * 11. Configurations (Settings)
  */
 exports.getSettings = async () => {

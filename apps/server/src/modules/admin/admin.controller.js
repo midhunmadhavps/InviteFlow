@@ -336,21 +336,6 @@ exports.getWhatsApp = async (req, res) => {
 };
 
 /**
- * Configurations - Firebase
- */
-exports.getFirebase = async (req, res) => {
-  try {
-    const data = await adminService.getFirebaseDetails();
-    return res.status(200).json({
-      success: true,
-      data,
-    });
-  } catch (error) {
-    return handleError(res, error, "Failed to fetch Firebase details.");
-  }
-};
-
-/**
  * Configurations - Settings
  */
 exports.getSettings = async (req, res) => {

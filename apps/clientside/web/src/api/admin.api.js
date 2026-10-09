@@ -70,11 +70,6 @@ export const getWhatsAppDetailsApi = async () => {
   return response.data;
 };
 
-export const getFirebaseDetailsApi = async () => {
-  const response = await apiClient.get("/admin/firebase");
-  return response.data;
-};
-
 export const getEventsApi = async (params = {}) => {
   const response = await apiClient.get("/admin/events", { params });
   return response.data;
