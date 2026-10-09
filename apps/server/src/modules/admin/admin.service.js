@@ -873,30 +873,75 @@ exports.deleteEvent = async (eventId) => {
  * 8. Contacts List for Admin
  */
 exports.getContacts = async ({ search, page = 1, limit = 10 }) => {
-  const query = {};
+  const currentPage = Math.max(1, Number.parseInt(page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 10));
+  const skip = (currentPage - 1) * pageSize;
+  const pipeline = [{ $match: { role: "customer" } }];
 
-  if (search) {
-    const regex = new RegExp(search.trim(), "i");
-    query.$or = [{ name: regex }, { phone: regex }, { email: regex }];
+  pipeline.push({
+    $lookup: {
+      from: Contact.collection.name,
+      let: { customerId: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$userId", "$$customerId"] } } },
+        { $project: { name: 1, phoneNumber: 1, email: 1 } },
+        { $sort: { name: 1, _id: 1 } },
+      ],
+      as: "contacts",
+    },
+  });
+
+  if (search?.trim()) {
+    const searchPattern = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    pipeline.push({
+      $match: {
+        $or: [
+          { firstName: { $regex: searchPattern, $options: "i" } },
+          { lastName: { $regex: searchPattern, $options: "i" } },
+          { email: { $regex: searchPattern, $options: "i" } },
+          { phone: { $regex: searchPattern, $options: "i" } },
+          { "contacts.name": { $regex: searchPattern, $options: "i" } },
+          { "contacts.phoneNumber": { $regex: searchPattern, $options: "i" } },
+          { "contacts.email": { $regex: searchPattern, $options: "i" } },
+        ],
+      },
+    });
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  pipeline.push({
+    $facet: {
+      customers: [
+        { $sort: { firstName: 1, lastName: 1 } },
+        { $skip: skip },
+        { $limit: pageSize },
+        {
+          $project: {
+            customer: {
+              _id: "$_id",
+              firstName: "$firstName",
+              lastName: "$lastName",
+              email: "$email",
+              phone: "$phone",
+            },
+            contacts: 1,
+          },
+        },
+      ],
+      totalCustomers: [{ $count: "count" }],
+      totalContacts: [{ $unwind: "$contacts" }, { $count: "count" }],
+    },
+  });
 
-  const [contacts, total] = await Promise.all([
-    Contact.find(query)
-      .populate("userId", "firstName lastName email phone")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit)),
-    Contact.countDocuments(query),
-  ]);
+  const [result] = await User.aggregate(pipeline);
+  const total = result.totalCustomers[0]?.count || 0;
 
   return {
-    contacts,
+    customers: result.customers,
+    totalContacts: result.totalContacts[0]?.count || 0,
     total,
-    page: Number(page),
-    limit: Number(limit),
-    totalPages: Math.ceil(total / Number(limit)) || 1,
+    page: currentPage,
+    limit: pageSize,
+    totalPages: Math.ceil(total / pageSize) || 1,
   };
 };
 

@@ -27,6 +27,8 @@ const DataTable = ({
   onFilterChange,
   headerAction,
   onRowPress,
+  fillWidth = false,
+  alwaysShowPagination = false,
 }) => {
   return (
     <View style={styles.container}>
@@ -80,8 +82,12 @@ const DataTable = ({
       </View>
 
       {/* Table Content */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.tableWrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={fillWidth && styles.tableScrollContentFill}
+      >
+        <View style={[styles.tableWrapper, fillWidth && styles.tableWrapperFill]}>
           {/* Header Row */}
           <View style={styles.tableHeader}>
             {columns.map((col, index) => (
@@ -150,7 +156,7 @@ const DataTable = ({
           Showing {data.length} of {total} items
         </Text>
 
-        {totalPages > 1 && onPageChange && (
+        {(totalPages > 1 || alwaysShowPagination) && onPageChange && (
           <View style={styles.paginationControls}>
             <TouchableOpacity
               style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
@@ -273,6 +279,13 @@ const styles = StyleSheet.create({
   },
   tableWrapper: {
     minWidth: "100%",
+  },
+  tableScrollContentFill: {
+    flexGrow: 1,
+  },
+  tableWrapperFill: {
+    flexGrow: 1,
+    width: "100%",
   },
   tableHeader: {
     flexDirection: "row",

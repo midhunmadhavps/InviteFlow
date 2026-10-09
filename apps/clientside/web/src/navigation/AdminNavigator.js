@@ -15,6 +15,7 @@ import AdminLoginScreen from "../screens/AdminLoginScreen";
 import AdminOtpScreen from "../screens/AdminOtpScreen";
 import AdminDashboardScreen from "../screens/AdminDashboardScreen";
 import CustomerScreen from "../modules/customers/screens/CustomerScreen";
+import ContactsScreen from "../modules/contacts/screens/ContactsScreen";
 import EventsScreen from "../modules/events/screens/EventsScreen";
 import PaymentScreen from "../modules/payment/screens/PaymentScreen";
 import ConfigurationsScreen from "../modules/configurations/screens/ConfigurationsScreen";
@@ -81,6 +82,7 @@ const AdminNavigator = () => {
   const screenTitles = {
     dashboard: "Admin Dashboard",
     customer: "Customer Management",
+    contacts: "Customer Contacts",
     events: eventRegistration
       ? `Register ${eventRegistration.name}`
       : "Platform Events",
@@ -94,6 +96,8 @@ const AdminNavigator = () => {
         return <AdminDashboardScreen onNavigate={(tab) => setActiveTab(tab)} />;
       case "customer":
         return <CustomerScreen />;
+      case "contacts":
+        return <ContactsScreen />;
       case "events":
         if (eventRegistration) {
           const RegistrationScreen = EVENT_REGISTRATION_SCREENS[

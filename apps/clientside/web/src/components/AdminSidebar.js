@@ -59,6 +59,7 @@ const AdminSidebar = ({ activeTab, onSelectTab, isMobile, onCloseMobile }) => {
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: "view-dashboard-outline" },
     { key: "customer", label: "Customer", icon: "account-group-outline" },
+    { key: "contacts", label: "Contacts", icon: "contacts-outline" },
     { key: "events", label: "Events", icon: "calendar-heart" },
     { key: "payment", label: "Payment", icon: "credit-card-outline" },
     { key: "configurations", label: "Configurations", icon: "tune-vertical" },
