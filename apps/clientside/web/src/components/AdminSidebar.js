@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Image,
   View,
   Text,
   StyleSheet,
@@ -8,11 +9,42 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import { getSystemConfigApi } from "../api/admin.api";
 import Modal from "./Modal";
 
 const AdminSidebar = ({ activeTab, onSelectTab, isMobile, onCloseMobile }) => {
   const { logout } = useAdminAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [systemLogo, setSystemLogo] = useState("");
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSystemLogo = async () => {
+      try {
+        const response = await getSystemConfigApi();
+        if (isMounted) {
+          setSystemLogo(response.data?.logo || "");
+          setLogoLoadFailed(false);
+        }
+      } catch (error) {
+        console.error("Failed to load system logo:", error);
+      }
+    };
+
+    loadSystemLogo();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const getSystemLogoUrl = (logo) => {
+    if (!logo) return "";
+    if (/^https?:\/\//i.test(logo)) return logo;
+    if (logo.startsWith("/uploads/")) return `http://localhost:3000${logo}`;
+    return `http://localhost:3000/uploads/${encodeURIComponent(logo)}`;
+  };
 
   const handleSelect = (tabKey) => {
     onSelectTab(tabKey);
@@ -33,9 +65,19 @@ const AdminSidebar = ({ activeTab, onSelectTab, isMobile, onCloseMobile }) => {
     <View style={[styles.sidebar, isMobile && styles.sidebarMobile]}>
       {/* Brand Header */}
       <View style={styles.brandContainer}>
-        <View style={styles.logoIcon}>
-          <MaterialCommunityIcons name="email-seal-outline" size={22} color="#FFFFFF" />
-        </View>
+        {systemLogo && !logoLoadFailed ? (
+          <Image
+            source={{ uri: getSystemLogoUrl(systemLogo) }}
+            style={styles.logoImage}
+            resizeMode="contain"
+            onError={() => setLogoLoadFailed(true)}
+            accessibilityLabel="System logo"
+          />
+        ) : (
+          <View style={styles.logoIcon}>
+            <MaterialCommunityIcons name="email-seal-outline" size={22} color="#FFFFFF" />
+          </View>
+        )}
         <View style={styles.brandTextContainer}>
           <Text style={styles.brandTitle}>InviteFlow</Text>
           <Text style={styles.brandSubtitle}>Admin Panel</Text>
@@ -140,6 +182,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
     alignItems: "center",
     justifyContent: "center",
+  },
+  logoImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
   },
   brandTextContainer: {
     flex: 1,
