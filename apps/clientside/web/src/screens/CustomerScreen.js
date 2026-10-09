@@ -6,7 +6,6 @@ import {
   Pressable,
   TouchableOpacity,
   TextInput,
-  Image,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
@@ -31,6 +30,7 @@ const CustomerScreen = () => {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [setDefaultPassword, setSetDefaultPassword] = useState(false);
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -90,12 +90,14 @@ const CustomerScreen = () => {
         lastName: normalizedLastName,
         email: normalizedEmail,
         phone: normalizedPhone,
+        setDefaultPassword,
       });
       await fetchUsers(1, statusFilter, search);
       setFirstName("");
       setLastName("");
       setEmail("");
       setPhone("");
+      setSetDefaultPassword(false);
       setIsRegistering(false);
       setSuccessMessage(response.message || "Customer registered successfully.");
     } catch (err) {
@@ -359,6 +361,7 @@ const CustomerScreen = () => {
             onPress={() => {
               setError("");
               setSuccessMessage("");
+              setSetDefaultPassword(false);
               setIsRegistering(!isRegistering);
             }}
             activeOpacity={0.8}
@@ -392,11 +395,6 @@ const CustomerScreen = () => {
           <View style={styles.registrationScroll}>
             <View style={styles.registrationScrollContent}>
               <View style={styles.registrationCard}>
-            <Image
-              source={require("../../assets/Vector1.png")}
-              style={styles.registrationBackground}
-              resizeMode="stretch"
-            />
             <View style={styles.registrationHeading}>
               <View style={styles.registrationIcon}>
                 <MaterialCommunityIcons name="account-plus-outline" size={24} color="#FF7F86" />
@@ -473,12 +471,39 @@ const CustomerScreen = () => {
               </View>
             </View>
 
-            <View style={styles.accountDefaults}>
-              <MaterialCommunityIcons name="shield-check-outline" size={19} color="#15803D" />
+            <TouchableOpacity
+              style={styles.defaultPasswordOption}
+              onPress={() => setSetDefaultPassword((checked) => !checked)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: setDefaultPassword }}
+            >
+              <MaterialCommunityIcons
+                name={setDefaultPassword ? "checkbox-marked" : "checkbox-blank-outline"}
+                size={21}
+                color={setDefaultPassword ? "#4F46E5" : "#64748B"}
+              />
+              <Text style={styles.defaultPasswordText}>
+                Set default password (Admin@123)
+              </Text>
+            </TouchableOpacity>
+
+            <View style={[styles.accountDefaults, !setDefaultPassword && styles.accountDefaultsNeutral]}>
+              <MaterialCommunityIcons
+                name={setDefaultPassword ? "shield-check-outline" : "account-check-outline"}
+                size={19}
+                color={setDefaultPassword ? "#15803D" : "#4F46E5"}
+              />
               <View style={styles.accountDefaultsText}>
-                <Text style={styles.accountDefaultsTitle}>Account will be ready to use</Text>
-                <Text style={styles.accountDefaultsSubtitle}>
-                  Password: Admin@123  ·  Email and phone verified  ·  Status: Active
+                <Text style={[styles.accountDefaultsTitle, !setDefaultPassword && styles.accountDefaultsNeutralTitle]}>
+                  Account will be active after creation
+                </Text>
+                <Text style={[
+                  styles.accountDefaultsSubtitle,
+                  !setDefaultPassword && styles.accountDefaultsNeutralSubtitle,
+                ]}>
+                  {setDefaultPassword
+                    ? "Default password: Admin@123  ·  Email and phone verified  ·  Status: Active"
+                    : "No password assigned  ·  Email and phone verified  ·  Status: Active"}
                 </Text>
               </View>
             </View>
@@ -816,8 +841,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 9,
-    backgroundColor: "#FF7F86",
-    shadowColor: "#FF7F86",
+    backgroundColor: "#4F46E5",
+    shadowColor: "#4F46E5",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
     shadowRadius: 6,
@@ -852,14 +877,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
-  },
-  registrationBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    width: "100%",
-    height: 150,
   },
   registrationHeading: {
     flexDirection: "row",
@@ -931,6 +948,28 @@ const styles = StyleSheet.create({
     borderColor: "#BBF7D0",
     backgroundColor: "#F0FDF4",
   },
+  accountDefaultsNeutral: {
+    borderColor: "#C7D2FE",
+    backgroundColor: "#EEF2FF",
+  },
+  accountDefaultsNeutralTitle: {
+    color: "#3730A3",
+  },
+  accountDefaultsNeutralSubtitle: {
+    color: "#4B5563",
+  },
+  defaultPasswordOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    marginTop: 18,
+    minHeight: 28,
+  },
+  defaultPasswordText: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "600",
+  },
   accountDefaultsText: {
     flex: 1,
     gap: 3,
@@ -953,7 +992,7 @@ const styles = StyleSheet.create({
     gap: 9,
     marginTop: 22,
     borderRadius: 8,
-    backgroundColor: "#FF7F86",
+    backgroundColor: "#4F46E5",
   },
   submitButtonDisabled: {
     opacity: 0.7,

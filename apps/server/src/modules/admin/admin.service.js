@@ -295,7 +295,13 @@ exports.getUsers = async ({ role, status, search, page = 1, limit = 10 }) => {
   };
 };
 
-exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
+exports.createCustomer = async ({
+  firstName,
+  lastName,
+  email,
+  phone,
+  setDefaultPassword = false,
+}) => {
   const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
   const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
   const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
@@ -325,6 +331,12 @@ exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
     throw error;
   }
 
+  if (typeof setDefaultPassword !== "boolean") {
+    const error = new Error("Default password selection must be true or false.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const existingUser = await User.findOne({
     $or: [{ phone: normalizedPhone }, { email: normalizedEmail }],
   });
@@ -339,7 +351,7 @@ exports.createCustomer = async ({ firstName, lastName, email, phone }) => {
     throw error;
   }
 
-  const password = await bcrypt.hash("Admin@123", 10);
+  const password = setDefaultPassword ? await bcrypt.hash("Admin@123", 10) : null;
   const username = await createUsername(normalizedFirstName, normalizedLastName);
   const user = await User.create({
     username,

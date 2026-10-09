@@ -925,6 +925,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     backgroundColor: "#4F46E5",
+    shadowColor: "#4F46E5",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 2,
   },
   registerEventButtonText: {
     color: "#FFFFFF",
