@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  ScrollView,
   TouchableOpacity,
   TextInput,
 } from "react-native";
@@ -381,54 +382,60 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Platform Events</Text>
-          <Text style={styles.headerSubtitle}>
-            Overview of all wedding, anniversary, birthday, and ceremony invitations
-          </Text>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Platform Events</Text>
+            <Text style={styles.headerSubtitle}>
+              Overview of all wedding, anniversary, birthday, and ceremony invitations
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.registerEventButton}
+            onPress={openRegistrationTypePicker}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
+            <Text style={styles.registerEventButtonText}>Register Event</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.registerEventButton}
-          onPress={openRegistrationTypePicker}
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
-          <Text style={styles.registerEventButtonText}>Register Event</Text>
-        </TouchableOpacity>
-      </View>
 
-      {error ? (
-        <View style={styles.errorBanner}>
-          <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
+        {error ? (
+          <View style={styles.errorBanner}>
+            <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
-      {successMessage ? (
-        <View style={styles.successBanner}>
-          <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      ) : null}
+        {successMessage ? (
+          <View style={styles.successBanner}>
+            <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
 
-      <DataTable
-        columns={columns}
-        data={events}
-        onRowPress={(row) => setActionMenuEvent(row)}
-        loading={loading}
-        searchValue={search}
-        onSearchChange={(text) => {
-          setSearch(text);
-          fetchEvents(1, text);
-        }}
-        searchPlaceholder="Search by event title, ID, host..."
-        page={page}
-        totalPages={totalPages}
-        total={total}
-        onPageChange={(p) => fetchEvents(p, search)}
-        emptyMessage="No events found on the platform."
-      />
+        <DataTable
+          columns={columns}
+          data={events}
+          onRowPress={(row) => setActionMenuEvent(row)}
+          loading={loading}
+          searchValue={search}
+          onSearchChange={(text) => {
+            setSearch(text);
+            fetchEvents(1, text);
+          }}
+          searchPlaceholder="Search by event title, ID, host..."
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={(p) => fetchEvents(p, search)}
+          emptyMessage="No events found on the platform."
+        />
+      </ScrollView>
 
       <Modal
         visible={registrationTypePickerVisible}
@@ -885,6 +892,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+  },
+  pageScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  pageContent: {
     padding: 24,
     gap: 20,
   },
