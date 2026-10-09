@@ -223,7 +223,7 @@ exports.getEventTypes = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
   try {
-    const result = await adminService.createEvent(req.user._id, {
+    const result = await adminService.createEvent({
       ...req.body,
       hostOneImage: req.files?.hostOneImage?.[0]?.filename || null,
       invitation: req.files?.invitation?.[0]?.filename || null,

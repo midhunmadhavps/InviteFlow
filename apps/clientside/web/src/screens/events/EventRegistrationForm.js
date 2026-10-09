@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { createAdminEventApi } from "../../api/admin.api";
+import { createAdminEventApi, getUsersApi } from "../../api/admin.api";
 
 const EVENT_FORM_CONFIG = {
   Wedding: {
@@ -43,6 +43,13 @@ const EVENT_FORM_CONFIG = {
 
 const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) => {
   const config = EVENT_FORM_CONFIG[eventName];
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerResults, setCustomerResults] = useState([]);
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerSearchError, setCustomerSearchError] = useState("");
+  const customerSearchRequest = useRef(0);
   const [form, setForm] = useState({
     hostOne: "",
     hostTwo: "",
@@ -60,6 +67,44 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
   const [saving, setSaving] = useState(false);
   const hostImageInput = useRef(null);
   const invitationInput = useRef(null);
+
+  useEffect(() => {
+    if (!customerSearchOpen) return undefined;
+
+    const requestId = ++customerSearchRequest.current;
+    const timeoutId = setTimeout(async () => {
+      setCustomerLoading(true);
+      setCustomerSearchError("");
+      try {
+        const response = await getUsersApi({
+          page: 1,
+          limit: 10,
+          role: "customer",
+          status: "Active",
+          search: customerSearch.trim(),
+        });
+        if (requestId === customerSearchRequest.current) {
+          setCustomerResults(
+            (response.data?.users || []).filter((user) => user.isEnabled !== false)
+          );
+        }
+      } catch (requestError) {
+        if (requestId === customerSearchRequest.current) {
+          setCustomerSearchError(
+            requestError.response?.data?.message ||
+              requestError.message ||
+              "Unable to load customers."
+          );
+        }
+      } finally {
+        if (requestId === customerSearchRequest.current) {
+          setCustomerLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [customerSearch, customerSearchOpen]);
 
   useEffect(() => {
     if (!hostImage) {
@@ -89,6 +134,10 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
     setError("");
     if (!eventType?._id) {
       setError("The selected event type is missing. Return to the event list and try again.");
+      return;
+    }
+    if (!selectedCustomer?._id) {
+      setError("Select a customer for this event.");
       return;
     }
     if (!form.hostOne.trim() || (eventName !== "Birthday" && !form.hostTwo.trim())) {
@@ -140,6 +189,7 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
     }
 
     const payload = new FormData();
+    payload.append("customerId", selectedCustomer._id);
     payload.append("eventTypeId", eventType._id);
     payload.append("title", config.title(form.hostOne.trim(), form.hostTwo.trim()));
     payload.append("hostOne", form.hostOne.trim());
@@ -227,6 +277,107 @@ const EventRegistrationForm = ({ eventType, eventName, onCancel, onCreated }) =>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.form}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Customer</Text>
+          <Text style={styles.customerDescription}>
+            Search for the customer who will own this event.
+          </Text>
+          <View style={styles.customerPicker}>
+            <View style={styles.customerSearchInput}>
+              <MaterialCommunityIcons name="account-search-outline" size={19} color="#64748B" />
+              <TextInput
+                style={styles.customerSearchText}
+                value={customerSearch}
+                onFocus={() => {
+                  if (selectedCustomer) {
+                    setSelectedCustomer(null);
+                    setCustomerSearch("");
+                  }
+                  setCustomerSearchOpen(true);
+                }}
+                onChangeText={(value) => {
+                  setCustomerSearch(value);
+                  setSelectedCustomer(null);
+                  setCustomerSearchOpen(true);
+                }}
+                placeholder="Search customer by name, email, or phone"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Search customers"
+              />
+              {selectedCustomer ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedCustomer(null);
+                    setCustomerSearch("");
+                    setCustomerSearchOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear selected customer"
+                >
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#64748B" />
+                </TouchableOpacity>
+              ) : (
+                <MaterialCommunityIcons name="chevron-down" size={20} color="#64748B" />
+              )}
+            </View>
+            {customerSearchOpen ? (
+              <View style={styles.customerDropdown}>
+                {customerLoading ? (
+                  <View style={styles.customerDropdownMessage}>
+                    <ActivityIndicator size="small" color="#4F46E5" />
+                    <Text style={styles.customerDropdownMessageText}>Searching customers...</Text>
+                  </View>
+                ) : customerSearchError ? (
+                  <Text style={[styles.customerDropdownMessageText, styles.customerSearchError]}>
+                    {customerSearchError}
+                  </Text>
+                ) : customerResults.length === 0 ? (
+                  <Text style={styles.customerDropdownMessageText}>
+                    No active customers found.
+                  </Text>
+                ) : (
+                  <ScrollView
+                    style={styles.customerOptions}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {customerResults.map((customer) => {
+                      const customerName = [customer.firstName, customer.lastName]
+                        .filter(Boolean)
+                        .join(" ");
+                      return (
+                        <TouchableOpacity
+                          key={customer._id}
+                          style={styles.customerOption}
+                          onPress={() => {
+                            setSelectedCustomer(customer);
+                            setCustomerSearch(`${customerName} · ${customer.email || customer.phone}`);
+                            setCustomerSearchOpen(false);
+                            setError("");
+                          }}
+                          accessibilityRole="button"
+                        >
+                          <Text style={styles.customerOptionName}>{customerName}</Text>
+                          <Text style={styles.customerOptionDetails}>
+                            {[customer.email, customer.phone].filter(Boolean).join(" · ")}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            ) : null}
+          </View>
+          {selectedCustomer ? (
+            <Text style={styles.selectedCustomerHint}>
+              This event will be added to {selectedCustomer.firstName} {selectedCustomer.lastName}&apos;s account.
+            </Text>
+          ) : null}
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Event hosts</Text>
           <View style={styles.twoColumn}>
@@ -419,6 +570,88 @@ const styles = StyleSheet.create({
     color: "#1E293B",
     fontSize: 16,
     fontWeight: "700",
+  },
+  customerDescription: {
+    color: "#64748B",
+    fontSize: 13,
+    marginTop: -8,
+  },
+  customerPicker: {
+    position: "relative",
+    zIndex: 2,
+  },
+  customerSearchInput: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    backgroundColor: "#FFFFFF",
+  },
+  customerSearchText: {
+    flex: 1,
+    minWidth: 0,
+    height: 42,
+    padding: 0,
+    color: "#0F172A",
+    fontSize: 14,
+    outlineStyle: "none",
+  },
+  customerDropdown: {
+    marginTop: 4,
+    maxHeight: 220,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  customerOptions: {
+    maxHeight: 220,
+  },
+  customerDropdownMessage: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 12,
+  },
+  customerDropdownMessageText: {
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    color: "#64748B",
+    fontSize: 13,
+  },
+  customerSearchError: {
+    color: "#B91C1C",
+  },
+  customerOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  customerOptionName: {
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  customerOptionDetails: {
+    marginTop: 3,
+    color: "#64748B",
+    fontSize: 12,
+  },
+  selectedCustomerHint: {
+    color: "#4338CA",
+    fontSize: 12,
   },
   twoColumn: {
     flexDirection: "row",

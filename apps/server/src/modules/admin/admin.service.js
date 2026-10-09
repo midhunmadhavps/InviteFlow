@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user.model");
@@ -624,7 +625,25 @@ exports.updateUserRole = async (userId, newRole) => {
  */
 exports.getEventTypes = async () => EventType.find({ isActive: true }).sort({ name: 1 });
 
-exports.createEvent = async (adminId, eventData) => {
+exports.createEvent = async (eventData) => {
+  if (!mongoose.Types.ObjectId.isValid(eventData.customerId)) {
+    const error = new Error("Select a valid customer for this event.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const customer = await User.findOne({
+    _id: eventData.customerId,
+    role: "customer",
+    status: "Active",
+    isEnabled: { $ne: false },
+  });
+  if (!customer) {
+    const error = new Error("The selected customer is not active or available.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const eventType = await EventType.findOne({
     _id: eventData.eventTypeId,
     isActive: true,
@@ -684,7 +703,7 @@ exports.createEvent = async (adminId, eventData) => {
   }
 
   const event = await eventService.createEvent({
-    userId: adminId,
+    userId: customer._id,
     eventTypeId: eventType._id,
     title: eventData.title.trim(),
     hostOne: eventData.hostOne.trim(),
