@@ -10,7 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { removeToken, removeUser } from "../../../utils/auth";
+import { getUser, removeToken, removeUser } from "../../../utils/auth";
 import AppearanceToggle from "../../../../../web/src/shared/components/AppearanceToggle";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
@@ -37,7 +37,29 @@ const UpComingevents = [
 
 export default function MainScreen({ navigation }) {
   const [profileVisible, setProfileVisible] = useState(false);
+  const [user, setUser] = useState(null);
   const { mode, setMode, colors } = useAppTheme();
+
+  React.useEffect(() => {
+    let isActive = true;
+
+    getUser().then((storedUser) => {
+      if (isActive) {
+        setUser(storedUser);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const fullName = [user?.firstName, user?.lastName]
+    .filter((name) => typeof name === "string" && name.trim())
+    .map((name) => name.trim())
+    .join(" ");
+  const profileName = fullName || user?.username || "Your profile";
+  const firstName = user?.firstName?.trim() || profileName.split(/\s+/)[0];
 
   const renderEvent = ({ item }) => (
     <TouchableOpacity style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -80,7 +102,7 @@ export default function MainScreen({ navigation }) {
           </Text>
 
           <Text style={styles.welcomeText}>
-            Welcome back, James
+            {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
           </Text>
         </View>
 
@@ -212,12 +234,12 @@ export default function MainScreen({ navigation }) {
               </View>
 
               <Text style={styles.profileName}>
-                James Martin
+                {profileName}
               </Text>
-
+              {/*
               <Text style={styles.profileRole}>
                 Senior Graphic Designer
-              </Text>
+              </Text> */}
 
             </View>
 

@@ -1,6 +1,19 @@
 const SmsConfig = require("../../models/smsConfig.model");
 
+
 exports.sendSms = async ({ to, message }) => {
+  console.log("Dummy SMS sent successfully:", {
+    to,
+    message,
+  });
+
+  return {
+    success: true,
+    message: "SMS sent successfully (dummy mode)",
+  };
+};
+
+exports.sendSms2 = async ({ to, message }) => {
   const config = await SmsConfig.findById("default").lean();
   if (!config?.is_active || !config.api_url) {
     const error = new Error("SMS delivery is not configured or enabled.");
