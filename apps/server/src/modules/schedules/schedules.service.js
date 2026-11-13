@@ -45,4 +45,30 @@ const getScheduleInvites = async ({ eventId, userId }) => {
     .sort({ scheduledAt: 1 });
 };
 
-module.exports = { createScheduleInvites, getScheduleInvites };
+const updateScheduleInviteStatus = async ({ scheduleInviteId, isComplete, userId }) => {
+  const events = await Event.find({ userId }).select("_id");
+  return ScheduleInvite.findOneAndUpdate(
+    {
+      _id: scheduleInviteId,
+      eventId: { $in: events.map((event) => event._id) },
+    },
+    { $set: { is_complete: isComplete } },
+    { new: true, runValidators: true }
+  );
+};
+
+const deletePendingScheduleInvite = async ({ scheduleInviteId, userId }) => {
+  const events = await Event.find({ userId }).select("_id");
+  return ScheduleInvite.findOneAndDelete({
+    _id: scheduleInviteId,
+    eventId: { $in: events.map((event) => event._id) },
+    is_complete: { $ne: true },
+  });
+};
+
+module.exports = {
+  createScheduleInvites,
+  getScheduleInvites,
+  updateScheduleInviteStatus,
+  deletePendingScheduleInvite,
+};

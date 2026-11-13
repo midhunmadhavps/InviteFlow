@@ -1,8 +1,11 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   ImageBackground,
+  Alert,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,7 +14,11 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { getScheduleInvites } from "../api/event.api";
+import {
+  getScheduleInvites,
+  deleteScheduleInvite,
+  updateScheduleInviteStatus,
+} from "../api/event.api";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
 export default function ScheduleInvitesScreen({ navigation, route }) {
@@ -20,6 +27,41 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [updatingScheduleId, setUpdatingScheduleId] = useState(null);
+  const [createButtonWidth, setCreateButtonWidth] = useState(0);
+  const shineProgress = useRef(new Animated.Value(0)).current;
+  const shineTranslateX = shineProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-70, createButtonWidth + 70],
+  });
+
+  useEffect(() => {
+    if (!createButtonWidth) {
+      return undefined;
+    }
+
+    const shineAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(700),
+        Animated.timing(shineProgress, {
+          toValue: 1,
+          duration: 1300,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shineAnimation.start();
+
+    return () => shineAnimation.stop();
+  }, [createButtonWidth, shineProgress]);
+
+  const showActionError = (title, message) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n${message}`);
+      return;
+    }
+    Alert.alert(title, message);
+  };
 
   const loadSchedules = useCallback(async () => {
     setLoading(true);
@@ -56,6 +98,67 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
     })}`;
   };
 
+  const toggleInviteStatus = async (item) => {
+    const nextIsComplete = !item.is_complete;
+    setUpdatingScheduleId(item._id);
+    try {
+      await updateScheduleInviteStatus(item._id, nextIsComplete);
+      setSchedules((current) =>
+        current.map((schedule) =>
+          schedule._id === item._id
+            ? { ...schedule, is_complete: nextIsComplete }
+            : schedule
+        )
+      );
+    } catch (error) {
+      showActionError(
+        "Could not update status",
+        error.response?.data?.message || "Please try again."
+      );
+    } finally {
+      setUpdatingScheduleId(null);
+    }
+  };
+
+  const deletePendingInvite = async (item) => {
+    setUpdatingScheduleId(item._id);
+    try {
+      await deleteScheduleInvite(item._id);
+      setSchedules((current) =>
+        current.filter((schedule) => schedule._id !== item._id)
+      );
+    } catch (error) {
+      showActionError(
+        "Could not delete invite",
+        error.response?.data?.message || "Please try again."
+      );
+    } finally {
+      setUpdatingScheduleId(null);
+    }
+  };
+
+  const confirmDeleteInvite = (item) => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Delete this pending scheduled invite?")) {
+        deletePendingInvite(item);
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Delete scheduled invite?",
+      "This pending invite will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deletePendingInvite(item),
+        },
+      ]
+    );
+  };
+
   const renderSchedule = ({ item }) => (
     <View style={styles.scheduleCard}>
       <View style={styles.scheduleIcon}>
@@ -77,6 +180,45 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
             Event date: {new Date(item.eventId.eventDate).toLocaleDateString()}
           </Text>
         ) : null}
+      </View>
+      <View style={styles.scheduleActions}>
+        <TouchableOpacity
+          style={[
+            styles.statusBadge,
+            item.is_complete ? styles.sentBadge : styles.pendingBadge,
+          ]}
+          onPress={() => toggleInviteStatus(item)}
+          disabled={updatingScheduleId === item._id}
+          accessibilityLabel={
+            item.is_complete ? "Mark invite as pending" : "Mark invite as sent"
+          }
+        >
+          {updatingScheduleId === item._id ? (
+            <ActivityIndicator
+              size="small"
+              color={item.is_complete ? "#1f7a3d" : "#8a6500"}
+            />
+          ) : (
+            <Text
+              style={[
+                styles.statusText,
+                item.is_complete ? styles.sentText : styles.pendingText,
+              ]}
+            >
+              {item.is_complete ? "Sent" : "Pending"}
+            </Text>
+          )}
+        </TouchableOpacity>
+        {!item.is_complete && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => confirmDeleteInvite(item)}
+            disabled={updatingScheduleId === item._id}
+            accessibilityLabel="Delete pending scheduled invite"
+          >
+            <Ionicons name="trash-outline" size={19} color="#d64545" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -103,27 +245,34 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
                 {event?.title || "All events"}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() =>
-                navigation.navigate("ScheduleInviteCreate", { event })
-              }
-              accessibilityLabel="Schedule an invite"
-            >
-              <Ionicons name="add" size={25} color="#ff7f86" />
-            </TouchableOpacity>
+            <View style={styles.headerActionSpacer} />
           </View>
 
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.createButton}
+              onLayout={(layoutEvent) =>
+                setCreateButtonWidth(layoutEvent.nativeEvent.layout.width)
+              }
               onPress={() =>
                 navigation.navigate("ScheduleInviteCreate", { event })
               }
               activeOpacity={0.8}
             >
-              <Ionicons name="calendar-outline" size={19} color="#ffffff" />
+              <Ionicons name="calendar-outline" size={19} color="#ff7f86" />
               <Text style={styles.createButtonText}>Schedule Invite</Text>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.buttonShine,
+                  {
+                    transform: [
+                      { translateX: shineTranslateX },
+                      { skewX: "-20deg" },
+                    ],
+                  },
+                ]}
+              />
             </TouchableOpacity>
 
             {loading ? (
@@ -194,19 +343,17 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 12,
   },
-  addButton: {
+  headerActionSpacer: {
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
   },
   content: {
     flex: 1,
     padding: 16,
   },
   createButton: {
+    position: "relative",
+    overflow: "hidden",
     minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
@@ -214,10 +361,17 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
     borderRadius: 11,
-    backgroundColor: "#ff7f86",
+    backgroundColor: "#ffffff",
+  },
+  buttonShine: {
+    position: "absolute",
+    top: -12,
+    bottom: -12,
+    width: 42,
+    backgroundColor: "rgba(255,127,134,0.2)",
   },
   createButtonText: {
-    color: "#ffffff",
+    color: "#ff7f86",
     fontSize: 15,
     fontWeight: "700",
   },
@@ -245,6 +399,43 @@ const styles = StyleSheet.create({
   },
   scheduleDetails: {
     flex: 1,
+  },
+  scheduleActions: {
+    alignItems: "center",
+    gap: 8,
+    marginLeft: 8,
+  },
+  statusBadge: {
+    minWidth: 68,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  deleteButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: "#fff0f0",
+  },
+  pendingBadge: {
+    backgroundColor: "#fff1bd",
+  },
+  sentBadge: {
+    backgroundColor: "#d8f3df",
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  pendingText: {
+    color: "#8a6500",
+  },
+  sentText: {
+    color: "#1f7a3d",
   },
   eventTitle: {
     color: "#263957",

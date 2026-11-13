@@ -6,5 +6,7 @@ const controller = require("./schedules.controller");
 
 router.get("/", authMiddleware, controller.getScheduleInvites);
 router.post("/", authMiddleware, controller.createScheduleInvites);
+router.patch("/:id", authMiddleware, controller.updateScheduleInviteStatus);
+router.delete("/:id", authMiddleware, controller.deletePendingScheduleInvite);
 
 module.exports = router;

@@ -19,6 +19,10 @@ const scheduleInviteSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    is_complete: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

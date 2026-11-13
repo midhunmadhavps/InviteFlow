@@ -31,3 +31,15 @@ export const getScheduleInvites = async (eventId) => {
   });
   return response.data;
 };
+
+export const updateScheduleInviteStatus = async (id, isComplete) => {
+  const response = await api.patch(`/schedule-invites/${id}`, {
+    is_complete: isComplete,
+  });
+  return response.data;
+};
+
+export const deleteScheduleInvite = async (id) => {
+  const response = await api.delete(`/schedule-invites/${id}`);
+  return response.data;
+};
