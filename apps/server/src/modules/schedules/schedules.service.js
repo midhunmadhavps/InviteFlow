@@ -30,4 +30,19 @@ const createScheduleInvites = async ({ eventId, contactIds, scheduledAt, userId 
   );
 };
 
-module.exports = { createScheduleInvites };
+const getScheduleInvites = async ({ eventId, userId }) => {
+  const eventFilter = { userId };
+  if (eventId) {
+    eventFilter._id = eventId;
+  }
+
+  const events = await Event.find(eventFilter).select("_id");
+  return ScheduleInvite.find({
+    eventId: { $in: events.map((event) => event._id) },
+  })
+    .populate("eventId", "title eventDate")
+    .populate("contactId", "name phoneNumber")
+    .sort({ scheduledAt: 1 });
+};
+
+module.exports = { createScheduleInvites, getScheduleInvites };

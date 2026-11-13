@@ -361,7 +361,7 @@ export default function MyEventsScreen({ navigation }) {
               color="#ff7f86"
             />
             <Text style={styles.actionButtonText}>
-              Schedule Invits
+              Schedule
             </Text>
           </TouchableOpacity>
         </View>

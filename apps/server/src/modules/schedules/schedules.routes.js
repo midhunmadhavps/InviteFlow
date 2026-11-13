@@ -4,6 +4,7 @@ const router = express.Router();
 const authMiddleware = require("../../middleware/auth.middleware");
 const controller = require("./schedules.controller");
 
+router.get("/", authMiddleware, controller.getScheduleInvites);
 router.post("/", authMiddleware, controller.createScheduleInvites);
 
 module.exports = router;

@@ -49,4 +49,33 @@ const createScheduleInvites = async (req, res) => {
   }
 };
 
-module.exports = { createScheduleInvites };
+const getScheduleInvites = async (req, res) => {
+  const { eventId } = req.query;
+  if (eventId && !mongoose.Types.ObjectId.isValid(eventId)) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid event ID is required.",
+    });
+  }
+
+  try {
+    const result = await schedulesService.getScheduleInvites({
+      eventId,
+      userId: req.user._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Scheduled invites loaded successfully.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Load scheduled invites error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load scheduled invites.",
+    });
+  }
+};
+
+module.exports = { createScheduleInvites, getScheduleInvites };

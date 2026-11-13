@@ -12,6 +12,7 @@ import AnniversaryScreen from "../modules/events/screens/events/AnniversaryEvent
 import BirthdayScreen from "../modules/events/screens/events/BirthdayEventScreen";
 import EventDetailsScreen from "../modules/events/screens/EventDetailsScreen";
 import ScheduleInvitesScreen from "../modules/events/screens/ScheduleInvitesScreen";
+import ScheduleInviteCreateScreen from "../modules/events/screens/ScheduleInviteCreateScreen";
 
 
 const EventStack = createNativeStackNavigator();
@@ -29,6 +30,7 @@ export default function EventNavigator() {
             <EventStack.Screen name="BirthdayEvent" component={BirthdayScreen}/>
             <EventStack.Screen name="EventDeScreen" component={EventDetailsScreen}/>
             <EventStack.Screen name="ScheduleInvites" component={ScheduleInvitesScreen}/>
+            <EventStack.Screen name="ScheduleInviteCreate" component={ScheduleInviteCreateScreen}/>
 
         </EventStack.Navigator>
   );

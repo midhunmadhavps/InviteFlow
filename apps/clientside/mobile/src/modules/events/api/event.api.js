@@ -24,3 +24,10 @@ export const scheduleInvites = async (scheduleData) => {
   const response = await api.post("/schedule-invites", scheduleData);
   return response.data;
 };
+
+export const getScheduleInvites = async (eventId) => {
+  const response = await api.get("/schedule-invites", {
+    params: eventId ? { eventId } : {},
+  });
+  return response.data;
+};
