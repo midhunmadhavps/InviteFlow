@@ -234,31 +234,43 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
           </View>
 
           <View style={styles.content}>
-            <TouchableOpacity
-              style={styles.createButton}
-              onLayout={(layoutEvent) =>
-                setCreateButtonWidth(layoutEvent.nativeEvent.layout.width)
-              }
-              onPress={() =>
-                navigation.navigate("ScheduleInviteCreate", { event })
-              }
-              activeOpacity={0.8}
-            >
-              <Ionicons name="calendar-outline" size={19} color="#ff7f86" />
-              <Text style={styles.createButtonText}>Schedule Invite</Text>
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.buttonShine,
-                  {
-                    transform: [
-                      { translateX: shineTranslateX },
-                      { skewX: "-20deg" },
-                    ],
-                  },
-                ]}
-              />
-            </TouchableOpacity>
+            <View style={styles.topActions}>
+              <TouchableOpacity
+                style={styles.createButton}
+                onLayout={(layoutEvent) =>
+                  setCreateButtonWidth(layoutEvent.nativeEvent.layout.width)
+                }
+                onPress={() =>
+                  navigation.navigate("ScheduleInviteCreate", { event })
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={19} color="#ff7f86" />
+                <Text style={styles.createButtonText}>Schedule Invite</Text>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.buttonShine,
+                    {
+                      transform: [
+                        { translateX: shineTranslateX },
+                        { skewX: "-20deg" },
+                      ],
+                    },
+                  ]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sendButton}
+                onPress={() =>
+                  navigation.navigate("SendInviteCreate", { event })
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons name="send-outline" size={18} color="#ffffff" />
+                <Text style={styles.sendButtonText}>Send Invite</Text>
+              </TouchableOpacity>
+            </View>
 
             {loading ? (
               <View style={styles.stateContainer}>
@@ -383,7 +395,13 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  topActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
   createButton: {
+    flex: 1,
     position: "relative",
     overflow: "hidden",
     minHeight: 48,
@@ -391,9 +409,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginBottom: 16,
     borderRadius: 11,
     backgroundColor: "#ffffff",
+  },
+  sendButton: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 11,
+    backgroundColor: "#ff7f86",
   },
   buttonShine: {
     position: "absolute",
@@ -404,7 +431,12 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     color: "#ff7f86",
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  sendButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
     fontWeight: "700",
   },
   scheduleList: {

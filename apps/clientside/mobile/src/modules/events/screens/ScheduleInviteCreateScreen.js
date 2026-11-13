@@ -16,9 +16,14 @@ import { getContactsByUserId } from "../../contacts/api/contact.api";
 import { getUser } from "../../../utils/auth";
 import { useToast } from "../../../context/ToastContext";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
-import { scheduleInvites } from "../api/event.api";
+import { scheduleInvites, sendEventInvites } from "../api/event.api";
 
-export default function ScheduleInvitesScreen({ navigation, route }) {
+export default function ScheduleInviteCreateScreen({
+  navigation,
+  route,
+  mode = "schedule",
+}) {
+  const isSendMode = mode === "send";
   const { colors, isDark } = useAppTheme();
   const { showSuccess, showError } = useToast();
   const event = route.params?.event;
@@ -110,6 +115,29 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
 
     setSaving(true);
     try {
+      if (isSendMode) {
+        const response = await sendEventInvites({
+          eventId: event._id,
+          contactIds: selectedContactIds,
+        });
+        const result = response.data;
+        const failedContacts = result.results.filter((contact) => !contact.sent);
+
+        if (failedContacts.length > 0) {
+          setSelectedContactIds(failedContacts.map((contact) => contact.contactId));
+          showError(
+            `${result.sentCount} sent. Could not send to: ${failedContacts
+              .map((contact) => contact.name)
+              .join(", ")}`
+          );
+          return;
+        }
+
+        showSuccess(result.message || "Invitations sent successfully.");
+        navigation.goBack();
+        return;
+      }
+
       const response = await scheduleInvites({
         eventId: event._id,
         contactIds: selectedContactIds,
@@ -194,7 +222,9 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
               <Ionicons name="arrow-back" size={23} color="#ffffff" />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Schedule Invite</Text>
+              <Text style={styles.headerTitle}>
+                {isSendMode ? "Send Invite" : "Schedule Invite"}
+              </Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {event?.title || "Choose an event"}
               </Text>
@@ -203,14 +233,43 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
           </View>
 
           <View style={styles.content}>
-            {!!duplicateMessage && (
+            {!isSendMode && !!duplicateMessage && (
               <View style={styles.duplicateMessage}>
                 <Ionicons name="warning-outline" size={20} color="#8a6500" />
                 <Text style={styles.duplicateMessageText}>{duplicateMessage}</Text>
               </View>
             )}
-            <Text style={styles.sectionTitle}>Schedule date and time</Text>
-            <View style={styles.pickerRow}>
+            {isSendMode ? (
+              <View style={styles.eventDetailsCard}>
+                <Text style={styles.eventDetailsTitle}>Event invitation</Text>
+                <Text style={styles.eventDetailsText}>
+                  {event?.hostOne || event?.hostTwo
+                    ? `Hosted by ${[event.hostOne, event.hostTwo].filter(Boolean).join(" and ")}`
+                    : event?.title}
+                </Text>
+                {!!event?.eventDate && (
+                  <Text style={styles.eventDetailsText}>
+                    Date: {new Date(event.eventDate).toLocaleDateString()}
+                    {event.eventTime ? ` at ${event.eventTime}` : ""}
+                  </Text>
+                )}
+                {!!(event?.address || event?.location?.address) && (
+                  <Text style={styles.eventDetailsText}>
+                    Location: {event.address || event.location.address}
+                  </Text>
+                )}
+                {!!event?.message && (
+                  <Text style={styles.eventDetailsText}>{event.message}</Text>
+                )}
+                <Text style={styles.eventDetailsHint}>
+                  The event details, invitation, and available host photos will
+                  be sent through WhatsApp.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Schedule date and time</Text>
+                <View style={styles.pickerRow}>
               {Platform.OS === "web" ? (
                 <View style={styles.pickerButton}>
                   <Ionicons name="calendar-outline" size={20} color="#ff7f86" />
@@ -283,7 +342,9 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
                 )}
               </View>
             )}
-            {Platform.OS !== "web" && showTimePicker && (
+              </>
+            )}
+            {!isSendMode && Platform.OS !== "web" && showTimePicker && (
               <View style={styles.nativePicker}>
                 <DateTimePicker
                   value={scheduledAt}
@@ -347,8 +408,14 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <>
-                  <Ionicons name="calendar" size={18} color="#ffffff" />
-                  <Text style={styles.submitButtonText}>Schedule</Text>
+                  <Ionicons
+                    name={isSendMode ? "send" : "calendar"}
+                    size={18}
+                    color="#ffffff"
+                  />
+                  <Text style={styles.submitButtonText}>
+                    {isSendMode ? "Send" : "Schedule"}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -402,6 +469,32 @@ const styles = StyleSheet.create({
     color: "#263957",
     fontSize: 16,
     fontWeight: "700",
+  },
+  eventDetailsCard: {
+    gap: 7,
+    marginBottom: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e6e8ed",
+    borderRadius: 11,
+    backgroundColor: "#ffffff",
+  },
+  eventDetailsTitle: {
+    marginBottom: 2,
+    color: "#263957",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  eventDetailsText: {
+    color: "#535e70",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  eventDetailsHint: {
+    marginTop: 4,
+    color: "#777f8b",
+    fontSize: 12,
+    lineHeight: 17,
   },
   duplicateMessage: {
     flexDirection: "row",

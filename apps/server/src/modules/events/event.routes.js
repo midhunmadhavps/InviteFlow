@@ -19,6 +19,7 @@ router.post(
 );
 router.get("/event-types", authMiddleware, eventController.eventTypes);
 router.get("/events-list/:userId", authMiddleware, eventController.eventLists);
+router.post("/send-invites", authMiddleware, eventController.sendEventInvites);
 
 router.put(
   "/update-event/:id",

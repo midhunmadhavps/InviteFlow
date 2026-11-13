@@ -25,6 +25,11 @@ export const scheduleInvites = async (scheduleData) => {
   return response.data;
 };
 
+export const sendEventInvites = async (inviteData) => {
+  const response = await api.post("/event/send-invites", inviteData);
+  return response.data;
+};
+
 export const getScheduleInvites = async (eventId) => {
   const response = await api.get("/schedule-invites", {
     params: eventId ? { eventId } : {},

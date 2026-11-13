@@ -1,4 +1,6 @@
+const mongoose = require("mongoose");
 const eventService = require("./event.service");
+const whatsappService = require("./whatsapp.service");
 
 const createEvent = async (req, res) => {
   try {
@@ -191,9 +193,53 @@ const updateEvent = async (req, res) => {
   }
 };
 
+const sendEventInvites = async (req, res) => {
+  const { eventId, contactIds } = req.body;
+  if (
+    !mongoose.Types.ObjectId.isValid(eventId) ||
+    !Array.isArray(contactIds) ||
+    contactIds.length === 0 ||
+    contactIds.length > 100 ||
+    contactIds.some((id) => !mongoose.Types.ObjectId.isValid(id))
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid event and between 1 and 100 contacts are required.",
+    });
+  }
+
+  try {
+    const result = await whatsappService.sendEventInvitations({
+      eventId,
+      contactIds: [...new Set(contactIds.map(String))],
+      userId: req.user._id,
+    });
+
+    return res.status(200).json({
+      success: result.sentCount > 0,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    console.error("Send WhatsApp event invites error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send event invitations.",
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   eventTypes,
   eventLists,
   updateEvent,
+  sendEventInvites,
 };

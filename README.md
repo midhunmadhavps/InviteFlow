@@ -74,7 +74,15 @@ JWT_SECRET=my_super_secret_key
 JWT_EXPIRES_IN=7d
 
 FRONTEND_URL=http://localhost:8081
+
+# WhatsApp Cloud API (required to send event invitations)
+WHATSAPP_ACCESS_TOKEN=your_whatsapp_access_token
+WHATSAPP_PHONE_NUMBER_ID=your_whatsapp_phone_number_id
+WHATSAPP_API_VERSION=v22.0
+API_PUBLIC_URL=https://your-public-api.example.com
 ```
+
+`API_PUBLIC_URL` must be reachable by WhatsApp so it can download uploaded event and host images. WhatsApp only allows free-form messages during an open customer service window; initiating a conversation outside that window requires an approved WhatsApp message template.
 
 ---
 
