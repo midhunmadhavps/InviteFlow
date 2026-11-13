@@ -1,12 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const controller = require("./event.controller");
+const authMiddleware = require("../../middleware/auth.middleware");
+const controller = require("./schedules.controller");
 
-router.get("/", controller.getAllEvents);
-router.post("/", controller.createEvent);
-router.get("/:id", controller.getEventById);
-router.put("/:id", controller.updateEvent);
-router.delete("/:id", controller.deleteEvent);
+router.post("/", authMiddleware, controller.createScheduleInvites);
 
 module.exports = router;

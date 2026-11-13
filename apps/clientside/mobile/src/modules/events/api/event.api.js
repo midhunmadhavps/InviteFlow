@@ -19,3 +19,8 @@ export const updateEvent = async (id, data) => {
   const response = await api.put(`/event/update-event/${id}`, data);
   return response.data;
 };
+
+export const scheduleInvites = async (scheduleData) => {
+  const response = await api.post("/schedule-invites", scheduleData);
+  return response.data;
+};

@@ -20,5 +20,6 @@ app.use("/api/auth", require("./modules/auth/auth.routes"));
 app.use("/api/admin", require("./modules/admin/admin.routes"));
 app.use("/api/event", require("./modules/events/event.routes"));
 app.use("/api/contacts", require("./modules/contacts/contact.routes"));
+app.use("/api/schedule-invites", require("./modules/schedules/schedules.routes"));
 
 module.exports = app;

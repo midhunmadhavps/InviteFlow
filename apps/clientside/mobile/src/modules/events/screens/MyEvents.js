@@ -351,8 +351,7 @@ export default function MyEventsScreen({ navigation }) {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
-              // Handle schedule reminder
-              console.log("Schedule reminder for event:", item._id);
+              navigation.navigate("ScheduleInvites", { event: item });
             }}
             activeOpacity={0.7}
           >
@@ -362,7 +361,7 @@ export default function MyEventsScreen({ navigation }) {
               color="#ff7f86"
             />
             <Text style={styles.actionButtonText}>
-              Schedule Reminder
+              Schedule Invits
             </Text>
           </TouchableOpacity>
         </View>
