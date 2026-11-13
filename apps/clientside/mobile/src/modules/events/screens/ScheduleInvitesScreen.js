@@ -5,6 +5,7 @@ import {
   FlatList,
   ImageBackground,
   Alert,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -28,6 +29,7 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [updatingScheduleId, setUpdatingScheduleId] = useState(null);
+  const [schedulePendingDelete, setSchedulePendingDelete] = useState(null);
   const [createButtonWidth, setCreateButtonWidth] = useState(0);
   const shineProgress = useRef(new Animated.Value(0)).current;
   const shineTranslateX = shineProgress.interpolate({
@@ -127,6 +129,7 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
       setSchedules((current) =>
         current.filter((schedule) => schedule._id !== item._id)
       );
+      setSchedulePendingDelete(null);
     } catch (error) {
       showActionError(
         "Could not delete invite",
@@ -138,25 +141,7 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   };
 
   const confirmDeleteInvite = (item) => {
-    if (Platform.OS === "web") {
-      if (window.confirm("Delete this pending scheduled invite?")) {
-        deletePendingInvite(item);
-      }
-      return;
-    }
-
-    Alert.alert(
-      "Delete scheduled invite?",
-      "This pending invite will be permanently deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deletePendingInvite(item),
-        },
-      ]
-    );
+    setSchedulePendingDelete(item);
   };
 
   const renderSchedule = ({ item }) => (
@@ -303,6 +288,53 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
             )}
           </View>
         </ImageBackground>
+        <Modal
+          visible={!!schedulePendingDelete}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            if (!updatingScheduleId) {
+              setSchedulePendingDelete(null);
+            }
+          }}
+        >
+          <View style={styles.confirmationOverlay}>
+            <View style={styles.confirmationCard}>
+              <View style={styles.confirmationIcon}>
+                <Ionicons name="trash-outline" size={24} color="#d64545" />
+              </View>
+              <Text style={styles.confirmationTitle}>Delete invitation?</Text>
+              <Text style={styles.confirmationMessage}>
+                Delete the pending invite for{" "}
+                {schedulePendingDelete?.contactId?.name || "this contact"}?
+                This action cannot be undone.
+              </Text>
+              <View style={styles.confirmationActions}>
+                <TouchableOpacity
+                  style={styles.cancelDeleteButton}
+                  onPress={() => setSchedulePendingDelete(null)}
+                  disabled={!!updatingScheduleId}
+                >
+                  <Text style={styles.cancelDeleteText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmDeleteButton}
+                  onPress={() => deletePendingInvite(schedulePendingDelete)}
+                  disabled={
+                    !schedulePendingDelete ||
+                    updatingScheduleId === schedulePendingDelete?._id
+                  }
+                >
+                  {updatingScheduleId === schedulePendingDelete?._id ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.confirmDeleteText}>Delete</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ThemeTree>
     </View>
   );
@@ -465,6 +497,76 @@ const styles = StyleSheet.create({
   },
   retryText: {
     color: "#ff7f86",
+    fontWeight: "700",
+  },
+  confirmationOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(25, 35, 50, 0.48)",
+  },
+  confirmationCard: {
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    padding: 24,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+  },
+  confirmationIcon: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+    borderRadius: 26,
+    backgroundColor: "#fff0f0",
+  },
+  confirmationTitle: {
+    color: "#263957",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  confirmationMessage: {
+    marginTop: 9,
+    color: "#687386",
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  confirmationActions: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 22,
+  },
+  cancelDeleteButton: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e1e4e9",
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+  },
+  cancelDeleteText: {
+    color: "#536174",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  confirmDeleteButton: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "#d64545",
+  },
+  confirmDeleteText: {
+    color: "#ffffff",
+    fontSize: 14,
     fontWeight: "700",
   },
 });

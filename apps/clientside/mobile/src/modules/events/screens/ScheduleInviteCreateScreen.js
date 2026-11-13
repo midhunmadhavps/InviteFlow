@@ -24,7 +24,12 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   const event = route.params?.event;
   const [contacts, setContacts] = useState([]);
   const [selectedContactIds, setSelectedContactIds] = useState([]);
-  const [scheduledAt, setScheduledAt] = useState(new Date());
+  const [scheduledAt, setScheduledAt] = useState(() => {
+    const date = new Date();
+    date.setSeconds(0, 0);
+    return date;
+  });
+  const [duplicateMessage, setDuplicateMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -54,6 +59,10 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   useEffect(() => {
     loadContacts();
   }, []);
+
+  useEffect(() => {
+    setDuplicateMessage("");
+  }, [scheduledAt, selectedContactIds]);
 
   const toggleContact = (contactId) => {
     setSelectedContactIds((selected) =>
@@ -109,7 +118,20 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
       showSuccess(response.message || "Invites scheduled successfully.");
       navigation.goBack();
     } catch (error) {
-      showError(error.response?.data?.message || "Failed to schedule invites.");
+      const response = error.response?.data;
+      if (error.response?.status === 409) {
+        const duplicateNames = response?.duplicateContacts
+          ?.map((contact) => contact.name)
+          .filter(Boolean);
+        const names = duplicateNames?.join(", ");
+        setDuplicateMessage(
+          names
+            ? `An invite for ${names} is already scheduled for this event at this time.`
+            : response.message || "An invite is already scheduled for this event at this time."
+        );
+      } else {
+        showError(response?.message || "Failed to schedule invites.");
+      }
     } finally {
       setSaving(false);
     }
@@ -181,6 +203,12 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
           </View>
 
           <View style={styles.content}>
+            {!!duplicateMessage && (
+              <View style={styles.duplicateMessage}>
+                <Ionicons name="warning-outline" size={20} color="#8a6500" />
+                <Text style={styles.duplicateMessageText}>{duplicateMessage}</Text>
+              </View>
+            )}
             <Text style={styles.sectionTitle}>Schedule date and time</Text>
             <View style={styles.pickerRow}>
               {Platform.OS === "web" ? (
@@ -374,6 +402,24 @@ const styles = StyleSheet.create({
     color: "#263957",
     fontSize: 16,
     fontWeight: "700",
+  },
+  duplicateMessage: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+    marginBottom: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#f0d47a",
+    borderRadius: 10,
+    backgroundColor: "#fff7d6",
+  },
+  duplicateMessageText: {
+    flex: 1,
+    color: "#765700",
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "600",
   },
   pickerRow: {
     flexDirection: "row",

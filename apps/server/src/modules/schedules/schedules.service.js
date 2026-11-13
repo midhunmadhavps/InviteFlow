@@ -14,10 +14,31 @@ const createScheduleInvites = async ({ eventId, contactIds, scheduledAt, userId 
   const contacts = await Contact.find({
     _id: { $in: contactIds },
     userId,
-  }).select("_id");
+  }).select("_id name");
   if (contacts.length !== contactIds.length) {
     const error = new Error("One or more selected contacts are unavailable.");
     error.statusCode = 400;
+    throw error;
+  }
+
+  const existingInvites = await ScheduleInvite.find({
+    eventId,
+    contactId: { $in: contactIds },
+    scheduledAt,
+  }).select("contactId");
+  if (existingInvites.length > 0) {
+    const duplicateContactIds = new Set(
+      existingInvites.map((invite) => invite.contactId.toString())
+    );
+    const duplicateContacts = contacts
+      .filter((contact) => duplicateContactIds.has(contact._id.toString()))
+      .map((contact) => ({ id: contact._id, name: contact.name }));
+    const names = duplicateContacts.map((contact) => contact.name).join(", ");
+    const error = new Error(
+      `An invite for ${names} is already scheduled for this event at this time.`
+    );
+    error.statusCode = 409;
+    error.duplicateContacts = duplicateContacts;
     throw error;
   }
 
