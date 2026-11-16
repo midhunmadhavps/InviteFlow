@@ -108,6 +108,10 @@ const eventLists = async (req, res) => {
           ? `${baseUrl}/uploads/${eventData.hostOneImage}`
           : null,
 
+        hostTwoImage: eventData.hostTwoImage
+          ? `${baseUrl}/uploads/${eventData.hostTwoImage}`
+          : null,
+
         invitation: eventData.invitation
           ? `${baseUrl}/uploads/${eventData.invitation}`
           : null,
@@ -175,6 +179,11 @@ const updateEvent = async (req, res) => {
           ? (eventData.hostOneImage.startsWith("http")
               ? eventData.hostOneImage
               : `${baseUrl}/uploads/${eventData.hostOneImage}`)
+          : null,
+        hostTwoImage: eventData.hostTwoImage
+          ? (eventData.hostTwoImage.startsWith("http")
+              ? eventData.hostTwoImage
+              : `${baseUrl}/uploads/${eventData.hostTwoImage}`)
           : null,
         invitation: eventData.invitation
           ? (eventData.invitation.startsWith("http")

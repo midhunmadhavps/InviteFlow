@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   ImageBackground,
+  Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -40,6 +43,7 @@ export default function ScheduleInviteCreateScreen({
   const [loadError, setLoadError] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showMessagePreview, setShowMessagePreview] = useState(false);
 
   const loadContacts = async () => {
     setLoading(true);
@@ -127,7 +131,7 @@ export default function ScheduleInviteCreateScreen({
           setSelectedContactIds(failedContacts.map((contact) => contact.contactId));
           showError(
             `${result.sentCount} sent. Could not send to: ${failedContacts
-              .map((contact) => contact.name)
+              .map((contact) => `${contact.name} (${contact.error})`)
               .join(", ")}`
           );
           return;
@@ -205,6 +209,108 @@ export default function ScheduleInviteCreateScreen({
       hour12: true,
     });
 
+  const eventHosts = [event?.hostOne, event?.hostTwo].filter(Boolean).join(" and ");
+  const eventLocation = event?.address || event?.location?.address;
+  const eventMapUrl = event?.location?.googleMapsUrl || event?.googleMapsUrl;
+  const invitationAssets = [
+    { uri: event?.hostOneImage, label: "Host photo" },
+    { uri: event?.hostTwoImage, label: "Host photo" },
+    { uri: event?.invitation, label: "Invitation card" },
+  ].filter((asset) => asset.uri);
+
+  const renderMessagePreview = () => (
+    <View style={styles.eventDetailsCard}>
+      <View style={styles.previewBubble}>
+        {invitationAssets.length > 0 ? (
+          <View style={styles.previewAssets}>
+            {invitationAssets.map((asset, index) => {
+              const isPdf =
+                asset.label === "Invitation card" &&
+                /\.pdf(?:$|\?)/i.test(asset.uri);
+              const isImage = /\.(jpe?g|png)(?:$|\?)/i.test(asset.uri);
+              return !isImage ? (
+                <View
+                  key={`${asset.label}-${index}`}
+                  style={styles.previewPdf}
+                >
+                  <Ionicons
+                    name={isPdf ? "document-text-outline" : "attach-outline"}
+                    size={23}
+                    color="#ff7f86"
+                  />
+                  <Text style={styles.previewPdfText}>
+                    {asset.label}
+                    {isPdf ? " (PDF)" : " (file)"}
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  key={`${asset.label}-${index}`}
+                  style={styles.previewImageWrapper}
+                >
+                  <Image
+                    source={{ uri: asset.uri }}
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                    accessibilityLabel={asset.label}
+                  />
+                  <Text style={styles.previewAssetLabel}>{asset.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.noPreviewImage}>
+            <Ionicons name="image-outline" size={22} color="#9aa3b1" />
+            <Text style={styles.noPreviewImageText}>
+              No event images or invitation card
+            </Text>
+          </View>
+        )}
+        <ScrollView
+          style={styles.previewMessageScroll}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.previewMessage}>
+            💐{" "}
+            <Text style={styles.previewBold}>
+              {eventHosts || "Our family"} – {event?.title || "Event"} Invitation
+            </Text>
+            {"\n\n"}
+            {event?.message ? `${event.message}\n\n` : ""}
+            Your presence, love, and blessings will make our celebration even
+            more memorable. ❤️
+            {"\n\n"}
+            📅 <Text style={styles.previewBold}>Date:</Text>{" "}
+            {event?.eventDate
+              ? new Date(event.eventDate).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "To be announced"}
+            {"\n"}
+            ⏰ <Text style={styles.previewBold}>Time:</Text>{" "}
+            {event?.eventTime || "To be announced"}
+            {"\n"}
+            🏠 <Text style={styles.previewBold}>Address:</Text>{" "}
+            {eventLocation || "To be announced"}
+            {"\n"}
+            📌 <Text style={styles.previewBold}>Location:</Text>{" "}
+            {eventMapUrl || "Not provided"}
+            {"\n\n"}
+            We warmly welcome you and your family to celebrate this beautiful
+            occasion with us!
+            {"\n\n"}With love,
+            {"\n"}
+            <Text style={styles.previewBold}>{eventHosts || "Our family"} ❤️</Text>
+          </Text>
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemeTree>
@@ -240,32 +346,19 @@ export default function ScheduleInviteCreateScreen({
               </View>
             )}
             {isSendMode ? (
-              <View style={styles.eventDetailsCard}>
-                <Text style={styles.eventDetailsTitle}>Event invitation</Text>
-                <Text style={styles.eventDetailsText}>
-                  {event?.hostOne || event?.hostTwo
-                    ? `Hosted by ${[event.hostOne, event.hostTwo].filter(Boolean).join(" and ")}`
-                    : event?.title}
-                </Text>
-                {!!event?.eventDate && (
-                  <Text style={styles.eventDetailsText}>
-                    Date: {new Date(event.eventDate).toLocaleDateString()}
-                    {event.eventTime ? ` at ${event.eventTime}` : ""}
-                  </Text>
-                )}
-                {!!(event?.address || event?.location?.address) && (
-                  <Text style={styles.eventDetailsText}>
-                    Location: {event.address || event.location.address}
-                  </Text>
-                )}
-                {!!event?.message && (
-                  <Text style={styles.eventDetailsText}>{event.message}</Text>
-                )}
-                <Text style={styles.eventDetailsHint}>
-                  The event details, invitation, and available host photos will
-                  be sent through WhatsApp.
-                </Text>
-              </View>
+              <TouchableOpacity
+                style={styles.previewButton}
+                onPress={() => setShowMessagePreview(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="eye-outline" size={19} color="#ff7f86" />
+                <Text style={styles.previewButtonText}>Preview message</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={17}
+                  color="#8b94a1"
+                />
+              </TouchableOpacity>
             ) : (
               <>
                 <Text style={styles.sectionTitle}>Schedule date and time</Text>
@@ -421,6 +514,30 @@ export default function ScheduleInviteCreateScreen({
             </TouchableOpacity>
           </View>
         </ImageBackground>
+        {isSendMode && (
+          <Modal
+            visible={showMessagePreview}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowMessagePreview(false)}
+          >
+            <View style={styles.previewModalOverlay}>
+              <View style={styles.previewModalCard}>
+                <View style={styles.previewModalHeader}>
+                  <Text style={styles.previewModalTitle}>Message preview</Text>
+                  <TouchableOpacity
+                    style={styles.previewCloseButton}
+                    onPress={() => setShowMessagePreview(false)}
+                    accessibilityLabel="Close message preview"
+                  >
+                    <Ionicons name="close" size={23} color="#596579" />
+                  </TouchableOpacity>
+                </View>
+                {renderMessagePreview()}
+              </View>
+            </View>
+          </Modal>
+        )}
       </ThemeTree>
     </View>
   );
@@ -465,36 +582,136 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  previewButton: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    marginBottom: 12,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: "#f0d7d9",
+    borderRadius: 11,
+    backgroundColor: "#ffffff",
+  },
+  previewButtonText: {
+    flex: 1,
+    color: "#ff7f86",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  previewModalOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    backgroundColor: "rgba(25, 35, 50, 0.55)",
+  },
+  previewModalCard: {
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "90%",
+    alignSelf: "center",
+    flexShrink: 1,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+  },
+  previewModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  previewModalTitle: {
+    color: "#263957",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  previewCloseButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: "#f0f2f5",
+  },
   sectionTitle: {
     color: "#263957",
     fontSize: 16,
     fontWeight: "700",
   },
   eventDetailsCard: {
-    gap: 7,
-    marginBottom: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#e6e8ed",
-    borderRadius: 11,
+    gap: 9,
+  },
+  previewBubble: {
+    maxHeight: 330,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: "#f0f2f5",
+  },
+  previewAssets: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 9,
+  },
+  previewImageWrapper: {
+    alignItems: "center",
+  },
+  previewImage: {
+    width: 82,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: "#e5e8ed",
+  },
+  previewAssetLabel: {
+    marginTop: 3,
+    color: "#687386",
+    fontSize: 10,
+  },
+  previewPdf: {
+    minWidth: 120,
+    height: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 9,
+    borderRadius: 8,
     backgroundColor: "#ffffff",
   },
-  eventDetailsTitle: {
-    marginBottom: 2,
-    color: "#263957",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  eventDetailsText: {
+  previewPdfText: {
+    flexShrink: 1,
     color: "#535e70",
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 11,
+    fontWeight: "600",
   },
-  eventDetailsHint: {
-    marginTop: 4,
-    color: "#777f8b",
+  noPreviewImage: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+  },
+  noPreviewImageText: {
+    color: "#687386",
+    fontSize: 11,
+  },
+  previewMessage: {
+    color: "#263957",
     fontSize: 12,
     lineHeight: 17,
+  },
+  previewMessageScroll: {
+    maxHeight: 185,
+  },
+  previewBold: {
+    fontWeight: "700",
   },
   duplicateMessage: {
     flexDirection: "row",

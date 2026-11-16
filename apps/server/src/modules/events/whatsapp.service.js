@@ -9,11 +9,7 @@ const createServiceError = (message, statusCode) => {
   return error;
 };
 
-const buildPublicFileUrl = (file) => {
-  if (/^https?:\/\//i.test(file)) {
-    return file;
-  }
-
+const getPublicApiUrl = () => {
   const publicUrl = process.env.API_PUBLIC_URL?.replace(/\/+$/, "");
   if (!publicUrl) {
     throw createServiceError(
@@ -22,6 +18,31 @@ const buildPublicFileUrl = (file) => {
     );
   }
 
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(publicUrl);
+  } catch {
+    throw createServiceError("API_PUBLIC_URL must be a valid HTTPS URL.", 503);
+  }
+  if (parsedUrl.protocol !== "https:") {
+    throw createServiceError("API_PUBLIC_URL must use HTTPS.", 503);
+  }
+
+  return publicUrl;
+};
+
+const buildPublicFileUrl = (file) => {
+  if (/^https?:\/\//i.test(file)) {
+    const url = new URL(file);
+    if (!url.pathname.startsWith("/uploads/")) {
+      return file;
+    }
+
+    const publicUrl = getPublicApiUrl();
+    return `${publicUrl}${url.pathname}${url.search}`;
+  }
+
+  const publicUrl = getPublicApiUrl();
   return `${publicUrl}/uploads/${encodeURIComponent(path.basename(file))}`;
 };
 
@@ -89,12 +110,12 @@ const getEventAssets = (event) => {
         type: "document",
         document: { link: url, filename: fileName },
       });
-    } else if (/\.(jpe?g|png|webp)$/i.test(extension)) {
+    } else if (/\.(jpe?g|png)$/i.test(extension)) {
       assets.push({
         type: "image",
         image: { link: url },
       });
-    } else if (label === "Event invitation") {
+    } else {
       assets.push({
         type: "document",
         document: { link: url, filename: fileName },
@@ -106,21 +127,33 @@ const getEventAssets = (event) => {
 
 const buildEventMessage = (event) => {
   const location = event.location?.address || event.address;
+  const hosts = [event.hostOne, event.hostTwo].filter(Boolean).join(" and ");
+  const eventDate = event.eventDate
+    ? new Date(event.eventDate).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "To be announced";
   const lines = [
-    `You're invited to ${event.title}!`,
-    event.hostOne || event.hostTwo
-      ? `Hosted by ${[event.hostOne, event.hostTwo].filter(Boolean).join(" and ")}`
-      : null,
-    event.eventDate
-      ? `Date: ${new Date(event.eventDate).toLocaleDateString()}`
-      : null,
-    event.eventTime ? `Time: ${event.eventTime}` : null,
-    location ? `Location: ${location}` : null,
-    event.location?.googleMapsUrl || null,
+    `💐 *${hosts || "Our family"} – ${event.title || "Event"} Invitation*`,
     event.message || null,
+    "Your presence, love, and blessings will make our celebration even more memorable. ❤️",
+    "",
+    `📅 *Date:* ${eventDate}`,
+    `⏰ *Time:* ${event.eventTime || "To be announced"}`,
+    `🏠 *Address:* ${location || "To be announced"}`,
+    event.location?.googleMapsUrl
+      ? `\n📌 *Google Maps Location:* ${event.location.googleMapsUrl}`
+      : null,
+    "",
+    "We warmly welcome you and your family to celebrate this beautiful occasion with us!",
+    "",
+    "With love,",
+    `*${hosts || "Our family"}* ❤️`,
   ];
 
-  return lines.filter(Boolean).join("\n");
+  return lines.filter((line) => line !== null).join("\n");
 };
 
 const sendEventInvitations = async ({ eventId, contactIds, userId }) => {
@@ -166,13 +199,25 @@ const sendEventInvitations = async ({ eventId, contactIds, userId }) => {
     }
 
     try {
-      await sendWhatsAppMessage(phoneNumberId, accessToken, to, {
-        type: "text",
-        text: { preview_url: true, body: messageText },
-      });
+      if (assets.length === 0) {
+        await sendWhatsAppMessage(phoneNumberId, accessToken, to, {
+          type: "text",
+          text: { preview_url: true, body: messageText },
+        });
+      } else {
+        const [firstAsset, ...additionalAssets] = assets;
+        const mediaType = firstAsset.type;
+        await sendWhatsAppMessage(phoneNumberId, accessToken, to, {
+          ...firstAsset,
+          [mediaType]: {
+            ...firstAsset[mediaType],
+            caption: messageText,
+          },
+        });
 
-      for (const asset of assets) {
-        await sendWhatsAppMessage(phoneNumberId, accessToken, to, asset);
+        for (const asset of additionalAssets) {
+          await sendWhatsAppMessage(phoneNumberId, accessToken, to, asset);
+        }
       }
 
       await ScheduleInvite.updateMany(
