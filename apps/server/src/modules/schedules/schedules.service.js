@@ -1,7 +1,27 @@
 const mongoose = require("mongoose");
 const Contact = require("../../models/contact.model");
 const Event = require("../../models/event.model");
+const Payment = require("../../models/payment.model");
 const ScheduleInvite = require("./schedules.model");
+
+const checkEventPaymentApproved = async ({ eventId, userId }) => {
+  const payment = await Payment.findOne({
+    eventId,
+    userId,
+    status: "Approved",
+  }).select("_id");
+  return Boolean(payment);
+};
+
+const requireApprovedEventPayment = async ({ eventId, userId }) => {
+  if (!(await checkEventPaymentApproved({ eventId, userId }))) {
+    const error = new Error(
+      "An approved payment is required before scheduling invites for this event."
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+};
 
 const createScheduleInvites = async ({ eventId, contactIds, scheduledAt, userId }) => {
   const event = await Event.findOne({ _id: eventId, userId }).select("_id");
@@ -10,6 +30,8 @@ const createScheduleInvites = async ({ eventId, contactIds, scheduledAt, userId 
     error.statusCode = 404;
     throw error;
   }
+
+  await requireApprovedEventPayment({ eventId, userId });
 
   const contacts = await Contact.find({
     _id: { $in: contactIds },
@@ -51,6 +73,17 @@ const createScheduleInvites = async ({ eventId, contactIds, scheduledAt, userId 
   );
 };
 
+const getEventPaymentStatus = async ({ eventId, userId }) => {
+  const event = await Event.findOne({ _id: eventId, userId }).select("_id");
+  if (!event) {
+    const error = new Error("Event not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return checkEventPaymentApproved({ eventId, userId });
+};
+
 const getScheduleInvites = async ({ eventId, userId }) => {
   const eventFilter = { userId };
   if (eventId) {
@@ -88,7 +121,9 @@ const deletePendingScheduleInvite = async ({ scheduleInviteId, userId }) => {
 };
 
 module.exports = {
+  checkEventPaymentApproved,
   createScheduleInvites,
+  getEventPaymentStatus,
   getScheduleInvites,
   updateScheduleInviteStatus,
   deletePendingScheduleInvite,

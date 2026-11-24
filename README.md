@@ -90,6 +90,10 @@ API_PUBLIC_URL=https://your-public-api.example.com
 `API_PUBLIC_URL` must be reachable by WhatsApp so it can download uploaded event and host images. WhatsApp only allows free-form messages during an open customer service window; initiating a conversation outside that window requires an approved WhatsApp message template.
 The admin WhatsApp configuration page reports whether the access and webhook verify tokens are configured and allows administrators to edit the four values. The webhook verify token is optional when sending messages. Saved values are stored in the MongoDB `whatsapp_config` collection and take precedence over matching environment variables; environment values remain the fallback when a database value is not set. Access and verify tokens are encrypted before storage and are write-only in the web app. Configure a stable `WHATSAPP_CONFIG_ENCRYPTION_KEY` and keep it backed up securely; if it is omitted, the server uses `JWT_SECRET` for encryption. Losing or changing the encryption key prevents the server from decrypting saved tokens. Keep database access restricted and protect database backups.
 
+### Event payment approval for invite scheduling
+
+The Schedule Invite action requires a payment document for the same event and user with `status: "Approved"`. Payment documents use the MongoDB `payments` collection with `eventId`, `userId`, and a status of `Pending`, `Approved`, or `Rejected`. Payment records can be reviewed and approved by an administrator directly in the database until a payment management UI is implemented.
+
 ---
 
 ## Start Development Server

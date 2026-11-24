@@ -25,6 +25,13 @@ export const scheduleInvites = async (scheduleData) => {
   return response.data;
 };
 
+export const getEventPaymentStatus = async (eventId) => {
+  const response = await api.get("/schedule-invites/payment-status", {
+    params: { eventId },
+  });
+  return response.data;
+};
+
 export const sendEventInvites = async (inviteData) => {
   const response = await api.post("/event/send-invites", inviteData);
   return response.data;

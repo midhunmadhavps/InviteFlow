@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import {
   getScheduleInvites,
+  getEventPaymentStatus,
   deleteScheduleInvite,
   updateScheduleInviteStatus,
 } from "../api/event.api";
@@ -27,6 +28,7 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
   const event = route.params?.event;
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [updatingScheduleId, setUpdatingScheduleId] = useState(null);
   const [schedulePendingDelete, setSchedulePendingDelete] = useState(null);
@@ -140,6 +142,34 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
     }
   };
 
+  const openScheduleCreate = async () => {
+    if (!event?._id) {
+      showActionError("Cannot schedule invite", "Event information is missing.");
+      return;
+    }
+
+    setCheckingPayment(true);
+    try {
+      const response = await getEventPaymentStatus(event._id);
+      if (!response?.data?.approved) {
+        showActionError(
+          "Payment required",
+          "An approved payment is required before scheduling invites for this event."
+        );
+        return;
+      }
+
+      navigation.navigate("ScheduleInviteCreate", { event });
+    } catch (error) {
+      showActionError(
+        "Could not verify payment",
+        error.response?.data?.message || "Please try again."
+      );
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
   const confirmDeleteInvite = (item) => {
     setSchedulePendingDelete(item);
   };
@@ -236,29 +266,37 @@ export default function ScheduleInvitesScreen({ navigation, route }) {
           <View style={styles.content}>
             <View style={styles.topActions}>
               <TouchableOpacity
-                style={styles.createButton}
+                style={[
+                  styles.createButton,
+                  checkingPayment && styles.createButtonDisabled,
+                ]}
                 onLayout={(layoutEvent) =>
                   setCreateButtonWidth(layoutEvent.nativeEvent.layout.width)
                 }
-                onPress={() =>
-                  navigation.navigate("ScheduleInviteCreate", { event })
-                }
+                onPress={openScheduleCreate}
+                disabled={checkingPayment}
                 activeOpacity={0.8}
               >
-                <Ionicons name="calendar-outline" size={19} color="#ff7f86" />
-                <Text style={styles.createButtonText}>Schedule Invite</Text>
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.buttonShine,
-                    {
-                      transform: [
-                        { translateX: shineTranslateX },
-                        { skewX: "-20deg" },
-                      ],
-                    },
-                  ]}
-                />
+                {checkingPayment ? (
+                  <ActivityIndicator size="small" color="#ff7f86" />
+                ) : (
+                  <>
+                    <Ionicons name="calendar-outline" size={19} color="#ff7f86" />
+                    <Text style={styles.createButtonText}>Schedule Invite</Text>
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.buttonShine,
+                        {
+                          transform: [
+                            { translateX: shineTranslateX },
+                            { skewX: "-20deg" },
+                          ],
+                        },
+                      ]}
+                    />
+                  </>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.sendButton}
@@ -411,6 +449,9 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 11,
     backgroundColor: "#ffffff",
+  },
+  createButtonDisabled: {
+    opacity: 0.65,
   },
   sendButton: {
     flex: 1,

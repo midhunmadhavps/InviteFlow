@@ -9,11 +9,12 @@ import {
   RefreshControl,
   Image,
   ImageBackground,
+  Modal,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { getMyEvents } from "../api/event.api";
+import { getEventPaymentStatus, getMyEvents } from "../api/event.api";
 import { getUser } from "../../../utils/auth";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
@@ -23,6 +24,35 @@ export default function MyEventsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [checkingPaymentEventId, setCheckingPaymentEventId] = useState(null);
+  const [paymentNotice, setPaymentNotice] = useState(null);
+
+  const openEventSchedules = async (event) => {
+    if (checkingPaymentEventId) return;
+
+    setCheckingPaymentEventId(event._id);
+    try {
+      const response = await getEventPaymentStatus(event._id);
+      if (!response?.data?.approved) {
+        setPaymentNotice({
+          title: "Payment Required",
+          message: `Payment for "${event.title || "this event"}" must be approved before you can schedule invitations.`,
+        });
+        return;
+      }
+
+      navigation.navigate("ScheduleInvites", { event });
+    } catch (error) {
+      setPaymentNotice({
+        title: "Payment Validation",
+        message:
+          error.response?.data?.message ||
+          "Unable to verify payment status. Please try again.",
+      });
+    } finally {
+      setCheckingPaymentEventId(null);
+    }
+  };
 
   // --------------------------------------------------
   // EVENT TYPE IMAGES
@@ -349,20 +379,26 @@ export default function MyEventsScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              navigation.navigate("ScheduleInvites", { event: item });
-            }}
+            style={[
+              styles.actionButton,
+              checkingPaymentEventId === item._id && styles.actionButtonDisabled,
+            ]}
+            onPress={() => openEventSchedules(item)}
+            disabled={checkingPaymentEventId !== null}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="alarm-outline"
-              size={16}
-              color="#ff7f86"
-            />
-            <Text style={styles.actionButtonText}>
-              Schedule
-            </Text>
+            {checkingPaymentEventId === item._id ? (
+              <ActivityIndicator size="small" color="#ff7f86" />
+            ) : (
+              <>
+                <Ionicons
+                  name="alarm-outline"
+                  size={16}
+                  color="#ff7f86"
+                />
+                <Text style={styles.actionButtonText}>Schedule</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -484,6 +520,29 @@ export default function MyEventsScreen({ navigation }) {
           </View>
         }
       />
+      <Modal
+        visible={!!paymentNotice}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPaymentNotice(null)}
+      >
+        <View style={styles.paymentModalOverlay}>
+          <View style={styles.paymentModalCard}>
+            <View style={styles.paymentModalIcon}>
+              <Ionicons name="card-outline" size={25} color="#d58a00" />
+            </View>
+            <Text style={styles.paymentModalTitle}>{paymentNotice?.title}</Text>
+            <Text style={styles.paymentModalMessage}>{paymentNotice?.message}</Text>
+            <TouchableOpacity
+              style={styles.paymentModalButton}
+              onPress={() => setPaymentNotice(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.paymentModalButtonText}>Okay</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       </ThemeTree>
     </View>
   );
@@ -711,6 +770,67 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#ffd1d5",
+  },
+
+  actionButtonDisabled: {
+    opacity: 0.65,
+  },
+
+  paymentModalOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(25, 35, 50, 0.48)",
+  },
+
+  paymentModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    padding: 24,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+  },
+
+  paymentModalIcon: {
+    width: 52,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+    borderRadius: 26,
+    backgroundColor: "#fff7e6",
+  },
+
+  paymentModalTitle: {
+    color: "#263957",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  paymentModalMessage: {
+    marginTop: 9,
+    color: "#687386",
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+
+  paymentModalButton: {
+    width: "100%",
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 22,
+    borderRadius: 10,
+    backgroundColor: "#ff7f86",
+  },
+
+  paymentModalButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   actionButtonText: {

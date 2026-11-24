@@ -52,6 +52,40 @@ const createScheduleInvites = async (req, res) => {
   }
 };
 
+const getEventPaymentStatus = async (req, res) => {
+  const { eventId } = req.query;
+  if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid event ID is required.",
+    });
+  }
+
+  try {
+    const approved = await schedulesService.getEventPaymentStatus({
+      eventId,
+      userId: req.user._id,
+    });
+    return res.status(200).json({
+      success: true,
+      data: { approved },
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    console.error("Check event payment status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check event payment status.",
+    });
+  }
+};
+
 const getScheduleInvites = async (req, res) => {
   const { eventId } = req.query;
   if (eventId && !mongoose.Types.ObjectId.isValid(eventId)) {
@@ -157,6 +191,7 @@ const deletePendingScheduleInvite = async (req, res) => {
 
 module.exports = {
   createScheduleInvites,
+  getEventPaymentStatus,
   getScheduleInvites,
   updateScheduleInviteStatus,
   deletePendingScheduleInvite,
