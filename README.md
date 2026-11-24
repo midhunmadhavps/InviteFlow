@@ -75,18 +75,20 @@ JWT_EXPIRES_IN=7d
 
 FRONTEND_URL=http://localhost:8081
 
-# WhatsApp Cloud API (required to send event invitations)
+# WhatsApp Cloud API environment fallback (web configuration can be saved in MongoDB)
 WHATSAPP_ACCESS_TOKEN=your_whatsapp_access_token
 WHATSAPP_PHONE_NUMBER_ID=your_whatsapp_phone_number_id
 WHATSAPP_BUSINESS_ACCOUNT_ID=your_whatsapp_business_account_id
 # Optional; configure when receiving and verifying WhatsApp webhooks
 WHATSAPP_VERIFY_TOKEN=your_webhook_verify_token
+# Optional dedicated encryption key for WhatsApp credentials saved in MongoDB
+WHATSAPP_CONFIG_ENCRYPTION_KEY=use-a-stable-random-secret-at-least-32-characters
 WHATSAPP_API_VERSION=v22.0
 API_PUBLIC_URL=https://your-public-api.example.com
 ```
 
 `API_PUBLIC_URL` must be reachable by WhatsApp so it can download uploaded event and host images. WhatsApp only allows free-form messages during an open customer service window; initiating a conversation outside that window requires an approved WhatsApp message template.
-The admin WhatsApp configuration page reports whether the access and webhook verify tokens are configured and displays masked phone number and business account IDs. Secret values are read from the server environment and are not exposed in the browser. The webhook verify token is optional when sending messages.
+The admin WhatsApp configuration page reports whether the access and webhook verify tokens are configured and allows administrators to edit the four values. The webhook verify token is optional when sending messages. Saved values are stored in the MongoDB `whatsapp_config` collection and take precedence over matching environment variables; environment values remain the fallback when a database value is not set. Access and verify tokens are encrypted before storage and are write-only in the web app. Configure a stable `WHATSAPP_CONFIG_ENCRYPTION_KEY` and keep it backed up securely; if it is omitted, the server uses `JWT_SECRET` for encryption. Losing or changing the encryption key prevents the server from decrypting saved tokens. Keep database access restricted and protect database backups.
 
 ---
 

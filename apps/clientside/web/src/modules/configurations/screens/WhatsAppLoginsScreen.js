@@ -6,15 +6,27 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import StatusBadge from "../../../components/StatusBadge";
-import { getWhatsAppDetailsApi } from "../api/configuration.api";
+import {
+  getWhatsAppDetailsApi,
+  saveWhatsAppDetailsApi,
+} from "../api/configuration.api";
 
 const WhatsAppLoginsScreen = () => {
   const [data, setData] = useState(null);
+  const [form, setForm] = useState({
+    accessToken: "",
+    phoneNumberId: "",
+    verifyToken: "",
+    businessAccountId: "",
+  });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const loadData = async () => {
     setLoading(true);
@@ -23,12 +35,45 @@ const WhatsAppLoginsScreen = () => {
       const res = await getWhatsAppDetailsApi();
       if (res.success && res.data) {
         setData(res.data);
+        setForm((current) => ({
+          ...current,
+          phoneNumberId: res.data.phoneNumberId || "",
+          businessAccountId: res.data.businessAccountId || "",
+        }));
       }
     } catch (err) {
       setError(err.message || "Failed to load WhatsApp gateway configuration.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveConfig = async () => {
+    setSaving(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const response = await saveWhatsAppDetailsApi(form);
+      if (response.success && response.data) {
+        setData(response.data);
+        setForm((current) => ({
+          ...current,
+          accessToken: "",
+          verifyToken: "",
+          phoneNumberId: response.data.phoneNumberId || "",
+          businessAccountId: response.data.businessAccountId || "",
+        }));
+      }
+      setSuccessMessage(response.message || "WhatsApp configuration saved.");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to save WhatsApp configuration.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
   };
 
   useEffect(() => {
@@ -65,6 +110,12 @@ const WhatsAppLoginsScreen = () => {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
+      {successMessage ? (
+        <View style={styles.successBanner}>
+          <MaterialCommunityIcons name="check-circle" size={18} color="#15803D" />
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      ) : null}
 
       {/* Connection Card */}
       <View style={styles.card}>
@@ -76,7 +127,7 @@ const WhatsAppLoginsScreen = () => {
             <View>
               <Text style={styles.cardTitle}>Connection credentials</Text>
               <Text style={styles.cardSubtitle}>
-                Values are read from the server environment and are not editable here
+                Save these credentials securely for WhatsApp message delivery
               </Text>
             </View>
           </View>
@@ -86,9 +137,14 @@ const WhatsAppLoginsScreen = () => {
         <View style={styles.metaGrid}>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Phone Number ID</Text>
-            <Text style={[styles.metaValue, { fontFamily: "monospace" }]}>
-              {data?.phoneNumberId || "Not Configured"}
-            </Text>
+            <TextInput
+              style={styles.configInput}
+              value={form.phoneNumberId}
+              onChangeText={(value) => updateField("phoneNumberId", value)}
+              placeholder="Enter Phone Number ID"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <Text style={styles.metaDescription}>
               Identifies the WhatsApp Business phone number that sends messages.
             </Text>
@@ -96,9 +152,14 @@ const WhatsAppLoginsScreen = () => {
 
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>WhatsApp Business Account ID (WABA ID)</Text>
-            <Text style={[styles.metaValue, { fontFamily: "monospace" }]}>
-              {data?.businessAccountId || "Not Configured"}
-            </Text>
+            <TextInput
+              style={styles.configInput}
+              value={form.businessAccountId}
+              onChangeText={(value) => updateField("businessAccountId", value)}
+              placeholder="Enter WhatsApp Business Account ID"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <Text style={styles.metaDescription}>
               Identifies your WhatsApp Business Account.
             </Text>
@@ -106,26 +167,62 @@ const WhatsAppLoginsScreen = () => {
 
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>WhatsApp Access Token</Text>
-            <Text style={styles.metaValue}>
-              {data?.accessTokenConfigured ? "Configured" : "Not Configured"}
-            </Text>
+            <TextInput
+              style={styles.configInput}
+              value={form.accessToken}
+              onChangeText={(value) => updateField("accessToken", value)}
+              placeholder={
+                data?.accessTokenConfigured
+                  ? "Configured; enter to replace"
+                  : "Enter WhatsApp Access Token"
+              }
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <Text style={styles.metaDescription}>
-              Authenticates the backend when it sends messages. The token is never
-              returned to this page.
+              Authenticates the backend when it sends messages. Existing token values
+              are never returned to this page; leave blank to keep the current token.
             </Text>
           </View>
 
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Webhook Verify Token (optional for sending)</Text>
-            <Text style={styles.metaValue}>
-              {data?.verifyTokenConfigured ? "Configured" : "Not Configured"}
-            </Text>
+            <TextInput
+              style={styles.configInput}
+              value={form.verifyToken}
+              onChangeText={(value) => updateField("verifyToken", value)}
+              placeholder={
+                data?.verifyTokenConfigured
+                  ? "Configured; enter to replace"
+                  : "Enter Webhook Verify Token"
+              }
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <Text style={styles.metaDescription}>
               A token you create to verify webhook requests when receiving incoming
-              messages. It is not required for sending.
+              messages. It is not required for sending. Leave blank to keep the current
+              token.
             </Text>
           </View>
         </View>
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={saveConfig}
+          disabled={saving}
+          activeOpacity={0.8}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="content-save" size={18} color="#FFFFFF" />
+              <Text style={styles.saveButtonText}>Save WhatsApp Configuration</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Features Support List */}
@@ -159,8 +256,9 @@ const WhatsAppLoginsScreen = () => {
           <Text style={styles.securityTitle}>Security Compliance Notice</Text>
         </View>
         <Text style={styles.securityText}>
-          Set these values in the server environment. Secret values are never sent to
-          the browser; this page only shows whether each token is configured.
+          Credentials are stored in the server-side whatsapp_config collection. Secret
+          values are never returned to the browser. Restrict database access and use
+          encrypted backups.
         </Text>
       </View>
     </ScrollView>
@@ -171,6 +269,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+  },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    padding: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  successText: {
+    color: "#15803D",
+    fontSize: 13,
+    fontWeight: "500",
   },
   contentContainer: {
     padding: 24,
@@ -310,6 +423,36 @@ const styles = StyleSheet.create({
     color: "#64748B",
     lineHeight: 16,
     marginTop: 7,
+  },
+  configInput: {
+    minHeight: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 7,
+    backgroundColor: "#FFFFFF",
+    color: "#0F172A",
+    fontSize: 14,
+  },
+  saveButton: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 18,
+    paddingHorizontal: 16,
+    borderRadius: 9,
+    backgroundColor: "#16A34A",
+  },
+  saveButtonDisabled: {
+    opacity: 0.65,
+  },
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   featureList: {
     gap: 10,

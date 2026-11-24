@@ -55,6 +55,7 @@ router.get("/contacts", adminController.getContacts);
 
 // Configurations
 router.get("/whatsapp", adminController.getWhatsApp);
+router.put("/whatsapp", adminController.saveWhatsApp);
 router.get("/settings", adminController.getSettings);
 router.put("/settings", adminController.saveSettings);
 router.get("/system-config", adminController.getSystemConfig);

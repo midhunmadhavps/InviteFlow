@@ -2,6 +2,7 @@ const path = require("path");
 const Contact = require("../../models/contact.model");
 const Event = require("../../models/event.model");
 const ScheduleInvite = require("../../models/scheduleInvite.model");
+const { getWhatsAppConfig } = require("../../utils/whatsappConfig");
 
 const createServiceError = (message, statusCode) => {
   const error = new Error(message);
@@ -157,8 +158,10 @@ const buildEventMessage = (event) => {
 };
 
 const sendEventInvitations = async ({ eventId, contactIds, userId }) => {
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const config = await getWhatsAppConfig();
+  const accessToken = config?.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId =
+    config?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!accessToken || !phoneNumberId) {
     throw createServiceError(
       "WhatsApp delivery is not configured. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID.",

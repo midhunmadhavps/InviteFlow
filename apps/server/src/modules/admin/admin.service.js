@@ -10,6 +10,11 @@ const EventType = require("../../models/eventType.model");
 const eventService = require("../events/event.service");
 const EmailConfig = require("../../models/emailConfig.model");
 const SmsConfig = require("../../models/smsConfig.model");
+const WhatsAppConfig = require("../../models/whatsappConfig.model");
+const {
+  encryptSecret,
+  getWhatsAppConfig,
+} = require("../../utils/whatsappConfig");
 const SystemConfig = require("../../models/systemConfig.model");
 const { createUsername } = require("../users/user.utils");
 
@@ -949,15 +954,19 @@ exports.getContacts = async ({ search, page = 1, limit = 10 }) => {
  * 9. Configurations (WhatsApp Details)
  */
 exports.getWhatsAppDetails = async () => {
-  const hasToken = Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  const config = await getWhatsAppConfig();
+  const accessToken = config?.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId =
+    config?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const businessAccountId =
+    config?.businessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+  const verifyToken = config?.verifyToken || process.env.WHATSAPP_VERIFY_TOKEN;
+  const hasToken = Boolean(accessToken);
 
   return {
     status: hasToken ? "Connected" : "Not Configured",
-    phoneNumberId: maskString(phoneNumberId, 2, 4),
-    businessAccountId: maskString(businessAccountId, 2, 4),
+    phoneNumberId: phoneNumberId || "",
+    businessAccountId: businessAccountId || "",
     verifyTokenConfigured: Boolean(verifyToken),
     accessTokenConfigured: hasToken,
     environment: process.env.NODE_ENV || "development",
@@ -970,6 +979,51 @@ exports.getWhatsAppDetails = async () => {
       { name: "Media Delivery (Images/PDFs)", enabled: Boolean(process.env.CLOUDINARY_CLOUD_NAME) },
     ],
   };
+};
+
+exports.saveWhatsAppConfig = async (input = {}) => {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    const error = new Error("Provide WhatsApp configuration values.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const fields = {
+    accessToken: "WHATSAPP_ACCESS_TOKEN",
+    phoneNumberId: "WHATSAPP_PHONE_NUMBER_ID",
+    verifyToken: "WHATSAPP_VERIFY_TOKEN",
+    businessAccountId: "WHATSAPP_BUSINESS_ACCOUNT_ID",
+  };
+  const update = {};
+
+  Object.entries(fields).forEach(([field, label]) => {
+    if (!Object.prototype.hasOwnProperty.call(input, field)) return;
+    if (typeof input[field] !== "string") {
+      const error = new Error(`${label} must be a string.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const value = input[field].trim();
+    if (value) {
+      update[field] = ["accessToken", "verifyToken"].includes(field)
+        ? encryptSecret(value)
+        : value;
+    }
+  });
+
+  if (!Object.keys(update).length) {
+    const error = new Error("Provide at least one WhatsApp configuration value to save.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await WhatsAppConfig.findByIdAndUpdate(
+    "default",
+    { $set: update },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+  );
+  return exports.getWhatsAppDetails();
 };
 
 /**

@@ -5,6 +5,11 @@ export const getWhatsAppDetailsApi = async () => {
   return response.data;
 };
 
+export const saveWhatsAppDetailsApi = async (config) => {
+  const response = await apiClient.put("/admin/whatsapp", config);
+  return response.data;
+};
+
 export const getSettingsApi = async () => {
   const response = await apiClient.get("/admin/settings");
   return response.data;

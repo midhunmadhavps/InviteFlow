@@ -335,6 +335,19 @@ exports.getWhatsApp = async (req, res) => {
   }
 };
 
+exports.saveWhatsApp = async (req, res) => {
+  try {
+    const data = await adminService.saveWhatsAppConfig(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "WhatsApp configuration saved successfully.",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save WhatsApp configuration.");
+  }
+};
+
 /**
  * Configurations - Settings
  */
