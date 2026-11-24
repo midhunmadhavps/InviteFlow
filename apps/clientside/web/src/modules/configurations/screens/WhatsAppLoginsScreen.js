@@ -48,9 +48,9 @@ const WhatsAppLoginsScreen = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>WhatsApp Business Gateway</Text>
+          <Text style={styles.headerTitle}>WhatsApp Cloud API Configuration</Text>
           <Text style={styles.headerSubtitle}>
-            Legitimate application connection metadata, delivery status, and API health
+            Review the credentials and IDs used by the WhatsApp Business Platform
           </Text>
         </View>
         <TouchableOpacity style={styles.syncBtn} onPress={loadData}>
@@ -74,8 +74,10 @@ const WhatsAppLoginsScreen = () => {
               <MaterialCommunityIcons name="whatsapp" size={24} color="#16A34A" />
             </View>
             <View>
-              <Text style={styles.cardTitle}>Cloud API Connection</Text>
-              <Text style={styles.cardSubtitle}>Meta WhatsApp Business Platform</Text>
+              <Text style={styles.cardTitle}>Connection credentials</Text>
+              <Text style={styles.cardSubtitle}>
+                Values are read from the server environment and are not editable here
+              </Text>
             </View>
           </View>
           <StatusBadge status={data?.health || "Operational"} />
@@ -87,31 +89,41 @@ const WhatsAppLoginsScreen = () => {
             <Text style={[styles.metaValue, { fontFamily: "monospace" }]}>
               {data?.phoneNumberId || "Not Configured"}
             </Text>
-            <Text style={styles.maskedHint}>Sensitive digits masked</Text>
+            <Text style={styles.metaDescription}>
+              Identifies the WhatsApp Business phone number that sends messages.
+            </Text>
           </View>
 
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Business Account ID</Text>
+            <Text style={styles.metaLabel}>WhatsApp Business Account ID (WABA ID)</Text>
             <Text style={[styles.metaValue, { fontFamily: "monospace" }]}>
               {data?.businessAccountId || "Not Configured"}
             </Text>
-            <Text style={styles.maskedHint}>Sensitive digits masked</Text>
+            <Text style={styles.metaDescription}>
+              Identifies your WhatsApp Business Account.
+            </Text>
           </View>
 
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Access Token Status</Text>
+            <Text style={styles.metaLabel}>WhatsApp Access Token</Text>
             <Text style={styles.metaValue}>
-              {data?.accessTokenConfigured ? "🔒 Configured (Encrypted)" : "❌ Missing"}
+              {data?.accessTokenConfigured ? "Configured" : "Not Configured"}
             </Text>
-            <Text style={styles.maskedHint}>Never exposed over API/UI</Text>
+            <Text style={styles.metaDescription}>
+              Authenticates the backend when it sends messages. The token is never
+              returned to this page.
+            </Text>
           </View>
 
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Webhook Token Status</Text>
+            <Text style={styles.metaLabel}>Webhook Verify Token (optional for sending)</Text>
             <Text style={styles.metaValue}>
-              {data?.verifyTokenConfigured ? "✅ Verified" : "⚠️ Needs Setup"}
+              {data?.verifyTokenConfigured ? "Configured" : "Not Configured"}
             </Text>
-            <Text style={styles.maskedHint}>Inbound RSVP callbacks</Text>
+            <Text style={styles.metaDescription}>
+              A token you create to verify webhook requests when receiving incoming
+              messages. It is not required for sending.
+            </Text>
           </View>
         </View>
       </View>
@@ -147,7 +159,8 @@ const WhatsAppLoginsScreen = () => {
           <Text style={styles.securityTitle}>Security Compliance Notice</Text>
         </View>
         <Text style={styles.securityText}>
-          All WhatsApp Cloud API bearer tokens and webhook signing secrets are stored strictly within secure server-side environment variables and are never transmitted to client browsers, logged in production telemetry, or stored in plaintext.
+          Set these values in the server environment. Secret values are never sent to
+          the browser; this page only shows whether each token is configured.
         </Text>
       </View>
     </ScrollView>
@@ -292,10 +305,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0F172A",
   },
-  maskedHint: {
+  metaDescription: {
     fontSize: 11,
-    color: "#94A3B8",
-    marginTop: 4,
+    color: "#64748B",
+    lineHeight: 16,
+    marginTop: 7,
   },
   featureList: {
     gap: 10,

@@ -78,11 +78,15 @@ FRONTEND_URL=http://localhost:8081
 # WhatsApp Cloud API (required to send event invitations)
 WHATSAPP_ACCESS_TOKEN=your_whatsapp_access_token
 WHATSAPP_PHONE_NUMBER_ID=your_whatsapp_phone_number_id
+WHATSAPP_BUSINESS_ACCOUNT_ID=your_whatsapp_business_account_id
+# Optional; configure when receiving and verifying WhatsApp webhooks
+WHATSAPP_VERIFY_TOKEN=your_webhook_verify_token
 WHATSAPP_API_VERSION=v22.0
 API_PUBLIC_URL=https://your-public-api.example.com
 ```
 
 `API_PUBLIC_URL` must be reachable by WhatsApp so it can download uploaded event and host images. WhatsApp only allows free-form messages during an open customer service window; initiating a conversation outside that window requires an approved WhatsApp message template.
+The admin WhatsApp configuration page reports whether the access and webhook verify tokens are configured and displays masked phone number and business account IDs. Secret values are read from the server environment and are not exposed in the browser. The webhook verify token is optional when sending messages.
 
 ---
 
