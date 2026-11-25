@@ -6,7 +6,7 @@ const getEncryptionKey = () => {
     process.env.WHATSAPP_CONFIG_ENCRYPTION_KEY || process.env.JWT_SECRET;
   if (!secret) {
     const error = new Error(
-      "Set WHATSAPP_CONFIG_ENCRYPTION_KEY or JWT_SECRET to encrypt WhatsApp credentials."
+      "Set WHATSAPP_CONFIG_ENCRYPTION_KEY or JWT_SECRET to encrypt stored credentials."
     );
     error.statusCode = 503;
     throw error;

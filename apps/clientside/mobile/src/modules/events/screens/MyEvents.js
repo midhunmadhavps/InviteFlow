@@ -14,7 +14,11 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { getEventPaymentStatus, getMyEvents } from "../api/event.api";
+import {
+  getEventPaymentStatus,
+  getMyEvents,
+  getPaymentGatewayConfig,
+} from "../api/event.api";
 import { getUser } from "../../../utils/auth";
 import { ThemeTree, useAppTheme } from "../../../../../web/src/shared/theme/ThemeContext";
 
@@ -37,6 +41,7 @@ export default function MyEventsScreen({ navigation }) {
         setPaymentNotice({
           title: "Payment Required",
           message: `Payment for "${event.title || "this event"}" must be approved before you can schedule invitations.`,
+          event,
         });
         return;
       }
@@ -48,6 +53,35 @@ export default function MyEventsScreen({ navigation }) {
         message:
           error.response?.data?.message ||
           "Unable to verify payment status. Please try again.",
+        event,
+      });
+    } finally {
+      setCheckingPaymentEventId(null);
+    }
+  };
+
+  const openPaymentGateway = async () => {
+    const event = paymentNotice?.event;
+    if (!event || checkingPaymentEventId) return;
+
+    setCheckingPaymentEventId(event._id);
+    try {
+      const response = await getPaymentGatewayConfig();
+      if (response?.data?.enabled !== true) {
+        setPaymentNotice(null);
+        navigation.navigate("PaymentQr", { event });
+        return;
+      }
+
+      setPaymentNotice(null);
+      navigation.navigate("PaymentGateway", { event });
+    } catch (error) {
+      setPaymentNotice({
+        title: "Payment Gateway",
+        message:
+          error.response?.data?.message ||
+          "Unable to verify payment gateway availability. Please try again.",
+        event,
       });
     } finally {
       setCheckingPaymentEventId(null);
@@ -528,6 +562,14 @@ export default function MyEventsScreen({ navigation }) {
       >
         <View style={styles.paymentModalOverlay}>
           <View style={styles.paymentModalCard}>
+            <TouchableOpacity
+              style={styles.paymentModalClose}
+              onPress={() => setPaymentNotice(null)}
+              accessibilityLabel="Close payment message"
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={22} color="#64748b" />
+            </TouchableOpacity>
             <View style={styles.paymentModalIcon}>
               <Ionicons name="card-outline" size={25} color="#d58a00" />
             </View>
@@ -535,10 +577,18 @@ export default function MyEventsScreen({ navigation }) {
             <Text style={styles.paymentModalMessage}>{paymentNotice?.message}</Text>
             <TouchableOpacity
               style={styles.paymentModalButton}
-              onPress={() => setPaymentNotice(null)}
+              onPress={openPaymentGateway}
+              disabled={checkingPaymentEventId !== null}
               activeOpacity={0.8}
             >
-              <Text style={styles.paymentModalButtonText}>Okay</Text>
+              {checkingPaymentEventId === paymentNotice?.event?._id ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Ionicons name="card-outline" size={18} color="#ffffff" />
+                  <Text style={styles.paymentModalButtonText}>Make Payment</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -785,12 +835,26 @@ const styles = StyleSheet.create({
   },
 
   paymentModalCard: {
+    position: "relative",
     width: "100%",
     maxWidth: 360,
     alignItems: "center",
     padding: 24,
     borderRadius: 18,
     backgroundColor: "#ffffff",
+  },
+
+  paymentModalClose: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: "#f1f5f9",
   },
 
   paymentModalIcon: {
@@ -820,8 +884,10 @@ const styles = StyleSheet.create({
   paymentModalButton: {
     width: "100%",
     minHeight: 44,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     marginTop: 22,
     borderRadius: 10,
     backgroundColor: "#ff7f86",

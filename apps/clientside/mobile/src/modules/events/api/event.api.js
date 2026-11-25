@@ -32,6 +32,11 @@ export const getEventPaymentStatus = async (eventId) => {
   return response.data;
 };
 
+export const getPaymentGatewayConfig = async () => {
+  const response = await api.get("/event/payment-gateway/config");
+  return response.data;
+};
+
 export const sendEventInvites = async (inviteData) => {
   const response = await api.post("/event/send-invites", inviteData);
   return response.data;

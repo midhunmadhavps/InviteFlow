@@ -1,4 +1,5 @@
 const adminService = require("./admin.service");
+const paymentGatewayService = require("../payment/paymentGateway.service");
 
 const handleError = (res, error, defaultMessage = "Server error occurred.") => {
   const statusCode = error.statusCode || 500;
@@ -345,6 +346,28 @@ exports.saveWhatsApp = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "Failed to save WhatsApp configuration.");
+  }
+};
+
+exports.getPaymentGatewayConfig = async (req, res) => {
+  try {
+    const data = await paymentGatewayService.getPaymentGatewayConfig();
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return handleError(res, error, "Failed to fetch payment gateway configuration.");
+  }
+};
+
+exports.savePaymentGatewayConfig = async (req, res) => {
+  try {
+    const data = await paymentGatewayService.savePaymentGatewayConfig(req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Payment gateway configuration saved.",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to save payment gateway configuration.");
   }
 };
 

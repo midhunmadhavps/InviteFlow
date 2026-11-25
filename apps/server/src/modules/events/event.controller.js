@@ -1,6 +1,20 @@
 const mongoose = require("mongoose");
 const eventService = require("./event.service");
 const whatsappService = require("./whatsapp.service");
+const paymentGatewayService = require("../payment/paymentGateway.service");
+
+exports.getPaymentGatewayConfig = async (req, res) => {
+  try {
+    const data = await paymentGatewayService.getPaymentGatewayConfig();
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Fetch payment gateway status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch payment gateway status.",
+    });
+  }
+};
 
 const createEvent = async (req, res) => {
   try {
@@ -249,6 +263,7 @@ module.exports = {
   createEvent,
   eventTypes,
   eventLists,
+  getPaymentGatewayConfig: exports.getPaymentGatewayConfig,
   updateEvent,
   sendEventInvites,
 };

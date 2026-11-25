@@ -10,6 +10,16 @@ export const saveWhatsAppDetailsApi = async (config) => {
   return response.data;
 };
 
+export const getPaymentGatewayConfigApi = async () => {
+  const response = await apiClient.get("/admin/payment-gateway");
+  return response.data;
+};
+
+export const savePaymentGatewayConfigApi = async (config) => {
+  const response = await apiClient.put("/admin/payment-gateway", config);
+  return response.data;
+};
+
 export const getSettingsApi = async () => {
   const response = await apiClient.get("/admin/settings");
   return response.data;

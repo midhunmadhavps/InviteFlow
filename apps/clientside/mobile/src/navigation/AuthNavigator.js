@@ -12,6 +12,8 @@ import ResetPasswordScreen from "../modules/auth/screens/ResetPasswordScreen";
 import ForgotPasswordScreen from "../modules/auth/screens/ForgotPasswordScreen";
 
 import MainScreen from "../modules/events/screens/MainScreen";
+import PaymentDetailsScreen from "../modules/events/screens/PaymentDetailsScreen";
+import PaymentQrScreen from "../modules/events/screens/PaymentQrScreen";
 
 import EventNavigator from "./EventNavigator";
 import ContactsNavigator from "./ContactsNavigator";
@@ -35,6 +37,9 @@ export default function AuthNavigator() {
 
         {/* Main */}
         <Stack.Screen name="Main" component={MainScreen}/>
+        <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen}/>
+        <Stack.Screen name="PaymentGateway" component={PaymentDetailsScreen}/>
+        <Stack.Screen name="PaymentQr" component={PaymentQrScreen}/>
 
         {/* Events */}
         <Stack.Screen name="Events" component={EventNavigator}/>

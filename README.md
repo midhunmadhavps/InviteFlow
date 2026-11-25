@@ -92,7 +92,32 @@ The admin WhatsApp configuration page reports whether the access and webhook ver
 
 ### Event payment approval for invite scheduling
 
-The Schedule Invite action requires a payment document for the same event and user with `status: "Approved"`. Payment documents use the MongoDB `payments` collection with `eventId`, `userId`, and a status of `Pending`, `Approved`, or `Rejected`. Payment records can be reviewed and approved by an administrator directly in the database until a payment management UI is implemented.
+The Schedule Invite action requires a payment document for the same event and user with `status: "Approved"`. Payment documents use the MongoDB `payments` collection with `eventId`, `userId`, and a status of `Pending`, `Approved`, or `Rejected`. Payment approval remains admin-managed through the database.
+The admin Payment page has a gateway enable switch stored in the `payment_gateway_config` collection. The Make Payment button is always available when payment is required. When enabled, it opens the mobile gateway screen with GPay and PhonePe options; when disabled, it opens a QR-only payment screen. Both use the configured shared UPI QR code. Payment approval remains a separate admin-managed step.
+
+The admin Payment page also accepts these provider credentials. They may alternatively be supplied through the server environment:
+
+```env
+# Razorpay
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
+
+# PhonePe
+PHONEPE_CLIENT_ID=your_phonepe_client_id
+PHONEPE_CLIENT_SECRET=your_phonepe_client_secret
+PHONEPE_CLIENT_VERSION=1
+PHONEPE_WEBHOOK_USERNAME=your_webhook_username
+PHONEPE_WEBHOOK_PASSWORD=your_webhook_password
+
+# PayPal
+PAYPAL_CLIENT_ID=your_paypal_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+PAYPAL_WEBHOOK_ID=your_paypal_webhook_id
+PAYPAL_ENVIRONMENT=sandbox
+```
+
+Provider secrets saved from the admin page are encrypted in `payment_gateway_config`; secret values are never returned to the browser. PayPal can be configured for Sandbox or Live mode. Keep the stable `WHATSAPP_CONFIG_ENCRYPTION_KEY` (or `JWT_SECRET` fallback) unchanged so stored secrets remain decryptable. The payment provider credentials are configuration only until a provider checkout and webhook flow is implemented.
 
 ---
 
