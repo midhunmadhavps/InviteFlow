@@ -32,6 +32,12 @@ const PaymentScreen = () => {
     paypalWebhookId: "",
     paypalEnvironment: "sandbox",
   });
+  const [providerEnabled, setProviderEnabled] = useState({
+    razorpay: false,
+    phonepe: false,
+    paypal: false,
+  });
+  const [primaryProvider, setPrimaryProvider] = useState(null);
   const [configured, setConfigured] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +52,13 @@ const PaymentScreen = () => {
         if (active) setEnabled(response.data?.enabled === true);
         if (active) {
           setConfigured(response.data?.credentials || {});
+          setProviderEnabled({
+            razorpay: false,
+            phonepe: false,
+            paypal: false,
+            ...response.data?.providerEnabled,
+          });
+          setPrimaryProvider(response.data?.primaryProvider || null);
           setCredentials((current) => ({
             ...current,
             phonepeClientVersion: response.data?.phonepeClientVersion || "1",
@@ -100,6 +113,63 @@ const PaymentScreen = () => {
     setCredentials((current) => ({ ...current, [field]: value }));
   };
 
+  const updateProviderEnabled = (provider, isEnabled) => {
+    const next = { ...providerEnabled, [provider]: isEnabled };
+    setProviderEnabled(next);
+    if (isEnabled && !primaryProvider) {
+      setPrimaryProvider(provider);
+    } else if (!isEnabled && primaryProvider === provider) {
+      setPrimaryProvider(Object.keys(next).find((key) => next[key]) || null);
+    }
+  };
+
+  const renderProviderSettings = (provider, providerLabel) => (
+    <View style={styles.providerSettings}>
+      <View style={styles.providerEnableControl}>
+        <Text style={styles.inputLabel}>Enable {providerLabel}</Text>
+        <Switch
+          value={providerEnabled[provider]}
+          onValueChange={(value) => updateProviderEnabled(provider, value)}
+          disabled={saving}
+          accessibilityLabel={`Enable ${providerLabel}`}
+        />
+      </View>
+      <TouchableOpacity
+        style={[
+          styles.primaryButton,
+          primaryProvider === provider && styles.primaryButtonSelected,
+          (!providerEnabled[provider] || saving) && styles.primaryButtonDisabled,
+        ]}
+        onPress={() => setPrimaryProvider(provider)}
+        disabled={!providerEnabled[provider] || saving}
+        accessibilityRole="button"
+        accessibilityState={{
+          selected: primaryProvider === provider,
+          disabled: !providerEnabled[provider] || saving,
+        }}
+        activeOpacity={0.8}
+      >
+        <MaterialCommunityIcons
+          name={
+            primaryProvider === provider
+              ? "radiobox-marked"
+              : "radiobox-blank"
+          }
+          size={19}
+          color={primaryProvider === provider ? "#4F46E5" : "#64748B"}
+        />
+        <Text
+          style={[
+            styles.primaryButtonText,
+            primaryProvider === provider && styles.primaryButtonTextSelected,
+          ]}
+        >
+          {primaryProvider === provider ? "Primary" : "Set as primary"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const saveCredentials = async () => {
     setSaving(true);
     setError("");
@@ -109,8 +179,12 @@ const PaymentScreen = () => {
       const response = await savePaymentGatewayConfigApi({
         ...credentials,
         enabled,
+        providerEnabled,
+        primaryProvider,
       });
       setConfigured(response.data?.credentials || {});
+      setProviderEnabled(response.data?.providerEnabled || providerEnabled);
+      setPrimaryProvider(response.data?.primaryProvider || null);
       setCredentials((current) => ({
         ...current,
         razorpayKeyId: "",
@@ -212,9 +286,9 @@ const PaymentScreen = () => {
           <View style={styles.cardCopy}>
             <Text style={styles.cardTitle}>Enable payment gateway</Text>
             <Text style={styles.cardDescription}>
-              When enabled, users can open the payment screen and view the
-              configured UPI QR through GPay or PhonePe options. When disabled,
-              Make Payment opens the QR-only screen.
+              When enabled, the selected primary provider is used for online
+              checkout. Users can also choose the configured UPI QR code. When
+              disabled, Make Payment opens the QR-only screen.
             </Text>
           </View>
           {loading || saving ? (
@@ -236,9 +310,11 @@ const PaymentScreen = () => {
             color="#64748B"
           />
           <Text style={styles.infoText}>
-            Provider credentials are encrypted and write-only. Saving them does
-            not activate checkout or webhook processing; payment approval remains
-            a separate administrator-managed step.
+            Provider credentials are encrypted and write-only. Enable the
+            providers you want to offer and choose one enabled provider as
+            primary.             Razorpay payment links and signed webhook confirmation are active
+            when Razorpay is selected as primary. Other provider integrations
+            are not active yet.
           </Text>
         </View>
       </View>
@@ -268,6 +344,7 @@ const PaymentScreen = () => {
             }
           />
         </View>
+        {renderProviderSettings("razorpay", "Razorpay")}
         <View style={styles.fields}>
           {renderCredentialInput(
             "razorpayKeyId",
@@ -313,6 +390,7 @@ const PaymentScreen = () => {
             }
           />
         </View>
+        {renderProviderSettings("phonepe", "PhonePe")}
         <View style={styles.fields}>
           {renderCredentialInput(
             "phonepeClientId",
@@ -368,6 +446,7 @@ const PaymentScreen = () => {
             }
           />
         </View>
+        {renderProviderSettings("paypal", "PayPal")}
         <View style={styles.fields}>
           <Text style={styles.inputLabel}>PayPal environment</Text>
           <View style={styles.environmentOptions}>
@@ -434,7 +513,7 @@ const PaymentScreen = () => {
               size={19}
               color="#FFFFFF"
             />
-            <Text style={styles.saveButtonText}>Save Provider Credentials</Text>
+            <Text style={styles.saveButtonText}>Save Payment Settings</Text>
           </>
         )}
       </TouchableOpacity>
@@ -595,6 +674,48 @@ const styles = StyleSheet.create({
     marginTop: 3,
     color: "#64748B",
     fontSize: 12,
+  },
+  providerSettings: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+    paddingTop: 14,
+  },
+  providerEnableControl: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    minWidth: 180,
+  },
+  primaryButton: {
+    minHeight: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  primaryButtonSelected: {
+    borderColor: "#C7D2FE",
+    backgroundColor: "#EEF2FF",
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  primaryButtonTextSelected: {
+    color: "#4338CA",
   },
   fields: {
     gap: 14,

@@ -92,8 +92,12 @@ The admin WhatsApp configuration page reports whether the access and webhook ver
 
 ### Event payment approval for invite scheduling
 
-The Schedule Invite action requires a payment document for the same event and user with `status: "Approved"`. Payment documents use the MongoDB `payments` collection with `eventId`, `userId`, and a status of `Pending`, `Approved`, or `Rejected`. Payment approval remains admin-managed through the database.
-The admin Payment page has a gateway enable switch stored in the `payment_gateway_config` collection. The Make Payment button is always available when payment is required. When enabled, it opens the mobile gateway screen with GPay and PhonePe options; when disabled, it opens a QR-only payment screen. Both use the configured shared UPI QR code. Payment approval remains a separate admin-managed step.
+The Schedule Invite action requires a payment document for the same event and user with `status: "Approved"`. Payment documents use the MongoDB `payments` collection with `eventId`, `userId`, and a status of `Pending`, `Approved`, or `Rejected`. Razorpay payments are approved after provider verification; QR/manual payment approval remains admin-managed.
+The admin Payment page has a gateway enable switch stored in the `payment_gateway_config` collection. The Make Payment button is always available when payment is required. When Razorpay is enabled as the primary provider, the mobile gateway screen opens its hosted payment link; other provider choices and the shared UPI QR remain available as configured. When the gateway is disabled, the app opens a QR-only payment screen. QR/manual payment approval remains admin-managed.
+
+When Razorpay is enabled and selected as the primary provider, the mobile payment screen creates a Razorpay Payment Link using the price configured for the event type. The app marks the payment approved only after checking the payment link status with Razorpay or validating a signed webhook. Configure the Razorpay webhook URL as `https://<your-api-host>/api/event/payments/razorpay/webhook` and subscribe to `payment_link.paid`; use the same webhook secret saved in admin settings.
+
+Admins can set INR prices for active event types in the Event Type Pricing section of the Payment page. Prices must be greater than zero and support up to two decimal places. Razorpay payment links use INR; event price values are stored with the event type records.
 
 The admin Payment page also accepts these provider credentials. They may alternatively be supplied through the server environment:
 
@@ -117,7 +121,7 @@ PAYPAL_WEBHOOK_ID=your_paypal_webhook_id
 PAYPAL_ENVIRONMENT=sandbox
 ```
 
-Provider secrets saved from the admin page are encrypted in `payment_gateway_config`; secret values are never returned to the browser. PayPal can be configured for Sandbox or Live mode. Keep the stable `WHATSAPP_CONFIG_ENCRYPTION_KEY` (or `JWT_SECRET` fallback) unchanged so stored secrets remain decryptable. The payment provider credentials are configuration only until a provider checkout and webhook flow is implemented.
+Provider secrets saved from the admin page are encrypted in `payment_gateway_config`; secret values are never returned to the browser. Administrators can enable Razorpay, PhonePe, and PayPal separately and select one enabled provider as primary. PayPal can be configured for Sandbox or Live mode. Keep the stable `WHATSAPP_CONFIG_ENCRYPTION_KEY` (or `JWT_SECRET` fallback) unchanged so stored secrets remain decryptable. Razorpay checkout is implemented using payment links; PhonePe and PayPal remain configuration-only until their checkout and webhook flows are implemented.
 
 ---
 

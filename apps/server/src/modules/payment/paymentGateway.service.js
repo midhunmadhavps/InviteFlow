@@ -1,6 +1,8 @@
 const PaymentGatewayConfig = require("../../models/paymentGatewayConfig.model");
 const { encryptSecret } = require("../../utils/whatsappConfig");
 
+const providerNames = ["razorpay", "phonepe", "paypal"];
+
 const paymentFields = {
   razorpayKeyId: {
     env: "RAZORPAY_KEY_ID",
@@ -66,6 +68,13 @@ const getPaymentGatewayConfig = async () => {
     credentials,
     phonepeClientVersion,
     paypalEnvironment,
+    providerEnabled: Object.fromEntries(
+      providerNames.map((provider) => [
+        provider,
+        config?.providerEnabled?.[provider] === true,
+      ])
+    ),
+    primaryProvider: config?.primaryProvider || null,
   };
 };
 
@@ -109,6 +118,85 @@ const savePaymentGatewayConfig = async (input) => {
       throw error;
     }
     update.paypalEnvironment = input.paypalEnvironment;
+  }
+
+  const updatesProviderEnablement = Object.prototype.hasOwnProperty.call(
+    input,
+    "providerEnabled"
+  );
+  const updatesPrimaryProvider = Object.prototype.hasOwnProperty.call(
+    input,
+    "primaryProvider"
+  );
+  if (updatesProviderEnablement || updatesPrimaryProvider) {
+    const config = await PaymentGatewayConfig.findById("default").lean();
+    const currentProviderEnabled = Object.fromEntries(
+      providerNames.map((provider) => [
+        provider,
+        config?.providerEnabled?.[provider] === true,
+      ])
+    );
+    let providerEnabled = currentProviderEnabled;
+
+    if (updatesProviderEnablement) {
+      const requestedProviders = input.providerEnabled;
+      if (
+        !requestedProviders ||
+        typeof requestedProviders !== "object" ||
+        Array.isArray(requestedProviders) ||
+        providerNames.some(
+          (provider) => typeof requestedProviders[provider] !== "boolean"
+        ) ||
+        Object.keys(requestedProviders).some(
+          (provider) => !providerNames.includes(provider)
+        )
+      ) {
+        const error = new Error(
+          "providerEnabled must contain boolean values for Razorpay, PhonePe, and PayPal."
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+      providerEnabled = requestedProviders;
+    }
+
+    let primaryProvider = updatesPrimaryProvider
+      ? input.primaryProvider
+      : config?.primaryProvider || null;
+    if (
+      primaryProvider !== null &&
+      !providerNames.includes(primaryProvider)
+    ) {
+      const error = new Error(
+        "primaryProvider must be Razorpay, PhonePe, PayPal, or null."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const enabledProviders = providerNames.filter(
+      (provider) => providerEnabled[provider]
+    );
+    if (primaryProvider && !providerEnabled[primaryProvider]) {
+      if (updatesPrimaryProvider) {
+        const error = new Error("The primary payment provider must be enabled.");
+        error.statusCode = 400;
+        throw error;
+      }
+      primaryProvider = enabledProviders[0] || null;
+    } else if (!primaryProvider && enabledProviders.length) {
+      if (updatesPrimaryProvider) {
+        const error = new Error(
+          "Choose an enabled primary payment provider before saving."
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+      primaryProvider = enabledProviders[0];
+    }
+
+    update.providerEnabled = providerEnabled;
+    update.primaryProvider = primaryProvider;
   }
 
   if (!Object.keys(update).length) {

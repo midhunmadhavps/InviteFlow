@@ -31,6 +31,18 @@ router.patch("/users/:id/role", adminController.updateUserRole);
 
 // Events & Contacts
 router.get("/events/types", adminController.getEventTypes);
+router.post(
+  "/events/types",
+  upload.eventTypeImage.single("eventTypeImage"),
+  adminController.createEventType
+);
+router.patch(
+  "/events/types/:id",
+  upload.eventTypeImage.single("eventTypeImage"),
+  adminController.updateEventType
+);
+router.delete("/events/types/:id", adminController.deleteEventType);
+router.patch("/events/types/:id/price", adminController.updateEventTypePrice);
 router.get("/events", adminController.getEvents);
 router.post(
   "/events",

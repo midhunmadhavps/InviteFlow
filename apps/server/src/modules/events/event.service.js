@@ -24,7 +24,7 @@ const createEvent = async (data) => {
 };
 
 const eventTypes = async () => {
-  const eventTypes = await EventTypes.find().sort({ name: 1 });
+  const eventTypes = await EventTypes.find({ isActive: true }).sort({ name: 1 });
 
   return eventTypes;
 };
@@ -32,7 +32,7 @@ const eventTypes = async () => {
 const eventLists = async (userId) => {
   const eventLists = await Event.find({ userId })
     .sort({ createdAt: -1 })
-    .populate("eventTypeId", "name")
+    .populate("eventTypeId", "name price")
     .populate("contacts", "name phoneNumber email");
 
   return eventLists;

@@ -12,7 +12,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DataTable from "../../../components/DataTable";
 import StatusBadge from "../../../components/StatusBadge";
 import Modal from "../../../components/Modal";
+import { useAppTheme } from "../../../shared/theme/ThemeContext";
+import EventTypePricing from "../components/EventTypePricing";
 import {
+  createAdminEventTypeApi,
+  updateAdminEventTypeApi,
   deleteEventApi,
   getEventsApi,
   updateEventApi,
@@ -32,6 +36,22 @@ const getEventMediaUrl = (media) => {
 };
 
 const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
+  const { isDark } = useAppTheme();
+  const [activeTab, setActiveTab] = useState("events");
+  const [eventTypeModalVisible, setEventTypeModalVisible] = useState(false);
+  const [eventTypeForm, setEventTypeForm] = useState({
+    name: "",
+    icon: "",
+    description: "",
+    price: "",
+  });
+  const [editingEventType, setEditingEventType] = useState(null);
+  const [selectedEventTypeImage, setSelectedEventTypeImage] = useState(null);
+  const [eventTypeImagePreviewUrl, setEventTypeImagePreviewUrl] = useState("");
+  const [eventTypeSubmitting, setEventTypeSubmitting] = useState(false);
+  const [eventTypeError, setEventTypeError] = useState("");
+  const [eventTypeSuccess, setEventTypeSuccess] = useState("");
+  const [eventTypeRefreshKey, setEventTypeRefreshKey] = useState(0);
   const [events, setEvents] = useState([]);
   const [registrationTypePickerVisible, setRegistrationTypePickerVisible] = useState(false);
   const [registrationTypes, setRegistrationTypes] = useState([]);
@@ -60,6 +80,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
   const [actionLoading, setActionLoading] = useState(false);
   const hostImageInput = useRef(null);
   const invitationInput = useRef(null);
+  const eventTypeImageInput = useRef(null);
 
   const openRegistrationTypePicker = async () => {
     setRegistrationTypePickerVisible(true);
@@ -68,12 +89,7 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
     setError("");
     try {
       const response = await getAdminEventTypesApi();
-      const supportedTypes = ["wedding", "anniversary", "engagement", "birthday"];
-      setRegistrationTypes(
-        (response.data || []).filter((type) =>
-          supportedTypes.includes(type.name?.trim().toLowerCase())
-        )
-      );
+      setRegistrationTypes(response.data || []);
     } catch (requestError) {
       setRegistrationTypesError(
         requestError.response?.data?.message || requestError.message || "Failed to load event types."
@@ -82,6 +98,103 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
       setRegistrationTypesLoading(false);
     }
   };
+
+  const closeEventTypeModal = () => {
+    if (eventTypeSubmitting) return;
+    setEventTypeModalVisible(false);
+    setEditingEventType(null);
+    setSelectedEventTypeImage(null);
+    setEventTypeForm({ name: "", icon: "", description: "", price: "" });
+  };
+
+  const openCreateEventTypeModal = () => {
+    setEditingEventType(null);
+    setSelectedEventTypeImage(null);
+    setEventTypeForm({ name: "", icon: "", description: "", price: "" });
+    setEventTypeError("");
+    setEventTypeModalVisible(true);
+  };
+
+  const openEditEventTypeModal = (eventType) => {
+    setEditingEventType(eventType);
+    setSelectedEventTypeImage(null);
+    setEventTypeForm({
+      name: eventType.name || "",
+      icon: eventType.icon || "",
+      description: eventType.description || "",
+      price: String(eventType.price ?? ""),
+    });
+    setEventTypeError("");
+    setEventTypeModalVisible(true);
+  };
+
+  const saveEventType = async () => {
+    const name = eventTypeForm.name.trim();
+    const priceText = eventTypeForm.price.trim();
+    if (!name) {
+      setEventTypeError("Enter an event type name.");
+      return;
+    }
+    if (
+      priceText &&
+      (!/^\d+(\.\d{1,2})?$/.test(priceText) || Number(priceText) < 0)
+    ) {
+      setEventTypeError("Enter a valid price with up to two decimal places.");
+      return;
+    }
+    if (selectedEventTypeImage) {
+      const isValidType = /^image\/(jpeg|png|webp)$/.test(
+        selectedEventTypeImage.type
+      );
+      if (!isValidType || selectedEventTypeImage.size > 5 * 1024 * 1024) {
+        setEventTypeError("Choose a JPG, PNG, or WEBP image under 5 MB.");
+        return;
+      }
+    }
+
+    setEventTypeSubmitting(true);
+    setEventTypeError("");
+    try {
+      const payload = {
+        ...eventTypeForm,
+        name,
+        price: priceText ? Number(priceText) : 0,
+      };
+      if (selectedEventTypeImage) {
+        payload.eventTypeImage = selectedEventTypeImage;
+      }
+      const response = editingEventType
+        ? await updateAdminEventTypeApi(editingEventType._id, payload)
+        : await createAdminEventTypeApi(payload);
+      setEventTypeForm({ name: "", icon: "", description: "", price: "" });
+      setEventTypeModalVisible(false);
+      setEditingEventType(null);
+      setSelectedEventTypeImage(null);
+      setEventTypeRefreshKey((current) => current + 1);
+      setEventTypeSuccess(
+        response.message ||
+          `Event type ${editingEventType ? "updated" : "created"} successfully.`
+      );
+    } catch (requestError) {
+      setEventTypeError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          `Failed to ${editingEventType ? "update" : "create"} event type.`
+      );
+    } finally {
+      setEventTypeSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedEventTypeImage) {
+      setEventTypeImagePreviewUrl("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(selectedEventTypeImage);
+    setEventTypeImagePreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedEventTypeImage]);
 
   useEffect(() => {
     if (!selectedHostImage) {
@@ -388,54 +501,115 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
         contentContainerStyle={styles.pageContent}
         showsVerticalScrollIndicator
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle}>Platform Events</Text>
-            <Text style={styles.headerSubtitle}>
-              Overview of all wedding, anniversary, birthday, and ceremony invitations
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.registerEventButton}
-            onPress={openRegistrationTypePicker}
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
-            <Text style={styles.registerEventButtonText}>Register Event</Text>
-          </TouchableOpacity>
+        <View style={styles.tabsContainer}>
+          {[
+            { key: "eventType", label: "Event Type" },
+            { key: "events", label: "Events" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tabButton, isActive && styles.tabButtonActive]}
+                onPress={() => setActiveTab(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.tabButtonText,
+                    isActive && styles.tabButtonTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {error ? (
-          <View style={styles.errorBanner}>
-            <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
-            <Text style={styles.errorText}>{error}</Text>
+        {activeTab === "eventType" ? (
+          <View style={styles.tabContent}>
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.headerTitle}>Event Type</Text>
+                <Text style={styles.headerSubtitle}>
+                  Manage event types and their pricing
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.registerEventButton}
+                onPress={openCreateEventTypeModal}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
+                <Text style={styles.registerEventButtonText}>Create Event Type</Text>
+              </TouchableOpacity>
+            </View>
+            {eventTypeSuccess ? (
+              <View style={styles.successBanner}>
+                <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+                <Text style={styles.successText}>{eventTypeSuccess}</Text>
+              </View>
+            ) : null}
+            <EventTypePricing
+              key={eventTypeRefreshKey}
+              onEditEventType={openEditEventTypeModal}
+            />
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.tabContent}>
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.headerTitle}>Platform Events</Text>
+                <Text style={styles.headerSubtitle}>
+                  Overview of all wedding, anniversary, birthday, and ceremony invitations
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.registerEventButton}
+                onPress={openRegistrationTypePicker}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="plus" size={19} color="#FFFFFF" />
+                <Text style={styles.registerEventButtonText}>Register Event</Text>
+              </TouchableOpacity>
+            </View>
 
-        {successMessage ? (
-          <View style={styles.successBanner}>
-            <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
-            <Text style={styles.successText}>{successMessage}</Text>
+            {error ? (
+              <View style={styles.errorBanner}>
+                <MaterialCommunityIcons name="alert-circle" size={18} color="#DC2626" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            {successMessage ? (
+              <View style={styles.successBanner}>
+                <MaterialCommunityIcons name="check-circle" size={18} color="#16A34A" />
+                <Text style={styles.successText}>{successMessage}</Text>
+              </View>
+            ) : null}
+
+            <DataTable
+              columns={columns}
+              data={events}
+              onRowPress={(row) => setActionMenuEvent(row)}
+              loading={loading}
+              searchValue={search}
+              onSearchChange={(text) => {
+                setSearch(text);
+                fetchEvents(1, text);
+              }}
+              searchPlaceholder="Search by event title, ID, host..."
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={(p) => fetchEvents(p, search)}
+              emptyMessage="No events found on the platform."
+            />
           </View>
-        ) : null}
-
-        <DataTable
-          columns={columns}
-          data={events}
-          onRowPress={(row) => setActionMenuEvent(row)}
-          loading={loading}
-          searchValue={search}
-          onSearchChange={(text) => {
-            setSearch(text);
-            fetchEvents(1, text);
-          }}
-          searchPlaceholder="Search by event title, ID, host..."
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          onPageChange={(p) => fetchEvents(p, search)}
-          emptyMessage="No events found on the platform."
-        />
+        )}
       </ScrollView>
 
       <Modal
@@ -466,9 +640,127 @@ const EventsScreen = ({ onRegisterEvent, initialSuccessMessage = "" }) => {
           ))
         ) : (
           <Text style={styles.noEventTypes}>
-            {registrationTypesError || "No supported active event types are available."}
+            {registrationTypesError || "No active event types are available."}
           </Text>
         )}
+      </Modal>
+
+      <Modal
+        visible={eventTypeModalVisible}
+        onClose={closeEventTypeModal}
+        title={editingEventType ? "Edit Event Type" : "Create Event Type"}
+        confirmText={editingEventType ? "Save Changes" : "Create"}
+        onConfirm={saveEventType}
+        isConfirming={eventTypeSubmitting}
+      >
+        {eventTypeError ? (
+          <View style={styles.eventTypeFormError}>
+            <Text style={styles.errorText}>{eventTypeError}</Text>
+          </View>
+        ) : null}
+        <Text style={[styles.eventTypeFormLabel, isDark && styles.eventTypeFormLabelDark]}>
+          Name *
+        </Text>
+        <TextInput
+          style={[styles.eventTypeFormInput, isDark && styles.eventTypeFormInputDark]}
+          value={eventTypeForm.name}
+          onChangeText={(name) =>
+            setEventTypeForm((current) => ({ ...current, name }))
+          }
+          placeholder="e.g. Graduation"
+          maxLength={100}
+          editable={!eventTypeSubmitting}
+          placeholderTextColor={isDark ? "#CBD5E1" : "#94A3B8"}
+          autoFocus
+        />
+        <Text style={[styles.eventTypeFormLabel, isDark && styles.eventTypeFormLabelDark]}>
+          Icon (optional)
+        </Text>
+        <TextInput
+          style={[styles.eventTypeFormInput, isDark && styles.eventTypeFormInputDark]}
+          value={eventTypeForm.icon}
+          onChangeText={(icon) =>
+            setEventTypeForm((current) => ({ ...current, icon }))
+          }
+          placeholder="e.g. 🎓"
+          maxLength={20}
+          editable={!eventTypeSubmitting}
+          placeholderTextColor={isDark ? "#CBD5E1" : "#94A3B8"}
+        />
+        <Text style={[styles.eventTypeFormLabel, isDark && styles.eventTypeFormLabelDark]}>
+          Description (optional)
+        </Text>
+        <TextInput
+          style={[
+            styles.eventTypeFormInput,
+            styles.eventTypeDescriptionInput,
+            isDark && styles.eventTypeFormInputDark,
+          ]}
+          value={eventTypeForm.description}
+          onChangeText={(description) =>
+            setEventTypeForm((current) => ({ ...current, description }))
+          }
+          placeholder="Describe this event type"
+          multiline
+          numberOfLines={3}
+          editable={!eventTypeSubmitting}
+          placeholderTextColor={isDark ? "#CBD5E1" : "#94A3B8"}
+        />
+        <Text style={[styles.eventTypeFormLabel, isDark && styles.eventTypeFormLabelDark]}>
+          Price in INR (optional)
+        </Text>
+        <TextInput
+          style={[styles.eventTypeFormInput, isDark && styles.eventTypeFormInputDark]}
+          value={eventTypeForm.price}
+          onChangeText={(price) =>
+            setEventTypeForm((current) => ({ ...current, price }))
+          }
+          placeholder="e.g. 499"
+          keyboardType="decimal-pad"
+          editable={!eventTypeSubmitting}
+          placeholderTextColor={isDark ? "#CBD5E1" : "#94A3B8"}
+        />
+        <Text style={[styles.eventTypeFormLabel, isDark && styles.eventTypeFormLabelDark]}>
+          Image (optional)
+        </Text>
+        <input
+          ref={eventTypeImageInput}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: "none" }}
+          onChange={(event) => {
+            const file = event.target.files?.[0] || null;
+            setSelectedEventTypeImage(file);
+            setEventTypeError("");
+            event.target.value = "";
+          }}
+        />
+        <View style={styles.eventTypeImagePicker}>
+          <TouchableOpacity
+            style={styles.eventTypeImageButton}
+            onPress={() => eventTypeImageInput.current?.click()}
+            disabled={eventTypeSubmitting}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="image-plus" size={18} color="#4338CA" />
+            <Text style={styles.eventTypeImageButtonText}>Choose image</Text>
+          </TouchableOpacity>
+          <Text
+            style={[styles.eventTypeImageHint, isDark && styles.eventTypeFormLabelDark]}
+          >
+            JPG, PNG, or WEBP up to 5 MB
+          </Text>
+        </View>
+        {eventTypeImagePreviewUrl || editingEventType?.image ? (
+          <img
+            src={
+              eventTypeImagePreviewUrl ||
+              getEventMediaUrl(editingEventType.image)
+            }
+            alt={`${eventTypeForm.name || "Event type"} preview`}
+            style={styles.eventTypeImagePreview}
+          />
+        ) : null}
       </Modal>
 
       {/* Event Details Modal */}
@@ -915,6 +1207,33 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 20,
   },
+  tabsContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  tabButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    borderBottomWidth: 3,
+    borderBottomColor: "transparent",
+  },
+  tabButtonActive: {
+    borderBottomColor: "#4F46E5",
+  },
+  tabButtonText: {
+    color: "#64748B",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  tabButtonTextActive: {
+    color: "#4F46E5",
+    fontWeight: "700",
+  },
+  tabContent: {
+    gap: 20,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -949,6 +1268,82 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "700",
+  },
+  eventTypeFormLabel: {
+    marginBottom: 6,
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  eventTypeFormLabelDark: {
+    color: "#CBD5E1",
+  },
+  eventTypeFormInput: {
+    minHeight: 42,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    color: "#0F172A",
+    fontSize: 14,
+  },
+  eventTypeFormInputDark: {
+    borderColor: "#4B5563",
+    backgroundColor: "#273449",
+    color: "#F8FAFC",
+  },
+  eventTypeImagePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  eventTypeImageButton: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+    borderRadius: 8,
+    backgroundColor: "#EEF2FF",
+  },
+  eventTypeImageButtonText: {
+    color: "#4338CA",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  eventTypeImageHint: {
+    flexShrink: 1,
+    color: "#64748B",
+    fontSize: 12,
+  },
+  eventTypeImagePreview: {
+    width: 120,
+    height: 100,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    objectFit: "contain",
+    backgroundColor: "#FFFFFF",
+  },
+  eventTypeDescriptionInput: {
+    minHeight: 84,
+    textAlignVertical: "top",
+  },
+  eventTypeFormError: {
+    marginBottom: 16,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
   },
   eventTypeLoading: {
     minHeight: 60,

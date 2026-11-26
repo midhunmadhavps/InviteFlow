@@ -6,7 +6,15 @@ const app = express();
 
 app.use(cors());
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buffer) => {
+      if (req.path === "/api/event/payments/razorpay/webhook") {
+        req.rawBody = Buffer.from(buffer);
+      }
+    },
+  })
+);
 
 app.use(express.urlencoded({ extended: true }));
 

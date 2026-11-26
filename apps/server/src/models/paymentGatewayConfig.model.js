@@ -20,6 +20,16 @@ const paymentGatewayConfigSchema = new mongoose.Schema(
       enum: ["sandbox", "live"],
       default: "sandbox",
     },
+    providerEnabled: {
+      razorpay: { type: Boolean, default: false },
+      phonepe: { type: Boolean, default: false },
+      paypal: { type: Boolean, default: false },
+    },
+    primaryProvider: {
+      type: String,
+      enum: ["razorpay", "phonepe", "paypal", null],
+      default: null,
+    },
   },
   {
     collection: "payment_gateway_config",

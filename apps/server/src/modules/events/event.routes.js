@@ -20,6 +20,9 @@ router.post(
 router.get("/event-types", authMiddleware, eventController.eventTypes);
 router.get("/events-list/:userId", authMiddleware, eventController.eventLists);
 router.get("/payment-gateway/config", authMiddleware, eventController.getPaymentGatewayConfig);
+router.post("/payments/razorpay/link", authMiddleware, eventController.createRazorpayPaymentLink);
+router.get("/payments/razorpay/status", authMiddleware, eventController.getRazorpayPaymentStatus);
+router.post("/payments/razorpay/webhook", eventController.handleRazorpayWebhook);
 router.post("/send-invites", authMiddleware, eventController.sendEventInvites);
 
 router.put(

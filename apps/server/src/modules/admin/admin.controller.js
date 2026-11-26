@@ -222,6 +222,66 @@ exports.getEventTypes = async (req, res) => {
   }
 };
 
+exports.createEventType = async (req, res) => {
+  try {
+    const eventType = await adminService.createEventType({
+      ...req.body,
+      image: req.file?.filename,
+    });
+    return res.status(201).json({
+      success: true,
+      message: "Event type created successfully.",
+      data: eventType,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to create event type.");
+  }
+};
+
+exports.updateEventType = async (req, res) => {
+  try {
+    const eventType = await adminService.updateEventType(req.params.id, {
+      ...req.body,
+      image: req.file?.filename,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Event type updated successfully.",
+      data: eventType,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to update event type.");
+  }
+};
+
+exports.updateEventTypePrice = async (req, res) => {
+  try {
+    const eventType = await adminService.updateEventTypePrice(
+      req.params.id,
+      req.body.price
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Event type price updated.",
+      data: eventType,
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to update event type price.");
+  }
+};
+
+exports.deleteEventType = async (req, res) => {
+  try {
+    await adminService.deleteEventType(req.params.id);
+    return res.status(200).json({
+      success: true,
+      message: "Event type removed from registration options.",
+    });
+  } catch (error) {
+    return handleError(res, error, "Failed to delete event type.");
+  }
+};
+
 exports.createEvent = async (req, res) => {
   try {
     const result = await adminService.createEvent({

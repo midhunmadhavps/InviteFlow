@@ -630,6 +630,181 @@ exports.updateUserRole = async (userId, newRole) => {
  */
 exports.getEventTypes = async () => EventType.find({ isActive: true }).sort({ name: 1 });
 
+exports.createEventType = async ({
+  name,
+  icon = "",
+  description = "",
+  price = 0,
+  image = "",
+}) => {
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const normalizedIcon = typeof icon === "string" ? icon.trim() : "";
+  const normalizedDescription =
+    typeof description === "string" ? description.trim() : "";
+  const normalizedPrice =
+    price === "" || price === null || price === undefined ? 0 : Number(price);
+
+  if (
+    !normalizedName ||
+    normalizedName.length > 100 ||
+    typeof price === "boolean" ||
+    !Number.isFinite(normalizedPrice) ||
+    normalizedPrice < 0 ||
+    Math.round(normalizedPrice * 100) / 100 !== normalizedPrice
+  ) {
+    const error = new Error(
+      "Provide a name and a valid price of zero or more with up to two decimal places."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingType = await EventType.findOne({
+    name: { $regex: `^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+  });
+  if (existingType) {
+    const error = new Error("An event type with this name already exists.");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  try {
+    return await EventType.create({
+      name: normalizedName,
+      icon: normalizedIcon,
+      description: normalizedDescription,
+      price: normalizedPrice,
+      image,
+      isActive: true,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const duplicateError = new Error(
+        "An event type with this name already exists."
+      );
+      duplicateError.statusCode = 409;
+      throw duplicateError;
+    }
+    throw error;
+  }
+};
+
+exports.updateEventType = async (eventTypeId, updates) => {
+  if (!mongoose.Types.ObjectId.isValid(eventTypeId)) {
+    const error = new Error("Provide a valid event type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const name = typeof updates.name === "string" ? updates.name.trim() : "";
+  const icon = typeof updates.icon === "string" ? updates.icon.trim() : "";
+  const description =
+    typeof updates.description === "string" ? updates.description.trim() : "";
+  const price =
+    updates.price === "" || updates.price === null || updates.price === undefined
+      ? 0
+      : Number(updates.price);
+
+  if (
+    !name ||
+    name.length > 100 ||
+    typeof updates.price === "boolean" ||
+    !Number.isFinite(price) ||
+    price < 0 ||
+    Math.round(price * 100) / 100 !== price
+  ) {
+    const error = new Error(
+      "Provide a name and a valid price of zero or more with up to two decimal places."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const duplicate = await EventType.findOne({
+    _id: { $ne: eventTypeId },
+    name: { $regex: `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+  });
+  if (duplicate) {
+    const error = new Error("An event type with this name already exists.");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const update = { name, icon, description, price };
+  if (updates.image) update.image = updates.image;
+
+  try {
+    const eventType = await EventType.findByIdAndUpdate(
+      eventTypeId,
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+    if (!eventType) {
+      const error = new Error("Event type not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+    return eventType;
+  } catch (error) {
+    if (error.code === 11000) {
+      const duplicateError = new Error(
+        "An event type with this name already exists."
+      );
+      duplicateError.statusCode = 409;
+      throw duplicateError;
+    }
+    throw error;
+  }
+};
+
+exports.updateEventTypePrice = async (eventTypeId, price) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(eventTypeId) ||
+    typeof price !== "number" ||
+    !Number.isFinite(price) ||
+    price <= 0 ||
+    Math.round(price * 100) / 100 !== price
+  ) {
+    const error = new Error(
+      "Provide a valid event type and a price greater than zero with up to two decimal places."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const eventType = await EventType.findByIdAndUpdate(
+    eventTypeId,
+    { $set: { price } },
+    { new: true, runValidators: true }
+  );
+  if (!eventType) {
+    const error = new Error("Event type not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  return eventType;
+};
+
+exports.deleteEventType = async (eventTypeId) => {
+  if (!mongoose.Types.ObjectId.isValid(eventTypeId)) {
+    const error = new Error("Provide a valid event type.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const eventType = await EventType.findByIdAndUpdate(
+    eventTypeId,
+    { $set: { isActive: false } },
+    { new: true, runValidators: true }
+  );
+  if (!eventType) {
+    const error = new Error("Event type not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  return eventType;
+};
+
 exports.createEvent = async (eventData) => {
   if (!mongoose.Types.ObjectId.isValid(eventData.customerId)) {
     const error = new Error("Select a valid customer for this event.");

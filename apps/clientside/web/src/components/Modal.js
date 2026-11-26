@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAppTheme } from "../shared/theme/ThemeContext";
 
 const Modal = ({
   visible,
@@ -20,31 +21,35 @@ const Modal = ({
   isConfirming = false,
   hideActions = false,
 }) => {
+  const { isDark } = useAppTheme();
   if (!visible) return null;
 
   return (
     <RNModal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{title}</Text>
+        <View style={[styles.modalContainer, isDark && styles.modalContainerDark]}>
+          <View style={[styles.header, isDark && styles.headerDark]}>
+            <Text style={[styles.headerTitle, isDark && styles.textDark]}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <MaterialCommunityIcons name="close" size={20} color="#64748B" />
+              <MaterialCommunityIcons name="close" size={20} color={isDark ? "#CBD5E1" : "#64748B"} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={[styles.body, isDark && styles.bodyDark]}
+            showsVerticalScrollIndicator={false}
+          >
             {children}
           </ScrollView>
 
           {!hideActions && (
-            <View style={styles.footer}>
+            <View style={[styles.footer, isDark && styles.footerDark]}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, isDark && styles.cancelBtnDark]}
                 onPress={onClose}
                 disabled={isConfirming}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={[styles.cancelBtnText, isDark && styles.textDark]}>Cancel</Text>
               </TouchableOpacity>
               {onConfirm && (
                 <TouchableOpacity
@@ -86,6 +91,9 @@ const styles = StyleSheet.create({
     elevation: 10,
     overflow: "hidden",
   },
+  modalContainerDark: {
+    backgroundColor: "#1F2937",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -95,10 +103,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
+  headerDark: {
+    borderBottomColor: "#374151",
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#0F172A",
+  },
+  textDark: {
+    color: "#F8FAFC",
   },
   closeBtn: {
     padding: 4,
@@ -107,6 +121,9 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 24,
     paddingVertical: 20,
+  },
+  bodyDark: {
+    backgroundColor: "#1F2937",
   },
   footer: {
     flexDirection: "row",
@@ -119,6 +136,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     gap: 12,
   },
+  footerDark: {
+    borderTopColor: "#374151",
+    backgroundColor: "#273449",
+  },
   cancelBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -126,6 +147,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#CBD5E1",
     backgroundColor: "#FFFFFF",
+  },
+  cancelBtnDark: {
+    borderColor: "#4B5563",
+    backgroundColor: "#1F2937",
   },
   cancelBtnText: {
     color: "#475569",

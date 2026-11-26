@@ -37,6 +37,18 @@ export const getPaymentGatewayConfig = async () => {
   return response.data;
 };
 
+export const createRazorpayPaymentLink = async (eventId) => {
+  const response = await api.post("/event/payments/razorpay/link", { eventId });
+  return response.data;
+};
+
+export const getRazorpayPaymentStatus = async (eventId) => {
+  const response = await api.get("/event/payments/razorpay/status", {
+    params: { eventId },
+  });
+  return response.data;
+};
+
 export const sendEventInvites = async (inviteData) => {
   const response = await api.post("/event/send-invites", inviteData);
   return response.data;

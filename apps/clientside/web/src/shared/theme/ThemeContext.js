@@ -61,8 +61,15 @@ const WEB_DARK_MODE_STYLES = `
   body[data-inviteflow-theme="dark"] input,
   body[data-inviteflow-theme="dark"] textarea,
   body[data-inviteflow-theme="dark"] select {
-    color: #F8FAFC;
+    background-color: #273449 !important;
+    border-color: #4B5563 !important;
+    color: #F8FAFC !important;
     color-scheme: dark;
+  }
+  body[data-inviteflow-theme="dark"] input::placeholder,
+  body[data-inviteflow-theme="dark"] textarea::placeholder {
+    color: #CBD5E1;
+    opacity: 1;
   }
 `;
 

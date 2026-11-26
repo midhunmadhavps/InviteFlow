@@ -10,6 +10,40 @@ export const getAdminEventTypesApi = async () => {
   return response.data;
 };
 
+export const createAdminEventTypeApi = async (eventType) => {
+  const formData = new FormData();
+  Object.entries(eventType).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
+  const response = await apiClient.post("/admin/events/types", formData, {
+    headers: { "Content-Type": undefined },
+  });
+  return response.data;
+};
+
+export const updateAdminEventTypeApi = async (id, eventType) => {
+  const formData = new FormData();
+  Object.entries(eventType).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
+  const response = await apiClient.patch(`/admin/events/types/${id}`, formData, {
+    headers: { "Content-Type": undefined },
+  });
+  return response.data;
+};
+
+export const deleteAdminEventTypeApi = async (id) => {
+  const response = await apiClient.delete(`/admin/events/types/${id}`);
+  return response.data;
+};
+
+export const updateEventTypePriceApi = async (id, price) => {
+  const response = await apiClient.patch(`/admin/events/types/${id}/price`, {
+    price,
+  });
+  return response.data;
+};
+
 export const createAdminEventApi = async (eventData) => {
   const response = await apiClient.post("/admin/events", eventData, {
     headers: { "Content-Type": undefined },

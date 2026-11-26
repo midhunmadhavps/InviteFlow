@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const eventService = require("./event.service");
 const whatsappService = require("./whatsapp.service");
 const paymentGatewayService = require("../payment/paymentGateway.service");
+const razorpayService = require("../payment/razorpay.service");
 
 exports.getPaymentGatewayConfig = async (req, res) => {
   try {
@@ -12,6 +13,52 @@ exports.getPaymentGatewayConfig = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch payment gateway status.",
+    });
+  }
+};
+
+exports.createRazorpayPaymentLink = async (req, res) => {
+  try {
+    const data = await razorpayService.createPaymentLink({
+      eventId: req.body.eventId,
+      userId: req.user._id,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to start Razorpay payment.",
+    });
+  }
+};
+
+exports.getRazorpayPaymentStatus = async (req, res) => {
+  try {
+    const data = await razorpayService.getPaymentStatus({
+      eventId: req.query.eventId,
+      userId: req.user._id,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to check Razorpay payment status.",
+    });
+  }
+};
+
+exports.handleRazorpayWebhook = async (req, res) => {
+  try {
+    const data = await razorpayService.handleWebhook({
+      rawBody: req.rawBody,
+      signature: req.headers["x-razorpay-signature"],
+      event: req.body,
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to process Razorpay webhook.",
     });
   }
 };
@@ -264,6 +311,9 @@ module.exports = {
   eventTypes,
   eventLists,
   getPaymentGatewayConfig: exports.getPaymentGatewayConfig,
+  createRazorpayPaymentLink: exports.createRazorpayPaymentLink,
+  getRazorpayPaymentStatus: exports.getRazorpayPaymentStatus,
+  handleRazorpayWebhook: exports.handleRazorpayWebhook,
   updateEvent,
   sendEventInvites,
 };

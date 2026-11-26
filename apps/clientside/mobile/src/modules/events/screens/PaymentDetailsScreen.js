@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  AppState,
   ActivityIndicator,
   Image,
   Linking,
@@ -15,25 +16,41 @@ import { Asset } from "expo-asset";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { useToast } from "../../../context/ToastContext";
-import { getPaymentGatewayConfig } from "../api/event.api";
+import {
+  createRazorpayPaymentLink,
+  getPaymentGatewayConfig,
+  getRazorpayPaymentStatus,
+} from "../api/event.api";
 
 const PAYMENT_QR = require("../../../../../shared/public/assets/images/payment_qr.png");
 
 export default function PaymentDetailsScreen({ navigation, route }) {
   const event = route.params?.event;
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [downloading, setDownloading] = useState(false);
   const [gatewayLoading, setGatewayLoading] = useState(true);
   const [gatewayEnabled, setGatewayEnabled] = useState(false);
+  const [primaryProvider, setPrimaryProvider] = useState(null);
+  const [razorpayEnabled, setRazorpayEnabled] = useState(false);
   const [selectedPaymentApp, setSelectedPaymentApp] = useState(null);
   const [showQrCode, setShowQrCode] = useState(false);
   const [gatewayError, setGatewayError] = useState("");
+  const [razorpayLoading, setRazorpayLoading] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [checkoutOpened, setCheckoutOpened] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("");
 
   useEffect(() => {
     let active = true;
     getPaymentGatewayConfig()
       .then((response) => {
-        if (active) setGatewayEnabled(response?.data?.enabled === true);
+        if (active) {
+          setGatewayEnabled(response?.data?.enabled === true);
+          setPrimaryProvider(response?.data?.primaryProvider || null);
+          setRazorpayEnabled(
+            response?.data?.providerEnabled?.razorpay === true
+          );
+        }
       })
       .catch((error) => {
         if (active) {
@@ -51,6 +68,66 @@ export default function PaymentDetailsScreen({ navigation, route }) {
       active = false;
     };
   }, []);
+
+  const refreshRazorpayPaymentStatus = async () => {
+    if (!event?._id) return;
+    setCheckingPayment(true);
+    try {
+      const response = await getRazorpayPaymentStatus(event._id);
+      const status = response?.data?.status || "Pending";
+      setPaymentStatus(status);
+      if (response?.data?.approved) {
+        setCheckoutOpened(false);
+      }
+    } catch (error) {
+      showError(
+        error.response?.data?.message ||
+          "Unable to verify payment status. Please try again."
+      );
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!checkoutOpened) return undefined;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshRazorpayPaymentStatus();
+    });
+    return () => subscription.remove();
+  }, [checkoutOpened, event?._id]);
+
+  const startRazorpayPayment = async () => {
+    if (!event?._id) {
+      showError("Could not identify this event for payment.");
+      return;
+    }
+    setRazorpayLoading(true);
+    setGatewayError("");
+    try {
+      const response = await createRazorpayPaymentLink(event._id);
+      const payment = response?.data;
+      if (payment?.alreadyPaid) {
+        setPaymentStatus("Approved");
+        showSuccess("Payment for this event is already approved.");
+        return;
+      }
+      if (!payment?.paymentUrl) {
+        throw new Error("Razorpay did not return a checkout link.");
+      }
+      setPaymentStatus("Pending");
+      await Linking.openURL(payment.paymentUrl);
+      setCheckoutOpened(true);
+    } catch (error) {
+      showError(
+        error.response?.data?.message ||
+          error.message ||
+          "Could not start Razorpay checkout."
+      );
+    } finally {
+      setRazorpayLoading(false);
+    }
+  };
 
   const downloadQrCode = async () => {
     if (Platform.OS === "web") {
@@ -192,73 +269,147 @@ export default function PaymentDetailsScreen({ navigation, route }) {
                   </View>
                 </>
               ) : (
-                <>
-                  <Text style={styles.description}>
-                    Select GPay or PhonePe, then submit to open the app on this
-                    phone.
-                  </Text>
-                  <View style={styles.providerList}>
-                    {["GPay", "PhonePe"].map((appName) => {
-                      const isSelected = selectedPaymentApp === appName;
-                      return (
-                        <TouchableOpacity
-                          key={appName}
-                          style={[
-                            styles.providerOption,
-                            isSelected && styles.providerOptionSelected,
-                          ]}
-                          onPress={() => setSelectedPaymentApp(appName)}
-                          activeOpacity={0.8}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: isSelected }}
-                        >
-                          <View
-                            style={[
-                              styles.providerIcon,
-                              isSelected && styles.providerIconSelected,
-                            ]}
-                          >
-                            <Ionicons
-                              name="phone-portrait-outline"
-                              size={20}
-                              color={isSelected ? "#ffffff" : "#ff7f86"}
-                            />
-                          </View>
-                          <View style={styles.providerCopy}>
-                            <Text style={styles.providerName}>{appName}</Text>
-                            <Text style={styles.providerDescription}>
-                              Open {appName} on this phone
-                            </Text>
-                          </View>
+                primaryProvider === "razorpay" && razorpayEnabled ? (
+                  <>
+                    <Text style={styles.description}>
+                      Pay securely with Razorpay. The event price is set by the
+                      administrator.
+                    </Text>
+                    {event?.eventTypeId?.price > 0 ? (
+                      <Text style={styles.razorpayAmount}>
+                        ₹{Number(event.eventTypeId.price).toFixed(2)}
+                      </Text>
+                    ) : null}
+                    <TouchableOpacity
+                      style={[
+                        styles.submitButton,
+                        razorpayLoading && styles.buttonDisabled,
+                      ]}
+                      onPress={startRazorpayPayment}
+                      disabled={razorpayLoading}
+                      activeOpacity={0.8}
+                    >
+                      {razorpayLoading ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <>
+                          <Text style={styles.submitButtonText}>
+                            Pay with Razorpay
+                          </Text>
                           <Ionicons
-                            name={
-                              isSelected
-                                ? "checkmark-circle"
-                                : "ellipse-outline"
-                            }
-                            size={22}
-                            color={isSelected ? "#16a34a" : "#aab0bb"}
+                            name="arrow-forward"
+                            size={18}
+                            color="#ffffff"
                           />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    {checkoutOpened || paymentStatus ? (
+                      <View style={styles.paymentStatusContainer}>
+                        <Text
+                          style={[
+                            styles.paymentStatusText,
+                            paymentStatus === "Approved" &&
+                              styles.paymentStatusApproved,
+                          ]}
+                        >
+                          {paymentStatus === "Approved"
+                            ? "Payment approved"
+                            : "Payment pending confirmation"}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.checkStatusButton}
+                          onPress={refreshRazorpayPaymentStatus}
+                          disabled={checkingPayment}
+                          activeOpacity={0.8}
+                        >
+                          {checkingPayment ? (
+                            <ActivityIndicator
+                              size="small"
+                              color="#ff7f86"
+                            />
+                          ) : (
+                            <Text style={styles.checkStatusButtonText}>
+                              Check payment status
+                            </Text>
+                          )}
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.submitButton,
-                      !selectedPaymentApp && styles.buttonDisabled,
-                    ]}
-                    onPress={submitPaymentMethod}
-                    disabled={!selectedPaymentApp}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.submitButtonText}>Submit</Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={18}
-                      color="#ffffff"
-                    />
-                  </TouchableOpacity>
+                      </View>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.description}>
+                      Select GPay or PhonePe, then submit to open the app on this
+                      phone.
+                    </Text>
+                    <View style={styles.providerList}>
+                      {["GPay", "PhonePe"].map((appName) => {
+                        const isSelected = selectedPaymentApp === appName;
+                        return (
+                          <TouchableOpacity
+                            key={appName}
+                            style={[
+                              styles.providerOption,
+                              isSelected && styles.providerOptionSelected,
+                            ]}
+                            onPress={() => setSelectedPaymentApp(appName)}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                          >
+                            <View
+                              style={[
+                                styles.providerIcon,
+                                isSelected && styles.providerIconSelected,
+                              ]}
+                            >
+                              <Ionicons
+                                name="phone-portrait-outline"
+                                size={20}
+                                color={isSelected ? "#ffffff" : "#ff7f86"}
+                              />
+                            </View>
+                            <View style={styles.providerCopy}>
+                              <Text style={styles.providerName}>{appName}</Text>
+                              <Text style={styles.providerDescription}>
+                                Open {appName} on this phone
+                              </Text>
+                            </View>
+                            <Ionicons
+                              name={
+                                isSelected
+                                  ? "checkmark-circle"
+                                  : "ellipse-outline"
+                              }
+                              size={22}
+                              color={isSelected ? "#16a34a" : "#aab0bb"}
+                            />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.submitButton,
+                        !selectedPaymentApp && styles.buttonDisabled,
+                      ]}
+                      onPress={submitPaymentMethod}
+                      disabled={!selectedPaymentApp}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.submitButtonText}>Submit</Text>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color="#ffffff"
+                      />
+                    </TouchableOpacity>
+                  </>
+                )
+              )}
+              {!showQrCode ? (
+                <>
                   <View style={styles.orDivider}>
                     <View style={styles.orDividerLine} />
                     <Text style={styles.orDividerText}>OR</Text>
@@ -280,7 +431,7 @@ export default function PaymentDetailsScreen({ navigation, route }) {
                     </Text>
                   </TouchableOpacity>
                 </>
-              )}
+              ) : null}
 
               <Text style={styles.note}>
                 Payment status must be approved before invite scheduling is
@@ -369,6 +520,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
+  },
+  razorpayAmount: {
+    marginTop: 12,
+    color: "#263957",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  paymentStatusContainer: {
+    width: "100%",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+  },
+  paymentStatusText: {
+    color: "#b7791f",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  paymentStatusApproved: {
+    color: "#15803d",
+  },
+  checkStatusButton: {
+    minHeight: 36,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  checkStatusButtonText: {
+    color: "#e85e68",
+    fontSize: 13,
+    fontWeight: "700",
   },
   gatewayLoader: {
     marginVertical: 28,

@@ -25,6 +25,11 @@ const storage = multer.diskStorage({
       return;
     }
 
+    if (file.fieldname === "eventTypeImage") {
+      cb(null, `event_type_${crypto.randomUUID()}${logoExtensions[file.mimetype]}`);
+      return;
+    }
+
     const eventId = req.eventId || req.params?.id || Date.now();
 
     const extension = path.extname(file.originalname);
@@ -61,5 +66,18 @@ const uploadLogo = multer({
   },
 });
 
+const uploadEventTypeImage = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!Object.prototype.hasOwnProperty.call(logoExtensions, file.mimetype)) {
+      cb(new Error("Event type image must be a JPG, PNG, or WEBP image."));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
 module.exports = upload;
 module.exports.logo = uploadLogo;
+module.exports.eventTypeImage = uploadEventTypeImage;
